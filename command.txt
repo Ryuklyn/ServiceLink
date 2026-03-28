@@ -1,0 +1,8 @@
+npm run dev
+
+mvn spring-boot:run
+
+export $(grep -v '^#' .env | xargs)
+
+echo $GOOGLE_CLIENT_ID
+echo $GOOGLE_CLIENT_SECRET
