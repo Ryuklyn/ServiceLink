@@ -21,7 +21,7 @@ const roles = [
     cta: "Start Booking",
     href: "/register/user",
     ctaColor: "text-blue-600 hover:text-blue-800",
-    image: "/images/register-user.jpg",
+    image: "/images/reguser1.png",
   },
   {
     icon: <Wrench size={22} className="text-gray-500" />,
@@ -31,7 +31,7 @@ const roles = [
     cta: "Join the Network",
     href: "/register/provider",
     ctaColor: "text-orange-500 hover:text-orange-700",
-    image: "/images/register-provider.jpg",
+    image: "/images/regprovider2.png",
   },
   {
     icon: <Building2 size={22} className="text-gray-500" />,
@@ -41,7 +41,7 @@ const roles = [
     cta: "Go Pro",
     href: "/register/business",
     ctaColor: "text-blue-600 hover:text-blue-800",
-    image: "/images/register-business.jpg",
+    image: "/images/regbusiness1.jpeg",
   },
 ];
 
