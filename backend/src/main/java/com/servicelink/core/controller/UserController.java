@@ -12,8 +12,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.servicelink.core.model.User;
+import com.servicelink.core.dto.request.UserRequestDTO;
+import com.servicelink.core.dto.response.UserResponseDTO;
 import com.servicelink.core.service.UserService;
+import com.servicelink.mapper.UserMapper;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
@@ -27,18 +30,13 @@ public class UserController {
     }
 
     @GetMapping
-    public List<User> getUsers() {
-        return service.getAllUsers();
-    }
-
-    @PostMapping
-    public User create(@RequestBody User user) {
-        return service.save(user);
+    public List<UserResponseDTO> getUsers() {
+        return UserMapper.toDTOList(service.getAllUsers());
     }
 
     @PutMapping("/{id}")
-    public User update(@PathVariable Long id, @RequestBody User user) {
-        return service.update(id, user);
+    public UserResponseDTO update(@PathVariable Long id, @Valid @RequestBody UserRequestDTO userDTO) {
+        return UserMapper.toDTO(service.updateProfile(id, userDTO));
     }
 
     @DeleteMapping("/{id}")

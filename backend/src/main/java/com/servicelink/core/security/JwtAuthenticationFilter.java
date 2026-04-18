@@ -43,14 +43,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             userEmail = jwtService.extractUsername(jwt);
             
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // Here we simply check if token is structurally valid and not expired
-                // Since user context is minimal, we bypass DB hit on every request if desired.
-                // In a stricter app, you would load UserDetails from DB here.
                 if (jwtService.isTokenValid(jwt, userEmail)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userEmail,
                             null,
-                           new ArrayList<>() // no authorities mapped yet
+                           new ArrayList<>()
                     );
                     authToken.setDetails(
                             new WebAuthenticationDetailsSource().buildDetails(request)

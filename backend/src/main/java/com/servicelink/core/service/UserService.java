@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import com.servicelink.core.dto.request.UserRequestDTO;
+
 @Service
 public class UserService {
 
@@ -26,38 +28,28 @@ public class UserService {
         return repo.save(user);
     }
 
-    // ✅ Update user profile (IMPORTANT: no name in User anymore)
-    public User updateProfile(Long id, User updatedUser) {
+    // ✅ Update user profile
+    public User updateProfile(Long id, UserRequestDTO dto) {
         return repo.findById(id)
                 .map(existing -> {
 
-                    // 🔹 Update email (optional, careful in real apps)
-                    if (updatedUser.getEmail() != null) {
-                        existing.setEmail(updatedUser.getEmail());
+                    // 🔹 Update email
+                    if (dto.getEmail() != null) {
+                        existing.setEmail(dto.getEmail());
                     }
 
-                    // 🔹 Update profile fields
-                    if (updatedUser.getProfile() != null) {
-                        UserProfile existingProfile = existing.getProfile();
-
-                        if (existingProfile == null) {
-                            existingProfile = new UserProfile();
-                            existingProfile.setUser(existing);
-                        }
-
-                        UserProfile newProfile = updatedUser.getProfile();
-
-                        if (newProfile.getFullName() != null) {
-                            existingProfile.setFullName(newProfile.getFullName());
-                        }
-
-                        if (newProfile.getProfileImage() != null) {
-                            existingProfile.setProfileImage(newProfile.getProfileImage());
-                        }
-
-                        existing.setProfile(existingProfile);
+                    // 🔹 Update profile
+                    UserProfile profile = existing.getProfile();
+                    if (profile == null) {
+                        profile = new UserProfile();
+                        profile.setUser(existing);
                     }
 
+                    if (dto.getFullName() != null) {
+                        profile.setFullName(dto.getFullName());
+                    }
+                    
+                    existing.setProfile(profile);
                     return repo.save(existing);
                 })
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id " + id));
