@@ -5,7 +5,6 @@ import com.servicelink.core.dto.request.RegisterRequestDTO;
 import com.servicelink.core.dto.response.AuthResponseDTO;
 import com.servicelink.core.model.AuthProvider;
 import com.servicelink.core.model.User;
-import com.servicelink.core.model.UserProfile;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.security.JwtService;
 import com.servicelink.mapper.UserMapper;
