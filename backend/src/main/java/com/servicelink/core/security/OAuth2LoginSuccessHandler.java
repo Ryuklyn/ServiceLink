@@ -115,16 +115,25 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         } else {
             user = optionalUser.get();
+
+            UserProfile profile = user.getProfile();
+
+            if (profile == null){
+                profile = new UserProfile();
+                profile.setUser(user);
+                profile.setFullName(name);
+            }
+            profile.setProfileImage(picture);
+            user.setProfile(profile);
+
+            userRepository.save(user);
         }
 
         // ✅ JWT Claims
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("email", email);
-
-        if (user.getProfile() != null) {
-            extraClaims.put("name", user.getProfile().getFullName());
-            extraClaims.put("picture", user.getProfile().getProfileImage());
-        }
+        extraClaims.put("name", user.getProfile().getFullName());
+        extraClaims.put("picture", user.getProfile().getProfileImage());
 
         String jwt = jwtService.generateToken(extraClaims, email);
 

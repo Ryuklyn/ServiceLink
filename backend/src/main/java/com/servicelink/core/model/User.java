@@ -23,13 +23,14 @@ public class User {
     private String password; // null for Google users
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private AuthProvider provider;
 
-    private boolean isVerified = true;
+    private boolean verified = true;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
     // 🔗 One-to-one profile
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL,fetch = FetchType.EAGER)
     private UserProfile profile;
 }
