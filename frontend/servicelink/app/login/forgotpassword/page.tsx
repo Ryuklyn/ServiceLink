@@ -10,14 +10,35 @@ export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState("");
 
+  const handleSendOtp = async (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+
+    try {
+      const res = await fetch("http://localhost:8080/auth/send-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (res.ok) {
+        router.push(`/login/verify?email=${encodeURIComponent(email)}`);
+      } else {
+        alert("Failed to send OTP");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    // Here you would typically call an API to send the OTP to the user's email
+    // For this example, we'll just navigate to the next step
+    router.push(`/login/verify?email=${encodeURIComponent(email)}`);
+  };
+
   return (
     <AuthLayout>
       <StepIndicator step={1} />
 
-      {/* <h2 className="text-3xl text-black font-bold mb-2">Forgot Password?</h2>
-      <p className="text-gray-500 mb-6">
-        Enter your email to receive a verification code.
-      </p> */}
       <h2 className="text-2xl font-bold text-gray-900 mb-2">
         Forgot Password?
       </h2>
@@ -25,13 +46,7 @@ export default function Page() {
         Enter your email to receive a verification code.
       </p>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          router.push(`/login/verify?email=${encodeURIComponent(email)}`);
-        }}
-        className="space-y-5"
-      >
+      <form onSubmit={handleSendOtp} className="space-y-5">
         <label className="text-sm font-medium text-gray-700">
           Email Address
         </label>
