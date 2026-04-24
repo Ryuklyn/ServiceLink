@@ -2,8 +2,12 @@ package com.servicelink.core.config;
 
 import com.servicelink.core.security.JwtAuthenticationFilter;
 import com.servicelink.core.security.OAuth2LoginSuccessHandler;
+
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,24 +33,6 @@ public class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
-    // @Bean
-    // public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    //     http
-    //         .csrf(csrf -> csrf.disable())
-    //         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-    //         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-    //         .authorizeHttpRequests(auth -> auth
-    //             .requestMatchers("/", "/login", "/oauth2/**", "/api/auth/**").permitAll()
-    //             .anyRequest().authenticated()
-    //         )
-    //         .oauth2Login(oauth -> oauth
-    //             .successHandler(oAuth2LoginSuccessHandler)
-    //         )
-    //         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-    //     return http.build();
-    // }
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -58,23 +44,35 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/", 
-                    "/login", 
-                    "/error",
-                    "/oauth2/**",
-                    "/api/auth/**"
-                ).permitAll()
-                .anyRequest().authenticated()
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, exx) -> {
+                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                })
             )
+            .authorizeHttpRequests(auth -> auth
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+            // 🔓 PUBLIC AUTH ENDPOINTS
+            .requestMatchers(
+                "/api/auth/register",
+                "/api/auth/login",
+                "/oauth2/**",
+                "/error"
+            ).permitAll()
+
+            // 🔒 PROTECTED AUTH ENDPOINTS
+            .requestMatchers("/api/auth/me").authenticated()
+
+            // everything else
+            .anyRequest().authenticated()
+        )
 
             .oauth2Login(oauth -> oauth
                 .successHandler(oAuth2LoginSuccessHandler)
             )
 
             .addFilterBefore(jwtAuthenticationFilter,
-                    UsernamePasswordAuthenticationFilter.class);
+                UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -83,39 +81,18 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-//    @Bean
-//    public CorsConfigurationSource corsConfigurationSource() {
-//        CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-//        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-//        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
-//        configuration.setAllowCredentials(true);
-//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-//        source.registerCorsConfiguration("/**", configuration);
-//        return source;
-//    }
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-//        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-//        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
-//        configuration.setAllowCredentials(true);
-//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-//        source.registerCorsConfiguration("/**", configuration);
-//        return source;
+   @Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
 
-        // ✅ FIXED: use allowedOriginPatterns instead of allowedOrigins
-        // allowedOrigins("*") is incompatible with allowCredentials(true)
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000"));
+    config.setAllowedOriginPatterns(Arrays.asList("http://localhost:3001")); // ⚠️ MUST match your frontend
+    config.setAllowedMethods(Arrays.asList("*"));
+    config.setAllowedHeaders(Arrays.asList("*"));
+    config.setAllowCredentials(true);
 
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
-        configuration.setAllowCredentials(true);
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-
-    }
+    return source;
+}
 }

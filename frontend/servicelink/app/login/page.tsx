@@ -10,9 +10,54 @@ import {
   Star,
   Shield,
   Building2,
+  EyeOff,
 } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import api from "@/utils/axios";
+import { toast } from "react-toastify";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+
+      const res = await api.post("/auth/login", {
+        email: email.trim(),
+        password,
+      });
+
+      // 🔐 token save (if backend returns)
+      // localStorage.setItem("token", res.data.token);
+      console.log("FULL RESPONSE:", res.data);
+
+      localStorage.setItem("token", res.data.token);
+
+      console.log("Saved token:", localStorage.getItem("token"));
+
+      toast.success("Login successful");
+      console.log("Redirecting to dashboard...");
+
+      // 👉 dashboard redirect
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-white flex flex-col lg:flex-row">
       <div className="w-full h-full flex flex-col lg:flex-row">
@@ -49,7 +94,7 @@ export default function LoginPage() {
             </div>
 
             {/* Form */}
-            <form className="space-y-5">
+            <form className="space-y-5" onSubmit={handleLogin}>
               {/* Email */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
@@ -61,6 +106,8 @@ export default function LoginPage() {
                   </div>
                   <input
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-gray-900 transition-shadow outline-none"
                     placeholder="you@email.com"
                   />
@@ -77,12 +124,21 @@ export default function LoginPage() {
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-gray-900 transition-shadow outline-none"
                     placeholder="Enter your password"
                   />
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-400 hover:text-gray-600">
-                    <Eye className="h-5 w-5" />
+                  <div
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
                   </div>
                 </div>
               </div>
@@ -116,9 +172,10 @@ export default function LoginPage() {
               {/* Submit */}
               <button
                 type="submit"
+                disabled={loading}
                 className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-[#1e293b] hover:bg-[#1e3a8a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e3a8a] transition-colors"
               >
-                Sign In
+                {loading ? "Signing in..." : "Sign In"}
               </button>
             </form>
 
