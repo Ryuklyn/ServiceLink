@@ -11,11 +11,25 @@ public class EmailService {
     private JavaMailSender mailSender;
 
     public void sendOtpEmail(String to, String otp) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("[EMAIL_ADDRESS]");
-        message.setTo(to);
-        message.setSubject("Password Reset OTP - servicelink");
-        message.setText("Please find below the one time password (OTP) to reset the password for your ServiceLink account.\nOTP: " + otp + "\n\n Your OTP will be valid for only 5 minutes. \n\nPlease do not share this OTP with anyone.");
-        mailSender.send(message);
+        try {
+            String cleanEmail = to.trim();
+
+            SimpleMailMessage message = new SimpleMailMessage();
+
+            message.setTo(cleanEmail);
+            message.setSubject("Your OTP Code");
+            message.setText(
+                "Your OTP is: " + otp + "\n\n" +
+                "Valid for 5 minutes."
+            );
+
+            mailSender.send(message);
+            // message.setTo("Email: " + to);
+             System.out.println("EMAIL SENT: " + message);
+
+        } catch (Exception e) {
+            System.out.println("EMAIL ERROR: " + e.getMessage());
+            throw e;
+        }
     }
 }

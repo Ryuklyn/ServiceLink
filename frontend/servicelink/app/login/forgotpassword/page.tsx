@@ -5,36 +5,43 @@ import { Mail, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import api from "@/utils/axios";
+import { toast } from "react-toastify";
 
 export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSendOtp = async (e: { preventDefault: () => void }) => {
+  const handleSendOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (!email.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+
     try {
-      const res = await fetch("http://localhost:8080/auth/send-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
+      setLoading(true);
+
+      await api.post("/auth/send-otp", {
+        email: email.trim(),
       });
 
-      if (res.ok) {
-        router.push(`/login/verify?email=${encodeURIComponent(email)}`);
-      } else {
-        alert("Failed to send OTP");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    // Here you would typically call an API to send the OTP to the user's email
-    // For this example, we'll just navigate to the next step
-    router.push(`/login/verify?email=${encodeURIComponent(email)}`);
-  };
+      toast.success("OTP sent successfully");
 
+      router.push(`/login/verify?email=${encodeURIComponent(email.trim())}`);
+    } catch (err: any) {
+      console.error("OTP Error:", err);
+
+      const message =
+        err?.response?.data?.message || "Failed to send OTP. Please try again.";
+
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <AuthLayout>
       <StepIndicator step={1} />
@@ -61,8 +68,12 @@ export default function Page() {
           />
         </div>
 
-        <button className="w-full py-3 bg-[#1e3a8a] text-white rounded-xl inline-flex items-center justify-center gap-2 font-semibold">
-          Send Code <ArrowRight size={16} />
+        <button
+          disabled={loading}
+          className="w-full py-3 bg-[#1e3a8a] text-white rounded-xl inline-flex items-center justify-center gap-2 font-semibold"
+        >
+          {loading ? "Sending..." : "Send OTP"}
+          <ArrowRight size={16} />
         </button>
       </form>
       <p className="text-[14px] text-gray-500 text-center mt-6">

@@ -73,4 +73,17 @@ public class AuthService {
                 .requiresProfileImage(profile == null || profile.getProfileImage() == null)
                 .build();
     }
+
+    
+        public void resetPassword(String email, String newPassword) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        System.out.println("RESET EMAIL: [" + email + "]");
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        userRepository.save(user);
+    }
 }

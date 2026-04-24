@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
+import api from "@/utils/axios";
+import { useSearchParams } from "next/navigation";
 
 export default function Page() {
   const router = useRouter();
@@ -18,6 +20,9 @@ export default function Page() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [showHint, setShowHint] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") || "";
 
   // 🔥 Strength logic (0–4)
   const getStrength = (pass: string) => {
@@ -46,7 +51,7 @@ export default function Page() {
     return "bg-gray-200";
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (password.length < 8) {
       toast.error("Password must be at least 8 characters");
       return;
@@ -62,8 +67,22 @@ export default function Page() {
       return;
     }
 
-    toast.success("Password reset successfully");
-    router.push("/login");
+    try {
+      setLoading(true);
+
+      await api.post("/auth/reset-password", {
+        email: searchParams.get("email"),
+        newPassword: password,
+      });
+
+      toast.success("Password reset successfully");
+
+      router.push("/login");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to reset password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -82,6 +101,7 @@ export default function Page() {
       <div className="relative mb-3">
         <input
           type={showPass ? "text" : "password"}
+          value={password}
           placeholder="Enter new password"
           onFocus={() => setShowHint(true)}
           onChange={(e) => setPassword(e.target.value)}

@@ -8,7 +8,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -57,14 +56,12 @@ public class SecurityConfig {
 
             // 🔓 PUBLIC AUTH ENDPOINTS
             .requestMatchers(
-                "/api/auth/register",
-                "/api/auth/login",
+                "/api/auth/**",
                 "/oauth2/**",
                 "/error"
             ).permitAll()
 
             // 🔒 PROTECTED AUTH ENDPOINTS
-            .requestMatchers("/api/auth/me").authenticated()
 
             // everything else
             .anyRequest().authenticated()
