@@ -38,3 +38,28 @@ h5,
 h6 {
   font-family: var(--font-heading);
 }
+
+.progress-bar {
+  width: var(--progress);
+  background: linear-gradient(to right, #fbbf24, #f59e0b);
+}
+
+.experience-slider {
+  height: 6px;
+  border-radius: 9999px;
+  appearance: none;
+  background: linear-gradient(
+    to right,
+    #f59e0b var(--progress, 0%),
+    #e5e5e5 var(--progress, 0%)
+  );
+}
+
+.experience-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f59e0b;
+  cursor: pointer;
+}
