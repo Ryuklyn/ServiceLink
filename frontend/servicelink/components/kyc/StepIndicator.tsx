@@ -12,15 +12,15 @@ const steps = [
 
 export default function StepIndicator({ currentStep = 1 }) {
   return (
-    <div className="w-full flex flex-col items-center">
+    <div className="w-full flex justify-center">
       {/* Step Row */}
-      <div className="flex items-center w-full">
+      <div className="inline-flex items-center gap-2">
         {steps.map((step, index) => {
           const isCompleted = step.id < currentStep;
           const isActive = step.id === currentStep;
 
           return (
-            <div key={step.id} className="flex items-center flex-1">
+            <div key={step.id} className="flex items-center">
               {/* Circle + Label */}
               <div className="flex flex-col items-center relative z-10">
                 <div
@@ -59,16 +59,6 @@ export default function StepIndicator({ currentStep = 1 }) {
               </div>
               {/* Line */}
               {/* {index !== steps.length - 1 && (
-                <div className="flex-1 h-[2px] mx-2 bg-stone-200 relative">
-                  <div
-                    className={`
-                      absolute top-0 left-0 h-full transition-all duration-300
-                      ${step.id < currentStep ? "bg-amber-500 w-full" : "w-0"}
-                    `}
-                  />
-                </div>
-              )} */}
-              {index !== steps.length - 1 && (
                 <div className="flex-1 flex items-center">
                   <div className="w-full h-[2px] bg-stone-200 relative">
                     <div
@@ -76,6 +66,17 @@ export default function StepIndicator({ currentStep = 1 }) {
           absolute top-0 left-0 h-full transition-all duration-300
           ${step.id < currentStep ? "bg-amber-500 w-full" : "w-0"}
         `}
+                    />
+                  </div>
+                </div>
+              )} */}
+              {index !== steps.length - 1 && (
+                <div className="flex items-center mx-4">
+                  <div className="w-16 h-[2px] bg-stone-200 relative">
+                    <div
+                      className={`absolute top-0 left-0 h-full transition-all duration-300
+                        ${step.id < currentStep ? "bg-amber-500 w-full" : "w-0"}
+                      `}
                     />
                   </div>
                 </div>

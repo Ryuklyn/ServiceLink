@@ -8,6 +8,7 @@ import {
   Home,
   PartyPopper,
 } from "lucide-react";
+import { useState } from "react";
 
 /* =========================
    TYPES
@@ -30,29 +31,39 @@ type Personal = {
 };
 
 type Professional = {
-  occupation?: string;
-  organization?: string;
-  designation?: string;
-  monthlyIncome?: string;
-  incomeSource?: string;
+  primaryService?: string;
+  otherService?: string;
+  additionalServices?: string[];
+  experienceYears?: number;
+  primaryDistrict?: string;
+  secondaryDistricts?: string[];
+  travelRadius?: string;
+  bio?: string;
+  image?: string | null;
+  photoConfirmed?: boolean;
 };
 
 type KYC = {
-  docType?: string;
-  docNumber?: string;
-  frontFile?: unknown;
-  selfie?: unknown;
+  citizenshipFront?: File | null;
+  citizenshipBack?: File | null;
+  pan?: File | null;
+  professional?: File[];
+  photo?: File | null;
 };
 
-type Payment = {
-  method?: string;
+// type Payment = {
+//   method?: string;
+// };
+
+type Terms = {
+  agreed?: boolean;
 };
 
 type AllData = {
   personal?: Personal;
   professional?: Professional;
   kyc?: KYC;
-  payment?: Payment;
+  terms?: Terms;
 };
 
 interface Props {
@@ -62,9 +73,9 @@ interface Props {
   onGoToStep?: (step: number) => void;
 }
 
-interface DoneProps {
-  onRestart?: () => void;
-}
+// interface DoneProps {
+//   onRestart?: () => void;
+// }
 
 /* =========================
    UI COMPONENTS
@@ -122,7 +133,8 @@ export function ReviewDone({ allData, onSubmit, onBack, onGoToStep }: Props) {
   const personal = allData.personal ?? {};
   const professional = allData.professional ?? {};
   const kyc = allData.kyc ?? {};
-  const payment = allData.payment ?? {};
+  const [agreed, setAgreed] = useState(allData.terms?.agreed || false);
+  const [error, setError] = useState("");
 
   const addr = personal.currentAddress ?? {};
 
@@ -142,7 +154,9 @@ export function ReviewDone({ allData, onSubmit, onBack, onGoToStep }: Props) {
       <div className="text-center mb-8">
         <CheckCircle2 className="w-12 h-12 text-amber-500 mx-auto mb-3" />
 
-        <h1 className="text-2xl font-bold">Review Your Details</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Review Your Details
+        </h1>
         <p className="text-sm text-stone-500">
           Confirm before submitting application
         </p>
@@ -160,22 +174,85 @@ export function ReviewDone({ allData, onSubmit, onBack, onGoToStep }: Props) {
         </Section>
 
         <Section title="Professional" onEdit={() => onGoToStep?.(2)}>
-          <Row label="Job" value={professional.occupation} />
-          <Row label="Org" value={professional.organization} />
-          <Row label="Role" value={professional.designation} />
-          <Row label="Income" value={professional.monthlyIncome} />
+          <Row label="Primary Service" value={professional.primaryService} />
+          <Row
+            label="Experience"
+            value={
+              professional.experienceYears
+                ? `${professional.experienceYears} years`
+                : ""
+            }
+          />
+          <Row label="District" value={professional.primaryDistrict} />
+          <Row
+            label="Additional Services"
+            value={professional.additionalServices?.join(", ")}
+          />
+          <Row label="Bio" value={professional.bio || "Not provided"} />
         </Section>
 
         <Section title="KYC" onEdit={() => onGoToStep?.(3)}>
-          <Row label="Doc Type" value={kyc.docType} />
-          <Row label="Doc No" value={kyc.docNumber} />
-          <Row label="Front" value={kyc.frontFile ? "Uploaded" : ""} />
-          <Row label="Selfie" value={kyc.selfie ? "Uploaded" : ""} />
+          <Row
+            label="Citizenship Front"
+            value={kyc.citizenshipFront ? "Uploaded" : ""}
+          />
+          <Row
+            label="Citizenship Back"
+            value={kyc.citizenshipBack ? "Uploaded" : ""}
+          />
+          <Row label="Photo" value={kyc.photo ? "Uploaded" : ""} />
+          <Row label="PAN" value={kyc.pan ? "Uploaded" : ""} />
         </Section>
 
-        <Section title="Payment" onEdit={() => onGoToStep?.(4)}>
-          <Row label="Method" value={payment.method} />
-        </Section>
+        {/* TERMS & AGREEMENT */}
+        <div className="bg-stone-50 border border-stone-200 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-stone-700 mb-3">
+            ⚖️ Terms & Agreements
+          </h3>
+
+          <div className="flex flex-col gap-2 text-sm text-stone-600">
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-1" />I agree to ServiceLink
+              Terms of Service
+            </label>
+
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-1" />I agree to Privacy
+              Policy & Data Protection
+            </label>
+
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-1" />I confirm all
+              information is accurate and truthful
+            </label>
+
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-1" />I consent to background
+              verification
+            </label>
+
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-1" />I agree to video call
+              verification (if required)
+            </label>
+
+            {/* MAIN AGREEMENT */}
+            <label className="flex items-start gap-2 mt-2 font-medium text-stone-800">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => {
+                  setAgreed(e.target.checked);
+                  setError("");
+                }}
+                className="mt-1"
+              />
+              I have read and agree to all terms above
+            </label>
+
+            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+          </div>
+        </div>
 
         {/* ACTIONS */}
         <div className="flex justify-between pt-4">
@@ -200,27 +277,27 @@ export function ReviewDone({ allData, onSubmit, onBack, onGoToStep }: Props) {
   );
 }
 
-/* =========================
-   DONE STEP
-========================= */
-export function DoneStep({ onRestart }: DoneProps) {
-  return (
-    <div className="text-center py-10">
-      <PartyPopper className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+// /* =========================
+//    DONE STEP
+// ========================= */
+// export function DoneStep({ onRestart }: DoneProps) {
+//   return (
+//     <div className="text-center py-10">
+//       <PartyPopper className="w-12 h-12 text-amber-500 mx-auto mb-4" />
 
-      <h1 className="text-2xl font-bold">You're all set!</h1>
+//       <h1 className="text-2xl font-bold">You're all set!</h1>
 
-      <p className="text-stone-500 mt-2 mb-6">
-        Your application is under review.
-      </p>
+//       <p className="text-stone-500 mt-2 mb-6">
+//         Your application is under review.
+//       </p>
 
-      <button
-        onClick={onRestart}
-        className="inline-flex items-center gap-2 px-6 py-2 bg-amber-500 text-white rounded-lg"
-      >
-        <Home className="w-4 h-4" />
-        Back Home
-      </button>
-    </div>
-  );
-}
+//       <button
+//         onClick={onRestart}
+//         className="inline-flex items-center gap-2 px-6 py-2 bg-amber-500 text-white rounded-lg"
+//       >
+//         <Home className="w-4 h-4" />
+//         Back Home
+//       </button>
+//     </div>
+//   );
+// }

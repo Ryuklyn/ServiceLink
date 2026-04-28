@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, MapPin, ArrowRight } from "lucide-react";
 import {
   FormInput,
@@ -45,6 +45,7 @@ type FormErrors = Partial<
 
 interface PersonalInfoStepProps {
   onNext?: (data: FormState) => void;
+  initialData?: Partial<FormState>;
 }
 
 /* =========================
@@ -67,17 +68,35 @@ const emptyAddress: Address = {
 /* =========================
    COMPONENT
 ========================= */
-export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
+export default function PersonalInfoStep({
+  onNext,
+  initialData,
+}: PersonalInfoStepProps) {
   const [form, setForm] = useState<FormState>({
-    fullName: "",
-    dob: "",
-    gender: "",
-    phone: "",
-    email: "",
-    currentAddress: { ...emptyAddress },
-    permanentAddress: { ...emptyAddress },
-    sameAddress: true,
+    fullName: initialData?.fullName || "",
+    dob: initialData?.dob || "",
+    gender: initialData?.gender || "",
+    phone: initialData?.phone || "",
+    email: initialData?.email || "",
+    currentAddress: initialData?.currentAddress || { ...emptyAddress },
+    permanentAddress: initialData?.permanentAddress || { ...emptyAddress },
+    sameAddress: initialData?.sameAddress ?? true,
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({
+        fullName: initialData.fullName || "",
+        dob: initialData.dob || "",
+        gender: initialData.gender || "",
+        phone: initialData.phone || "",
+        email: initialData.email || "",
+        currentAddress: initialData.currentAddress || { ...emptyAddress },
+        permanentAddress: initialData.permanentAddress || { ...emptyAddress },
+        sameAddress: initialData.sameAddress ?? true,
+      });
+    }
+  }, [initialData]);
 
   const [errors, setErrors] = useState<FormErrors>({});
 

@@ -11,7 +11,8 @@ import StepIndicator from "@/components/kyc/StepIndicator";
 import PersonalInfoStep from "@/components/kyc/PersonalInfoStep";
 import ProfessionalInfoStep from "@/components/kyc/ProfessionalInfoStep";
 import KYCStep from "@/components/kyc/KycStep";
-import { ReviewDone, DoneStep } from "@/components/kyc/ReviewDone";
+import { ReviewDone } from "@/components/kyc/ReviewDone";
+import DoneStep from "@/components/kyc/DoneStep";
 
 /* =========================
    TYPES
@@ -39,7 +40,11 @@ export default function ProviderRegistrationPage() {
 
   /* ── KYC step state ───────────────────── */
   const [currentStep, setCurrentStep] = useState<number>(1);
-  const [allData, setAllData] = useState<AllData>({});
+  const [allData, setAllData] = useState<AllData>({
+    personal: {},
+    professional: {},
+    kyc: {},
+  });
 
   /* =========================
      OTP PHASE HANDLERS
@@ -86,7 +91,7 @@ export default function ProviderRegistrationPage() {
   const handleSubmit = useCallback(() => {
     console.log("Submitting KYC:", { phone: verifiedPhone, ...allData });
     // TODO: await api.post("/kyc/submit", { phone: verifiedPhone, ...allData });
-    setCurrentStep(6);
+    setCurrentStep(5);
   }, [allData, verifiedPhone]);
 
   const resetFlow = useCallback(() => {
@@ -104,35 +109,34 @@ export default function ProviderRegistrationPage() {
     switch (currentStep) {
       case 1:
         return (
-          <PersonalInfoStep onNext={(data) => handleNext("personal", data)} />
+          <PersonalInfoStep
+            initialData={allData.personal}
+            onNext={(data) => handleNext("personal", data)}
+          />
         );
       case 2:
         return (
           <ProfessionalInfoStep
+            initialData={allData.professional}
             onNext={(data) => handleNext("professional", data)}
             onBack={() => goTo(1)}
           />
         );
+
       case 3:
         return (
           <KYCStep
+            initialData={allData.kyc}
             onNext={(data) => handleNext("kyc", data)}
             onBack={() => goTo(2)}
           />
         );
-      //   case 4:
-      // return (
-      //   <PaymentStep
-      //     onNext={(data) => handleNext("payment", data)}
-      //     onBack={() => goTo(3)}
-      //   />
-      // );
       case 4:
         return (
           <ReviewDone
             allData={allData}
             onSubmit={handleSubmit}
-            onBack={() => goTo(4)}
+            onBack={() => goTo(3)}
             onGoToStep={goTo}
           />
         );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import {
   Upload,
   Camera,
@@ -26,6 +26,7 @@ type KYCFiles = {
 interface Props {
   onNext?: (data: KYCFiles) => void;
   onBack?: () => void;
+  initialData?: Partial<KYCFiles>;
 }
 
 /* =========================
@@ -140,7 +141,11 @@ function KYCItem({ title, required, file, children }: any) {
 /* =========================
    MAIN COMPONENT
 ========================= */
-export default function KYCStepRedesign({ onNext, onBack }: Props) {
+export default function KYCStepRedesign({
+  onNext,
+  onBack,
+  initialData,
+}: Props) {
   const [files, setFiles] = useState<KYCFiles>({
     citizenshipFront: null,
     citizenshipBack: null,
@@ -148,6 +153,18 @@ export default function KYCStepRedesign({ onNext, onBack }: Props) {
     professional: [],
     photo: null,
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFiles({
+        citizenshipFront: initialData.citizenshipFront || null,
+        citizenshipBack: initialData.citizenshipBack || null,
+        pan: initialData.pan || null,
+        professional: initialData.professional || [],
+        photo: initialData.photo || null,
+      });
+    }
+  }, [initialData]);
 
   const update = (key: keyof KYCFiles, value: any) => {
     setFiles((prev) => ({ ...prev, [key]: value }));

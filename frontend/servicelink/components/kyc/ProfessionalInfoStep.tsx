@@ -100,6 +100,7 @@ const bioGuidelines = [
 interface Props {
   onNext?: (data: FormState) => void;
   onBack?: () => void;
+  initialData?: Partial<FormState>;
 }
 
 /* =========================
@@ -120,7 +121,11 @@ function getExperienceLabel(years: number): string {
 /* =========================
    COMPONENT
 ========================= */
-export default function SkillsServicesForm({ onNext, onBack }: Props) {
+export default function SkillsServicesForm({
+  onNext,
+  onBack,
+  initialData,
+}: Props) {
   const [primaryService, setPrimaryService] = useState("");
   const [otherService, setOtherService] = useState("");
   const [additionalServices, setAdditionalServices] = useState<string[]>([]);
@@ -195,6 +200,20 @@ export default function SkillsServicesForm({ onNext, onBack }: Props) {
     };
     img.src = url;
   };
+  useEffect(() => {
+    if (initialData) {
+      setPrimaryService(initialData.primaryService || "");
+      setOtherService(initialData.otherService || "");
+      setAdditionalServices(initialData.additionalServices || []);
+      setExperienceYears(initialData.experienceYears || 0);
+      setPrimaryDistrict(initialData.primaryDistrict || "");
+      setSecondaryDistricts(initialData.secondaryDistricts || []);
+      setTravelRadius(initialData.travelRadius || "selected");
+      setBio(initialData.bio || "");
+      setImage(initialData.image || null);
+      setPhotoConfirmed(initialData.photoConfirmed || false);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     return () => {
