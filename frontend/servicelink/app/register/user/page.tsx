@@ -159,7 +159,7 @@ export default function SignupPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={step === 2}
-                  className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 placeholder:text-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
                   placeholder="John Doe"
                 />
               </div>
@@ -177,7 +177,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={step === 2}
-                  className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full pl-10 text-gray-900 placeholder:text-gray-200 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
                   placeholder="you@email.com"
                 />
 
@@ -206,7 +206,7 @@ export default function SignupPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full pl-10 pr-10 py-3 border border-gray-200 text-gray-900 placeholder:text-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="Enter your password"
                   />
 
