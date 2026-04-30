@@ -276,28 +276,3 @@ export function ReviewDone({ allData, onSubmit, onBack, onGoToStep }: Props) {
     </div>
   );
 }
-
-// /* =========================
-//    DONE STEP
-// ========================= */
-// export function DoneStep({ onRestart }: DoneProps) {
-//   return (
-//     <div className="text-center py-10">
-//       <PartyPopper className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-
-//       <h1 className="text-2xl font-bold">You're all set!</h1>
-
-//       <p className="text-stone-500 mt-2 mb-6">
-//         Your application is under review.
-//       </p>
-
-//       <button
-//         onClick={onRestart}
-//         className="inline-flex items-center gap-2 px-6 py-2 bg-amber-500 text-white rounded-lg"
-//       >
-//         <Home className="w-4 h-4" />
-//         Back Home
-//       </button>
-//     </div>
-//   );
-// }
