@@ -1,0 +1,118 @@
+package com.servicelink.mapper;
+
+import com.servicelink.core.dto.request.KycSubmitRequestDTO;
+import com.servicelink.core.dto.response.KycSubmitResponseDTO;
+import com.servicelink.core.dto.response.KycStatusResponseDTO;
+import com.servicelink.core.model.KycStatus;
+import com.servicelink.core.model.KycSubmission;
+import com.servicelink.core.model.User;
+import org.springframework.stereotype.Component;
+
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Component
+public class KycMapper {
+
+    // ── Entity construction ────────────────────────────────────────────────
+
+    public KycSubmission toEntity(
+            KycSubmitRequestDTO dto,
+            User user,
+            String citizenshipFrontPath,
+            String citizenshipBackPath,
+            String photoPath,
+            String panPath,
+            String professionalCertPaths
+    ) {
+        return KycSubmission.builder()
+                .user(user)
+                .referenceNumber(generateReferenceNumber())
+                .fullName(dto.getFullName())
+                .dob(dto.getDob())
+                .gender(dto.getGender())
+                .phone(dto.getPhone())
+                .province(dto.getProvince())
+                .district(dto.getDistrict())
+                .municipality(dto.getMunicipality())
+                .ward(dto.getWard())
+                .tole(dto.getTole())
+                .primaryService(dto.getPrimaryService())
+                .otherService(dto.getOtherService())
+                .additionalServices(toJson(dto.getAdditionalServices()))
+                .experienceYears(dto.getExperienceYears())
+                .primaryDistrict(dto.getPrimaryDistrict())
+                .secondaryDistricts(toJson(dto.getSecondaryDistricts()))
+                .travelRadius(dto.getTravelRadius())
+                .bio(dto.getBio())
+                .citizenshipFrontPath(citizenshipFrontPath)
+                .citizenshipBackPath(citizenshipBackPath)
+                .photoPath(photoPath)
+                .panPath(panPath)
+                .professionalCertPaths(professionalCertPaths)
+                .status(KycStatus.PENDING)
+                .submittedAt(Instant.now())
+                .build();
+    }
+
+    // ── Response mapping ───────────────────────────────────────────────────
+
+    public KycSubmitResponseDTO toSubmitResponse(KycSubmission submission, String email) {
+        return KycSubmitResponseDTO.builder()
+                .referenceNumber(submission.getReferenceNumber())
+                .status(submission.getStatus().name())
+                .submittedAt(submission.getSubmittedAt())
+                .applicantName(submission.getFullName())
+                .applicantEmail(email)
+                .message("Application received. Review takes 2–3 business days.")
+                .build();
+    }
+
+    public KycStatusResponseDTO toStatusResponse(KycSubmission submission) {
+        return KycStatusResponseDTO.builder()
+                .referenceNumber(submission.getReferenceNumber())
+                .status(submission.getStatus().name())
+                .submittedAt(submission.getSubmittedAt())
+                .reviewedAt(submission.getReviewedAt())
+                .reviewNotes(submission.getReviewNotes())
+                .build();
+    }
+
+    // ── JSON helpers (no ObjectMapper needed) ──────────────────────────────
+
+    /**
+     * ["Electrical Work", "Plumbing"] → ["Electrical Work","Plumbing"]
+     * Stores as a minimal JSON array string in the DB column.
+     */
+    private String toJson(List<String> list) {
+        if (list == null || list.isEmpty()) return "[]";
+        String joined = list.stream()
+                .map(s -> "\"" + s.replace("\"", "\\\"") + "\"")
+                .collect(Collectors.joining(","));
+        return "[" + joined + "]";
+    }
+
+    /**
+     * ["Electrical Work","Plumbing"] → List<String>
+     * Simple parser — works for flat string arrays with no nested objects.
+     */
+    public List<String> fromJson(String json) {
+        if (json == null || json.isBlank() || json.equals("[]")) return List.of();
+        // Strip outer brackets, split on "," boundaries between quoted values
+        String inner = json.trim().replaceAll("^\\[|\\]$", "");
+        return Arrays.stream(inner.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
+                .map(s -> s.trim().replaceAll("^\"|\"$", ""))
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toList());
+    }
+
+    // ── Reference number ───────────────────────────────────────────────────
+
+    private String generateReferenceNumber() {
+        return "SVC-" + java.time.Year.now().getValue()
+                + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}
