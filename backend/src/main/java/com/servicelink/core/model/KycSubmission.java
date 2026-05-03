@@ -1,13 +1,11 @@
 package com.servicelink.core.model;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-// import lombok.*;
 import java.time.Instant;
 
 @Entity
@@ -22,47 +20,64 @@ public class KycSubmission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", unique = true)
+    /**
+     * The User entity for existing registered users.
+     * NULL for new provider applicants who haven't created an account yet.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
+
+    /**
+     * The primary identifier used at verification time — E.164 phone or email.
+     * Populated for ALL submissions (new and existing users).
+     */
+    @Column(nullable = false, unique = true)
+    private String applicantIdentifier;
 
     @Column(nullable = false, unique = true)
     private String referenceNumber;
 
-    // Personal
+    // ── Personal ──────────────────────────────────────────────────────────────
     private String fullName;
     private String dob;
     private String gender;
     private String phone;
 
-    // Address (current)
+    // ── Address ───────────────────────────────────────────────────────────────
     private String province;
     private String district;
     private String municipality;
     private String ward;
     private String tole;
 
-    // Professional
-    private String primaryService;
-    private String otherService;
-    private String additionalServices;   // JSON array stored as text
+    // ── Professional ──────────────────────────────────────────────────────────
+    private String  primaryService;
+    private String  otherService;
+    @Column(columnDefinition = "TEXT")
+    private String  additionalServices;     // JSON array stored as text
     private Integer experienceYears;
-    private String primaryDistrict;
-    private String secondaryDistricts;   // JSON array stored as text
-    private String travelRadius;
-    private String bio;
+    private String  primaryDistrict;
+    @Column(columnDefinition = "TEXT")
+    private String  secondaryDistricts;     // JSON array stored as text
+    private String  travelRadius;
+    @Column(columnDefinition = "TEXT")
+    private String  bio;
 
-    // Document paths (S3/Minio keys)
+    // ── Document paths ────────────────────────────────────────────────────────
     private String citizenshipFrontPath;
     private String citizenshipBackPath;
     private String photoPath;
     private String panPath;
-    private String professionalCertPaths; // JSON array
+    @Column(columnDefinition = "TEXT")
+    private String professionalCertPaths;   // JSON array
 
+    // ── Status ────────────────────────────────────────────────────────────────
     @Enumerated(EnumType.STRING)
     private KycStatus status;
 
     private Instant submittedAt;
     private Instant reviewedAt;
-    private String reviewNotes;
+    @Column(columnDefinition = "TEXT")
+    private String  reviewNotes;
 }

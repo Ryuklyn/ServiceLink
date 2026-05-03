@@ -1,339 +1,262 @@
 "use client";
 
-import {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  KeyboardEvent,
-  ClipboardEvent,
-} from "react";
-import {
-  Phone,
-  Timer,
-  Clock,
-  RefreshCw,
-  ChevronLeft,
-  ShieldCheck,
-  PhoneCall,
-} from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Phone, Mail, Clock, ChevronLeft, ShieldCheck, ExternalLink } from "lucide-react";
+import { OtpInput } from "@/components/kyc/OtpInput";
+import { otpSchema } from "@/lib/validators/kyc.schemas";
+import { otpApi } from "@/lib/api/otpApi";
+import type { ContactMode } from "@/components/kyc/PhoneStep";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const OTP_TTL      = 600;   // 10 min — matches backend
+const RESEND_WAIT  = 30;    // seconds between resend attempts
+const MAX_RESENDS  = 3;
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface OtpStepProps {
-  phone: string;
-  onVerified: () => void;
-  onChangePhone: () => void;
+  /** The normalized contact value (E.164 phone or email). */
+  contact: string;
+  mode: ContactMode;
+  /** WhatsApp fallback link if that was the delivery method. */
+  whatsappLink?: string;
+  /** Called after successful OTP verification — receives the providerToken. */
+  onVerified: (providerToken: string) => void;
+  /** Go back to phone/email entry. */
+  onChangeContact: () => void;
 }
 
-const OTP_LENGTH = 6;
-const COUNTDOWN_SECONDS = 600;
-const RESEND_COOLDOWN = 30;
-const MAX_RESENDS = 3;
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function OtpStep({
-  phone,
+  contact,
+  mode,
+  whatsappLink,
   onVerified,
-  onChangePhone,
+  onChangeContact,
 }: OtpStepProps) {
-  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
-  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
-  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
+  const [otp,         setOtp]         = useState("");
+  const [error,       setError]       = useState("");
+  const [verifying,   setVerifying]   = useState(false);
+  const [resending,   setResending]   = useState(false);
+  const [countdown,   setCountdown]   = useState(OTP_TTL);
+  const [resendWait,  setResendWait]  = useState(RESEND_WAIT);
   const [resendCount, setResendCount] = useState(0);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [resending, setResending] = useState(false);
 
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  /* ── Timers ───────────────────────── */
+  // Single interval ticks both countdowns
   useEffect(() => {
     const t = setInterval(() => {
-      setCountdown((c) => (c > 0 ? c - 1 : 0));
+      setCountdown((c)  => Math.max(c - 1, 0));
+      setResendWait((c) => Math.max(c - 1, 0));
     }, 1000);
     return () => clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    const t = setInterval(() => {
-      setResendCooldown((c) => (c > 0 ? c - 1 : 0));
-    }, 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    inputRefs.current[0]?.focus();
-  }, []);
-
-  /* ── Utils ───────────────────────── */
   const formatTime = (s: number) =>
-    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(
-      2,
-      "0",
-    )}`;
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-  /* ── OTP Handlers ────────────────── */
-  const handleChange = (i: number, val: string) => {
-    const digit = val.replace(/\D/g, "").slice(-1);
-
-    setOtp((prev) => {
-      const next = [...prev];
-      next[i] = digit;
-      return next;
-    });
-
-    setError("");
-
-    if (digit && i < OTP_LENGTH - 1) {
-      inputRefs.current[i + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (i: number, e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace") {
-      if (!otp[i] && i > 0) {
-        inputRefs.current[i - 1]?.focus();
-      }
-
-      setOtp((prev) => {
-        const next = [...prev];
-        next[i] = "";
-        return next;
-      });
-    }
-
-    if (e.key === "Enter") handleVerify();
-  };
-
-  const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-
-    const pasted = e.clipboardData
-      .getData("text")
-      .replace(/\D/g, "")
-      .slice(0, OTP_LENGTH);
-
-    if (!pasted) return;
-
-    const next = [...otp];
-    pasted.split("").forEach((d, idx) => {
-      if (idx < OTP_LENGTH) next[idx] = d;
-    });
-
-    setOtp(next);
-    inputRefs.current[Math.min(pasted.length, OTP_LENGTH) - 1]?.focus();
-  };
-
-  /* ── Verify ──────────────────────── */
+  // ── Verify ──────────────────────────────────────────────────────────────────
   const handleVerify = useCallback(async () => {
-    const code = otp.join("");
-
-    if (code.length < OTP_LENGTH) {
-      setError("Please enter all 6 digits.");
+    // Client-side format validation
+    const parsed = otpSchema.safeParse({ otp });
+    if (!parsed.success) {
+      setError(parsed.error.errors[0].message);
       return;
     }
-
     if (countdown <= 0) {
-      setError("OTP has expired.");
+      setError("OTP has expired. Please request a new one.");
       return;
     }
 
-    setLoading(true);
-
+    setVerifying(true);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
-      onVerified();
-    } catch {
-      setError("Invalid OTP.");
-      setOtp(Array(OTP_LENGTH).fill(""));
-      inputRefs.current[0]?.focus();
+      const res = mode === "phone"
+        ? await otpApi.verifyPhoneOtp(contact, otp)
+        : await otpApi.verifyEmailOtp(contact, otp);
+
+      if (!res.verified || !res.providerToken) {
+        setError(res.message ?? "Invalid OTP. Please try again.");
+        setOtp("");
+        return;
+      }
+      onVerified(res.providerToken);
+    } catch (err: any) {
+      setError(err?.message ?? "Invalid OTP. Please try again.");
+      setOtp("");
     } finally {
-      setLoading(false);
+      setVerifying(false);
     }
-  }, [otp, countdown, onVerified]);
+  }, [otp, countdown, contact, mode, onVerified]);
 
-  /* ── Resend ─────────────────────── */
+  // ── Resend ──────────────────────────────────────────────────────────────────
   const handleResend = useCallback(async () => {
-    if (resendCooldown > 0 || resendCount >= MAX_RESENDS) return;
-
+    if (resendWait > 0 || resendCount >= MAX_RESENDS) return;
     setResending(true);
-
     try {
-      await new Promise((r) => setTimeout(r, 800));
-
-      setCountdown(COUNTDOWN_SECONDS);
-      setResendCooldown(RESEND_COOLDOWN);
+      if (mode === "phone") {
+        await otpApi.sendPhoneOtp(contact);
+      } else {
+        await otpApi.sendEmailOtp(contact);
+      }
+      setCountdown(OTP_TTL);
+      setResendWait(RESEND_WAIT);
       setResendCount((c) => c + 1);
-      setOtp(Array(OTP_LENGTH).fill(""));
+      setOtp("");
       setError("");
-
-      inputRefs.current[0]?.focus();
-    } catch {
-      setError("Failed to resend OTP.");
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to resend OTP.");
     } finally {
       setResending(false);
     }
-  }, [resendCooldown, resendCount]);
+  }, [resendWait, resendCount, contact, mode]);
 
-  /* ── Derived ────────────────────── */
-  const isComplete = otp.every(Boolean);
-  const isExpired = countdown <= 0;
-  const canResend =
-    resendCooldown === 0 && resendCount < MAX_RESENDS && !isExpired;
+  // ── Derived ─────────────────────────────────────────────────────────────────
+  const isExpired  = countdown <= 0;
+  const isComplete = otp.length === 6;
+  const canResend  = resendWait === 0 && resendCount < MAX_RESENDS && !isExpired;
+  const btnDisabled = !isComplete || isExpired || verifying;
 
-  /* ── UI ─────────────────────────── */
+  const displayContact = mode === "phone"
+    ? contact   // already E.164
+    : contact;
+
   return (
     <div className="h-screen w-screen flex flex-col lg:flex-row bg-white overflow-hidden">
-      {/* LEFT */}
+
+      {/* ── Left panel ── */}
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-[#1E3A8A] to-[#2563eb] items-center justify-center text-white p-12">
         <div className="text-center max-w-sm">
           <div className="w-24 h-24 bg-orange-500 rounded-3xl flex items-center justify-center mb-10 mx-auto">
-            <ShieldCheck className="w-12 h-12" />
+            <ShieldCheck className="w-12 h-12" aria-hidden />
           </div>
           <h1 className="text-4xl font-bold mb-4">Secure Verification</h1>
           <p className="text-blue-100">
-            Enter the OTP sent to your phone to continue securely.
+            Enter the OTP sent to your {mode} to continue securely.
           </p>
         </div>
       </div>
 
-      {/* RIGHT */}
+      {/* ── Right panel ── */}
       <div className="flex-1 flex items-center justify-center bg-[#f0f4ff] px-4 lg:px-16 overflow-y-auto">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-stone-100">
+
           {/* Header */}
           <div className="p-6 border-b flex items-center gap-3">
-            <ShieldCheck className="text-[#1E3A8A]" />
+            <ShieldCheck className="text-[#1E3A8A]" aria-hidden />
             <div>
-              <h2 className="font-bold text-[#1E3A8A]">
-                Enter Verification Code
-              </h2>
-
+              <h2 className="font-bold text-[#1E3A8A]">Enter Verification Code</h2>
               <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                <Phone size={12} className="text-[#1E3A8A]" />
-                <span>
-                  Sent to:{" "}
-                  <strong className="text-[#1E3A8A]">+977 {phone}</strong>
-                </span>
+                {mode === "phone"
+                  ? <Phone size={12} className="text-[#1E3A8A]" aria-hidden />
+                  : <Mail  size={12} className="text-[#1E3A8A]" aria-hidden />}
+                <span>Sent to: <strong className="text-[#1E3A8A]">{displayContact}</strong></span>
               </div>
             </div>
           </div>
 
           {/* Body */}
-          <div className="px-6 py-6 space-y-6">
-            {/* OTP */}
+          <div className="px-6 py-6 space-y-5">
+
+            {/* WhatsApp reminder banner */}
+            {whatsappLink && (
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-green-50 border border-green-200
+                  text-green-800 px-4 py-3 rounded-xl text-sm font-medium hover:bg-green-100 transition"
+              >
+                <ExternalLink size={14} aria-hidden />
+                Didn't get the code? Tap to re-open WhatsApp
+              </a>
+            )}
+
+            {/* OTP Inputs */}
             <div>
-              <p className="text-xs font-semibold text-[#1E3A8A] mb-3 uppercase">
+              <p className="text-xs font-semibold text-[#1E3A8A] mb-3 uppercase tracking-wide">
                 6-Digit Code
               </p>
-
-              <div className="flex gap-2">
-                {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => (inputRefs.current[i] = el)}
-                    type="tel"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleChange(i, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(i, e)}
-                    onPaste={handlePaste}
-                    className={`w-full aspect-square text-center text-xl font-bold rounded-xl border-2 text-[#1E3A8A] focus:border-[#E8683F] focus:bg-[#fff5f2] outline-none transition disabled:cursor-not-allowed
-                    ${
-                      error
-                        ? "border-red-400 bg-red-50"
-                        : digit
-                          ? "border-[#E8683F] bg-[#fff5f2]"
-                          : "border-gray-200"
-                    }`}
-                  />
-                ))}
-              </div>
-
-              {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
+              <OtpInput
+                value={otp}
+                onChange={(v) => { setOtp(v); setError(""); }}
+                error={error}
+              />
             </div>
 
-            {/* Timer */}
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              {/* <Timer size={14} /> */}
+            {/* Live countdown */}
+            <div role="status" aria-live="polite" aria-atomic="true">
               {isExpired ? (
-                <div className="flex items-center gap-2 w-full bg-red-200 border border-red-400 text-red-700 px-3 py-2 rounded-md text-sm">
-                  <Clock className="w-4 h-4" />
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-md text-sm">
+                  <Clock className="w-4 h-4" aria-hidden />
                   <span>Code expired. Please request a new one.</span>
                 </div>
               ) : (
                 <span className="text-gray-600 text-sm">
-                  Expires in {formatTime(countdown)}
+                  Expires in <strong>{formatTime(countdown)}</strong>
                 </span>
               )}
             </div>
 
-            {/* Button */}
+            {/* Verify button */}
             <button
               onClick={handleVerify}
-              disabled={!isComplete || isExpired || loading}
-              className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 transition-all text-l font-semibold
-                  ${
-                    !isComplete || isExpired || loading
-                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                      : "bg-[#E8683F] text-white hover:bg-orange-600"
-                  }
-                `}
+              disabled={btnDisabled}
+              aria-busy={verifying}
+              className={`w-full py-3 rounded-xl flex items-center justify-center gap-2
+                transition-all text-base font-semibold
+                ${btnDisabled
+                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                  : "bg-[#E8683F] text-white hover:bg-orange-600 active:scale-[0.98]"
+                }`}
             >
-              <ShieldCheck className="w-5 h-5" />
-
-              {loading
-                ? "Verifying..."
+              <ShieldCheck className="w-5 h-5" aria-hidden />
+              {verifying
+                ? "Verifying…"
                 : !isComplete
                   ? "Enter 6-digit OTP"
                   : "Verify OTP"}
             </button>
 
-            <hr className="border-t my-4 mt-0" />
-
-            <div className="text-center text-xs text-gray-400 mb-0">
-              Didn't receive the code?
-            </div>
+            <hr className="border-stone-100" />
 
             {/* Resend */}
-            <div className="text-center text-sm mt-1">
-              {/* {canResend ? (
+            <div className="text-center space-y-1">
+              <p className="text-xs text-gray-400">Didn't receive the code?</p>
+              {resendCount >= MAX_RESENDS ? (
+                <p className="text-xs text-red-400">Maximum resends reached.</p>
+              ) : canResend ? (
                 <button
                   onClick={handleResend}
-                  className="text-orange-500 hover:underline text-center flex items-center justify-center gap-1 mx-auto text-semibold text-sm"
+                  disabled={resending}
+                  className="text-orange-500 hover:underline font-semibold text-sm"
                 >
-                  Resend OTP
+                  {resending ? "Sending…" : "Resend OTP"}
                 </button>
               ) : (
                 <p className="text-gray-400 text-xs">
-                  Resend available in {resendCooldown}s
-                </p>
-              )} */}
-              {canResend ? (
-                <button
-                  onClick={handleResend}
-                  className="text-orange-500 hover:underline text-center flex items-center justify-center gap-1 mx-auto font-semibold text-sm"
-                >
-                  Resend OTP
-                </button>
-              ) : (
-                <p className="text-gray-400 text-xs text-center">
-                  Resend available in{" "}
-                  <span className="font-semibold text-[#1E3A8A]">
-                    {resendCooldown}s
-                  </span>
+                  Resend in{" "}
+                  <strong className="text-[#1E3A8A]">{resendWait}s</strong>
+                  {resendCount > 0 && ` · ${MAX_RESENDS - resendCount} remaining`}
                 </p>
               )}
             </div>
 
-            {/* Change */}
-            <div className="text-xs text-center text-gray-400 mt-4 mb-0">
-              Wrong number?{" "}
+            {/* Change contact */}
+            <div className="text-center">
+              <p className="text-xs text-gray-400">
+                Wrong {mode === "phone" ? "number" : "email"}?
+              </p>
+              <button
+                onClick={onChangeContact}
+                className="mt-1 text-sm text-[#1E3A8A] flex items-center justify-center
+                  gap-1 mx-auto font-semibold hover:underline"
+              >
+                <ChevronLeft size={14} aria-hidden />
+                Change {mode === "phone" ? "Phone Number" : "Email Address"}
+              </button>
             </div>
-            <button
-              onClick={onChangePhone}
-              className="text-sm text-[#1E3A8A] flex items-center justify-center gap-1 text-center mx-auto text-extrabold mt-2"
-            >
-              <ChevronLeft size={14} />
-              Change Phone Number
-            </button>
+
           </div>
         </div>
       </div>

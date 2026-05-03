@@ -32,7 +32,7 @@
 //}
 
 
-package com.servicelink.mapper;
+package com.servicelink.core.mapper;
 
 import com.servicelink.core.dto.request.RegisterRequestDTO;
 import com.servicelink.core.dto.response.UserResponseDTO;

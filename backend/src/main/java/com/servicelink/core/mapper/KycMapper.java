@@ -1,4 +1,4 @@
-package com.servicelink.mapper;
+package com.servicelink.core.mapper;
 
 import com.servicelink.core.dto.request.KycSubmitRequestDTO;
 import com.servicelink.core.dto.response.KycSubmitResponseDTO;
@@ -17,19 +17,21 @@ import java.util.stream.Collectors;
 @Component
 public class KycMapper {
 
-    // ── Entity construction ────────────────────────────────────────────────
+    // ─── Entity construction ──────────────────────────────────────────────────
 
     public KycSubmission toEntity(
             KycSubmitRequestDTO dto,
-            User user,
-            String citizenshipFrontPath,
-            String citizenshipBackPath,
-            String photoPath,
-            String panPath,
-            String professionalCertPaths
+            User                user,               // may be null for new applicants
+            String              applicantIdentifier, // phone (E.164) or email
+            String              citizenshipFrontPath,
+            String              citizenshipBackPath,
+            String              photoPath,
+            String              panPath,
+            String              professionalCertPaths
     ) {
         return KycSubmission.builder()
                 .user(user)
+                .applicantIdentifier(applicantIdentifier)
                 .referenceNumber(generateReferenceNumber())
                 .fullName(dto.getFullName())
                 .dob(dto.getDob())
@@ -58,7 +60,7 @@ public class KycMapper {
                 .build();
     }
 
-    // ── Response mapping ───────────────────────────────────────────────────
+    // ─── Response mapping ─────────────────────────────────────────────────────
 
     public KycSubmitResponseDTO toSubmitResponse(KycSubmission submission, String email) {
         return KycSubmitResponseDTO.builder()
@@ -81,12 +83,8 @@ public class KycMapper {
                 .build();
     }
 
-    // ── JSON helpers (no ObjectMapper needed) ──────────────────────────────
+    // ─── JSON helpers ─────────────────────────────────────────────────────────
 
-    /**
-     * ["Electrical Work", "Plumbing"] → ["Electrical Work","Plumbing"]
-     * Stores as a minimal JSON array string in the DB column.
-     */
     private String toJson(List<String> list) {
         if (list == null || list.isEmpty()) return "[]";
         String joined = list.stream()
@@ -95,13 +93,8 @@ public class KycMapper {
         return "[" + joined + "]";
     }
 
-    /**
-     * ["Electrical Work","Plumbing"] → List<String>
-     * Simple parser — works for flat string arrays with no nested objects.
-     */
     public List<String> fromJson(String json) {
         if (json == null || json.isBlank() || json.equals("[]")) return List.of();
-        // Strip outer brackets, split on "," boundaries between quoted values
         String inner = json.trim().replaceAll("^\\[|\\]$", "");
         return Arrays.stream(inner.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
                 .map(s -> s.trim().replaceAll("^\"|\"$", ""))
@@ -109,7 +102,7 @@ public class KycMapper {
                 .collect(Collectors.toList());
     }
 
-    // ── Reference number ───────────────────────────────────────────────────
+    // ─── Reference number ─────────────────────────────────────────────────────
 
     private String generateReferenceNumber() {
         return "SVC-" + java.time.Year.now().getValue()

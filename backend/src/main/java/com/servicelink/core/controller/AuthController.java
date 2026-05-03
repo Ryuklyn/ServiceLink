@@ -5,39 +5,40 @@ import com.servicelink.core.dto.request.LoginRequestDTO;
 import com.servicelink.core.dto.request.OtpRequestDto;
 import com.servicelink.core.dto.request.RegisterRequestDTO;
 import com.servicelink.core.dto.response.AuthResponseDTO;
+import com.servicelink.core.dto.response.OtpSendResponseDTO;
+import com.servicelink.core.dto.response.OtpVerifyResponseDTO;
 import com.servicelink.core.dto.response.UserResponseDTO;
 import com.servicelink.core.model.User;
 import com.servicelink.core.model.UserProfile;
 import com.servicelink.core.repository.UserRepository;
+import com.servicelink.core.security.JwtService;
 import com.servicelink.core.service.AuthService;
 import com.servicelink.core.service.EmailService;
 import com.servicelink.core.service.OtpService;
-import com.servicelink.core.service.OtpVerification;
+import com.servicelink.core.service.PhoneOtpService;
 
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
-import java.util.Map;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-
-//@CrossOrigin(origins = "*")
 public class AuthController {
 
-    // private final ForgetPassword forgetPassword;
     private final UserRepository userRepository;
-    // private final OtpVerification otpVerification;
-    private final AuthService authService;
-     private final OtpService otpService;
-    private final EmailService emailService;
+    private final AuthService    authService;
+    private final OtpService     otpService;
+    private final EmailService   emailService;
+    private final PhoneOtpService phoneOtpService;
+    private final JwtService     jwtService;
+
+    // ─── Standard registration / login ────────────────────────────────────────
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(@Valid @RequestBody RegisterRequestDTO request) {
@@ -49,48 +50,14 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @PostMapping("/send-otp")
-    public ResponseEntity<?> sendOtp(@RequestBody OtpRequestDto request) {
-
-        String otp = otpService.generateOtp(request.getEmail());
-        System.out.println("Generated OTP: " + otp); // For testing purposes
-        System.out.println("Email: " + request.getEmail());
-
-        emailService.sendOtpEmail(request.getEmail(), otp);
-
-        return ResponseEntity.ok("OTP sent successfully");
-    }
-
-    @PostMapping("/verify-otp")
-    public ResponseEntity<?> verifyOtp(@RequestBody Map<String, String> request) {
-
-        String email = request.get("email");
-        String otp = request.get("otp");
-
-        boolean valid = otpService.verifyOtp(email, otp);
-
-        if (valid) {
-            otpService.clearOtp(email);
-            return ResponseEntity.ok("OTP verified");
-        }
-
-        return ResponseEntity.status(400).body("Invalid OTP");
-    }
-
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
-
         if (auth == null || !auth.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-
-        String email = auth.getName();
-
-        User user = userRepository.findByEmail(email)
+        User user    = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
         UserProfile profile = user.getProfile();
-
         return ResponseEntity.ok(
                 UserResponseDTO.builder()
                         .email(user.getEmail())
@@ -101,10 +68,138 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO dto) {
-
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordDTO dto) {
         authService.resetPassword(dto.getEmail(), dto.getNewPassword());
+        return ResponseEntity.ok(Map.of("message", "Password reset successful"));
+    }
 
-        return ResponseEntity.ok("Password reset successful");
+    // ─── Phone OTP ────────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/auth/send-phone-otp
+     * Body: { "phone": "+9779812345678" }
+     *
+     * Returns delivery method and (if WhatsApp fallback) the deep-link URL
+     * so the frontend can display a "Open WhatsApp" button.
+     */
+    @PostMapping("/send-phone-otp")
+    public ResponseEntity<OtpSendResponseDTO> sendPhoneOtp(
+            @RequestBody Map<String, String> body) {
+
+        String phone = body.get("phone");
+        if (phone == null || phone.isBlank()) {
+            throw new IllegalArgumentException("Phone number is required");
+        }
+
+        String otp = otpService.generateOtp(phone);
+        PhoneOtpService.SendResult result = phoneOtpService.sendOtp(phone, otp);
+
+        return ResponseEntity.ok(OtpSendResponseDTO.builder()
+                .message(result.isWhatsApp()
+                        ? "OTP ready — tap the WhatsApp link to view it"
+                        : "OTP sent via SMS")
+                .deliveryMethod(result.method().name())
+                .whatsappLink(result.whatsappLink())
+                .build());
+    }
+
+    /**
+     * POST /api/auth/verify-phone-otp
+     * Body: { "phone": "+9779812345678", "otp": "123456" }
+     *
+     * On success issues a short-lived provider token (15 min) that the
+     * frontend uses to authenticate the KYC submission.
+     */
+    @PostMapping("/verify-phone-otp")
+    public ResponseEntity<OtpVerifyResponseDTO> verifyPhoneOtp(
+            @RequestBody Map<String, String> body) {
+
+        String phone = body.get("phone");
+        String otp   = body.get("otp");
+
+        if (phone == null || otp == null) {
+            throw new IllegalArgumentException("Phone and OTP are required");
+        }
+
+        boolean valid = otpService.verifyOtp(phone, otp);
+        if (!valid) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(OtpVerifyResponseDTO.builder()
+                            .verified(false)
+                            .message("Invalid or expired OTP")
+                            .build());
+        }
+
+        // Issue a short-lived "provider applicant" token (15 min = 900_000 ms)
+        String providerToken = jwtService.generateToken(
+                Map.of("type", "PHONE_VERIFIED", "role", "PROVIDER_APPLICANT"),
+                phone   // sub = phone number
+        );
+
+        return ResponseEntity.ok(OtpVerifyResponseDTO.builder()
+                .verified(true)
+                .message("Phone verified successfully")
+                .providerToken(providerToken)
+                .build());
+    }
+
+    // ─── Email OTP ────────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/auth/send-email-otp
+     * Body: { "email": "user@example.com" }
+     */
+    @PostMapping("/send-email-otp")
+    public ResponseEntity<OtpSendResponseDTO> sendEmailOtp(
+            @RequestBody OtpRequestDto request) {
+
+        String email = request.getEmail();
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+
+        String otp = otpService.generateOtp(email);
+        emailService.sendOtpEmail(email, otp);
+
+        return ResponseEntity.ok(OtpSendResponseDTO.builder()
+                .message("OTP sent to " + email)
+                .deliveryMethod("EMAIL")
+                .build());
+    }
+
+    /**
+     * POST /api/auth/verify-email-otp
+     * Body: { "email": "user@example.com", "otp": "123456" }
+     */
+    @PostMapping("/verify-email-otp")
+    public ResponseEntity<OtpVerifyResponseDTO> verifyEmailOtp(
+            @RequestBody Map<String, String> body) {
+
+        String email = body.get("email");
+        String otp   = body.get("otp");
+
+        if (email == null || otp == null) {
+            throw new IllegalArgumentException("Email and OTP are required");
+        }
+
+        boolean valid = otpService.verifyOtp(email, otp);
+        if (!valid) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(OtpVerifyResponseDTO.builder()
+                            .verified(false)
+                            .message("Invalid or expired OTP")
+                            .build());
+        }
+
+        String providerToken = jwtService.generateToken(
+                Map.of("type", "EMAIL_VERIFIED", "role", "PROVIDER_APPLICANT"),
+                email
+        );
+
+        return ResponseEntity.ok(OtpVerifyResponseDTO.builder()
+                .verified(true)
+                .message("Email verified successfully")
+                .providerToken(providerToken)
+                .build());
     }
 }

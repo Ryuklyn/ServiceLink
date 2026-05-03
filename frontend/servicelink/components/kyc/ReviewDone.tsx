@@ -5,14 +5,13 @@ import {
   ArrowRight,
   CheckCircle2,
   Edit3,
-  Home,
-  PartyPopper,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
+import { kycApi } from "@/lib/api/kycApi";
 
-/* =========================
-   TYPES
-========================= */
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type Address = {
   tole?: string;
   municipality?: string;
@@ -39,8 +38,6 @@ type Professional = {
   secondaryDistricts?: string[];
   travelRadius?: string;
   bio?: string;
-  image?: string | null;
-  photoConfirmed?: boolean;
 };
 
 type KYC = {
@@ -51,41 +48,40 @@ type KYC = {
   photo?: File | null;
 };
 
-// type Payment = {
-//   method?: string;
-// };
-
-type Terms = {
-  agreed?: boolean;
-};
-
 type AllData = {
   personal?: Personal;
   professional?: Professional;
   kyc?: KYC;
-  terms?: Terms;
 };
 
-interface Props {
+interface ReviewDoneProps {
   allData: AllData;
-  onSubmit?: () => void;
+  providerToken?: string; // short-lived JWT from OTP verify
+  onSubmitSuccess?: () => void;
   onBack?: () => void;
   onGoToStep?: (step: number) => void;
 }
 
-// interface DoneProps {
-//   onRestart?: () => void;
-// }
+// ─── Terms definition ────────────────────────────────────────────────────────
 
-/* =========================
-   UI COMPONENTS
-========================= */
+const TERMS = [
+  { id: "tos", label: "I agree to ServiceLink Terms of Service" },
+  { id: "privacy", label: "I agree to Privacy Policy & Data Protection" },
+  {
+    id: "accurate",
+    label: "I confirm all information is accurate and truthful",
+  },
+  { id: "background", label: "I consent to background verification" },
+  { id: "video", label: "I agree to video call verification (if required)" },
+];
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
 function Row({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
-
   return (
-    <div className="flex justify-between py-2 border-b border-stone-100">
-      <span className="text-xs font-semibold text-stone-400 uppercase w-40">
+    <div className="flex justify-between py-2 border-b border-stone-100 last:border-0">
+      <span className="text-xs font-semibold text-stone-400 uppercase w-40 shrink-0">
         {label}
       </span>
       <span className="text-sm font-medium text-stone-700 text-right">
@@ -108,36 +104,119 @@ function Section({
     <div className="bg-stone-50 border border-stone-200 rounded-xl overflow-hidden">
       <div className="flex justify-between items-center px-4 py-3 bg-white border-b">
         <h3 className="text-sm font-bold text-stone-700">{title}</h3>
-
         {onEdit && (
           <button
             type="button"
             onClick={onEdit}
-            className="flex items-center gap-1 text-xs text-amber-600"
+            className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800"
           >
             <Edit3 className="w-3.5 h-3.5" />
             Edit
           </button>
         )}
       </div>
-
       <div className="px-4">{children}</div>
     </div>
   );
 }
 
-/* =========================
-   REVIEW STEP
-========================= */
-export function ReviewDone({ allData, onSubmit, onBack, onGoToStep }: Props) {
+// ─── Build FormData ───────────────────────────────────────────────────────────
+
+function buildFormData(allData: AllData): FormData {
+  const fd = new FormData();
+  const { personal = {}, professional = {}, kyc = {} } = allData;
+
+  // JSON data blob (matches KycSubmitRequestDTO)
+  const dataBlob = new Blob(
+    [
+      JSON.stringify({
+        fullName: personal.fullName,
+        dob: personal.dob,
+        gender: personal.gender,
+        phone: personal.phone,
+        email: personal.email,
+        province: personal.currentAddress?.province,
+        district: personal.currentAddress?.district,
+        municipality: personal.currentAddress?.municipality,
+        ward: personal.currentAddress?.ward,
+        tole: personal.currentAddress?.tole,
+        primaryService: professional.primaryService,
+        otherService: professional.otherService,
+        additionalServices: professional.additionalServices ?? [],
+        experienceYears: professional.experienceYears,
+        primaryDistrict: professional.primaryDistrict,
+        secondaryDistricts: professional.secondaryDistricts ?? [],
+        travelRadius: professional.travelRadius,
+        bio: professional.bio,
+      }),
+    ],
+    { type: "application/json" },
+  );
+  // fd.append("data", dataBlob);
+  fd.append(
+    "data",
+    JSON.stringify({
+      fullName: personal.fullName,
+      dob: personal.dob,
+      gender: personal.gender,
+      phone: personal.phone,
+      email: personal.email,
+      province: personal.currentAddress?.province,
+      district: personal.currentAddress?.district,
+      municipality: personal.currentAddress?.municipality,
+      ward: personal.currentAddress?.ward,
+      tole: personal.currentAddress?.tole,
+      primaryService: professional.primaryService,
+      otherService: professional.otherService,
+      additionalServices: professional.additionalServices ?? [],
+      experienceYears: professional.experienceYears,
+      primaryDistrict: professional.primaryDistrict,
+      secondaryDistricts: professional.secondaryDistricts ?? [],
+      travelRadius: professional.travelRadius,
+      bio: professional.bio,
+    }),
+  );
+
+  // Mandatory files
+  if (kyc.citizenshipFront) fd.append("citizenshipFront", kyc.citizenshipFront);
+  if (kyc.citizenshipBack) fd.append("citizenshipBack", kyc.citizenshipBack);
+  if (kyc.photo) fd.append("photo", kyc.photo);
+
+  // Optional files
+  if (kyc.pan) fd.append("pan", kyc.pan);
+  if (kyc.professional?.length) {
+    kyc.professional.forEach((f) => fd.append("professionalCerts", f));
+  }
+
+  return fd;
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export function ReviewDone({
+  allData,
+  providerToken,
+  onSubmitSuccess,
+  onBack,
+  onGoToStep,
+}: ReviewDoneProps) {
   const personal = allData.personal ?? {};
   const professional = allData.professional ?? {};
   const kyc = allData.kyc ?? {};
-  const [agreed, setAgreed] = useState(allData.terms?.agreed || false);
-  const [error, setError] = useState("");
+
+  // Each term tracked individually
+  const [agreed, setAgreed] = useState<Record<string, boolean>>(
+    Object.fromEntries(TERMS.map((t) => [t.id, false])),
+  );
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const allAgreed = TERMS.every((t) => agreed[t.id]);
+
+  const toggleTerm = (id: string) =>
+    setAgreed((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const addr = personal.currentAddress ?? {};
-
   const address = [
     addr.tole,
     addr.municipality,
@@ -148,22 +227,49 @@ export function ReviewDone({ allData, onSubmit, onBack, onGoToStep }: Props) {
     .filter(Boolean)
     .join(", ");
 
+  // ── Submit ─────────────────────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    if (!allAgreed) {
+      setSubmitError("Please agree to all terms before submitting.");
+      return;
+    }
+
+    // Validate required files present
+    if (!kyc.citizenshipFront || !kyc.citizenshipBack || !kyc.photo) {
+      setSubmitError(
+        "Missing required documents (citizenship + photo). Please go back to Step 3.",
+      );
+      return;
+    }
+
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      const fd = buildFormData(allData);
+      await kycApi.submitKyc(fd, providerToken);
+      onSubmitSuccess?.();
+    } catch (err: any) {
+      setSubmitError(err?.message ?? "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="w-full">
-      {/* HEADER */}
+      {/* Header */}
       <div className="text-center mb-8">
         <CheckCircle2 className="w-12 h-12 text-amber-500 mx-auto mb-3" />
-
         <h1 className="text-2xl font-bold text-gray-900">
           Review Your Details
         </h1>
         <p className="text-sm text-stone-500">
-          Confirm before submitting application
+          Confirm everything before submitting
         </p>
       </div>
 
-      {/* SECTIONS */}
       <div className="flex flex-col gap-4">
+        {/* Personal */}
         <Section title="Personal Info" onEdit={() => onGoToStep?.(1)}>
           <Row label="Name" value={personal.fullName} />
           <Row label="DOB" value={personal.dob} />
@@ -173,6 +279,7 @@ export function ReviewDone({ allData, onSubmit, onBack, onGoToStep }: Props) {
           <Row label="Address" value={address} />
         </Section>
 
+        {/* Professional */}
         <Section title="Professional" onEdit={() => onGoToStep?.(2)}>
           <Row label="Primary Service" value={professional.primaryService} />
           <Row
@@ -191,85 +298,97 @@ export function ReviewDone({ allData, onSubmit, onBack, onGoToStep }: Props) {
           <Row label="Bio" value={professional.bio || "Not provided"} />
         </Section>
 
-        <Section title="KYC" onEdit={() => onGoToStep?.(3)}>
+        {/* KYC Documents */}
+        <Section title="KYC Documents" onEdit={() => onGoToStep?.(3)}>
           <Row
             label="Citizenship Front"
-            value={kyc.citizenshipFront ? "Uploaded" : ""}
+            value={kyc.citizenshipFront ? "✓ Uploaded" : "⚠ Missing"}
           />
           <Row
             label="Citizenship Back"
-            value={kyc.citizenshipBack ? "Uploaded" : ""}
+            value={kyc.citizenshipBack ? "✓ Uploaded" : "⚠ Missing"}
           />
-          <Row label="Photo" value={kyc.photo ? "Uploaded" : ""} />
-          <Row label="PAN" value={kyc.pan ? "Uploaded" : ""} />
+          <Row label="Photo" value={kyc.photo ? "✓ Uploaded" : "⚠ Missing"} />
+          <Row label="PAN" value={kyc.pan ? "✓ Uploaded" : "Not provided"} />
         </Section>
 
-        {/* TERMS & AGREEMENT */}
+        {/* Terms */}
         <div className="bg-stone-50 border border-stone-200 rounded-xl p-4">
           <h3 className="text-sm font-bold text-stone-700 mb-3">
-            ⚖️ Terms & Agreements
+            ⚖️ Terms &amp; Agreements
           </h3>
-
-          <div className="flex flex-col gap-2 text-sm text-stone-600">
-            <label className="flex items-start gap-2">
-              <input type="checkbox" className="mt-1" />I agree to ServiceLink
-              Terms of Service
-            </label>
-
-            <label className="flex items-start gap-2">
-              <input type="checkbox" className="mt-1" />I agree to Privacy
-              Policy & Data Protection
-            </label>
-
-            <label className="flex items-start gap-2">
-              <input type="checkbox" className="mt-1" />I confirm all
-              information is accurate and truthful
-            </label>
-
-            <label className="flex items-start gap-2">
-              <input type="checkbox" className="mt-1" />I consent to background
-              verification
-            </label>
-
-            <label className="flex items-start gap-2">
-              <input type="checkbox" className="mt-1" />I agree to video call
-              verification (if required)
-            </label>
-
-            {/* MAIN AGREEMENT */}
-            <label className="flex items-start gap-2 mt-2 font-medium text-stone-800">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => {
-                  setAgreed(e.target.checked);
-                  setError("");
-                }}
-                className="mt-1"
-              />
-              I have read and agree to all terms above
-            </label>
-
-            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+          <div className="flex flex-col gap-2.5">
+            {TERMS.map((term) => (
+              <label
+                key={term.id}
+                className="flex items-start gap-2.5 cursor-pointer group"
+              >
+                <input
+                  type="checkbox"
+                  id={`term-${term.id}`}
+                  checked={agreed[term.id]}
+                  onChange={() => toggleTerm(term.id)}
+                  className="mt-0.5 accent-amber-500 w-4 h-4 cursor-pointer"
+                />
+                <span
+                  className={`text-sm leading-snug transition-colors
+                  ${agreed[term.id] ? "text-stone-700 font-medium" : "text-stone-500"}`}
+                >
+                  {term.label}
+                </span>
+              </label>
+            ))}
           </div>
+
+          {!allAgreed && (
+            <p className="text-xs text-amber-600 mt-3 font-medium">
+              ↑ Please check all boxes to enable submission.
+            </p>
+          )}
         </div>
 
-        {/* ACTIONS */}
-        <div className="flex justify-between pt-4">
+        {/* Submit error */}
+        {submitError && (
+          <div
+            role="alert"
+            className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm"
+          >
+            {submitError}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-between pt-2">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-5 py-2 border rounded-lg"
+            disabled={submitting}
+            className="flex items-center gap-2 px-5 py-2.5 border border-stone-300
+              rounded-xl text-stone-600 hover:bg-stone-50 transition disabled:opacity-50"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back
+            <ArrowLeft className="w-4 h-4" /> Back
           </button>
 
           <button
-            onClick={onSubmit}
-            className="flex items-center gap-2 px-6 py-2 bg-amber-500 text-white rounded-lg"
+            onClick={handleSubmit}
+            disabled={submitting || !allAgreed}
+            aria-busy={submitting}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold
+              transition-all duration-200
+              ${
+                submitting || !allAgreed
+                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  : "bg-amber-500 text-white hover:bg-amber-600 active:scale-[0.98] shadow-md"
+              }`}
           >
-            Submit
-            <ArrowRight className="w-4 h-4" />
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Submitting…
+              </>
+            ) : (
+              <>
+                Submit Application <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </div>
       </div>

@@ -57,6 +57,7 @@ public class SecurityConfig {
             // 🔓 PUBLIC AUTH ENDPOINTS
             .requestMatchers(
                 "/api/auth/**",
+                "/api/kyc/**",    // provider-token auth handled inside KycController
                 "/oauth2/**",
                 "/error"
             ).permitAll()
