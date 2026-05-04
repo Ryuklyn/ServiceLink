@@ -1,4 +1,8 @@
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+} from "axios";
 
 // ─── Error shape ────────────────────────────────────────────────────────────
 
@@ -64,7 +68,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 /** Authenticated client — attaches Bearer token automatically. */
 const authClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json" },
+  // headers: { "Content-Type": "application/json" },
   timeout: 15_000,
 });
 

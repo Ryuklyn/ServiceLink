@@ -26,21 +26,12 @@ export interface KycStatusResponse {
 // ─── KYC API ──────────────────────────────────────────────────────────────────
 
 export const kycApi = {
-  /**
-   * Submit KYC form data.
-   *
-   * Auth strategy (priority order):
-   *  1. `providerToken` (from OTP verify) → sent as X-Provider-Token header
-   *  2. Standard Bearer token (for logged-in users)
-   */
   submitKyc: async (
     formData: FormData,
     providerToken?: string,
   ): Promise<KycSubmitResponse> => {
-    const headers: Record<string, string> = {
-      // Let the browser set Content-Type (multipart/form-data + boundary)
-      "Content-Type": "multipart/form-data",
-    };
+    const headers: Record<string, string> = {};
+
     if (providerToken) {
       headers["X-Provider-Token"] = providerToken;
     }
@@ -50,6 +41,7 @@ export const kycApi = {
       formData,
       { headers },
     );
+
     return data;
   },
 

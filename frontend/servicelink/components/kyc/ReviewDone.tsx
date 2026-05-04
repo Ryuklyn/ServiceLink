@@ -125,57 +125,88 @@ function Section({
 function buildFormData(allData: AllData): FormData {
   const fd = new FormData();
   const { personal = {}, professional = {}, kyc = {} } = allData;
+  console.log(allData, "da");
 
   // JSON data blob (matches KycSubmitRequestDTO)
-  const dataBlob = new Blob(
-    [
-      JSON.stringify({
-        fullName: personal.fullName,
-        dob: personal.dob,
-        gender: personal.gender,
-        phone: personal.phone,
-        email: personal.email,
-        province: personal.currentAddress?.province,
-        district: personal.currentAddress?.district,
-        municipality: personal.currentAddress?.municipality,
-        ward: personal.currentAddress?.ward,
-        tole: personal.currentAddress?.tole,
-        primaryService: professional.primaryService,
-        otherService: professional.otherService,
-        additionalServices: professional.additionalServices ?? [],
-        experienceYears: professional.experienceYears,
-        primaryDistrict: professional.primaryDistrict,
-        secondaryDistricts: professional.secondaryDistricts ?? [],
-        travelRadius: professional.travelRadius,
-        bio: professional.bio,
-      }),
-    ],
-    { type: "application/json" },
-  );
+  // const dataBlob = new Blob(
+  //   [
+  //     JSON.stringify({
+  //       fullName: personal.fullName,
+  //       dob: personal.dob,
+  //       gender: personal.gender,
+  //       phone: personal.phone,
+  //       email: personal.email,
+  //       province: personal.currentAddress?.province,
+  //       district: personal.currentAddress?.district,
+  //       municipality: personal.currentAddress?.municipality,
+  //       ward: personal.currentAddress?.ward,
+  //       tole: personal.currentAddress?.tole,
+  //       primaryService: professional.primaryService,
+  //       otherService: professional.otherService,
+  //       additionalServices: professional.additionalServices ?? [],
+  //       experienceYears: professional.experienceYears,
+  //       primaryDistrict: professional.primaryDistrict,
+  //       secondaryDistricts: professional.secondaryDistricts ?? [],
+  //       travelRadius: professional.travelRadius,
+  //       bio: professional.bio,
+  //     }),
+  //   ],
+  //   { type: "application/json" },
+  // );
+  const payload = {
+    fullName: personal.fullName,
+    dob: personal.dob,
+    gender: personal.gender,
+    phone: personal.phone,
+    email: personal.email,
+    province: personal.currentAddress?.province,
+    district: personal.currentAddress?.district,
+    municipality: personal.currentAddress?.municipality,
+    ward: personal.currentAddress?.ward,
+    tole: personal.currentAddress?.tole,
+    primaryService: professional.primaryService,
+    otherService: professional.otherService,
+    additionalServices: professional.additionalServices ?? [],
+    experienceYears: professional.experienceYears,
+    primaryDistrict: professional.primaryDistrict,
+    secondaryDistricts: professional.secondaryDistricts ?? [],
+    travelRadius: professional.travelRadius,
+    bio: professional.bio,
+  };
+
   // fd.append("data", dataBlob);
   fd.append(
     "data",
-    JSON.stringify({
-      fullName: personal.fullName,
-      dob: personal.dob,
-      gender: personal.gender,
-      phone: personal.phone,
-      email: personal.email,
-      province: personal.currentAddress?.province,
-      district: personal.currentAddress?.district,
-      municipality: personal.currentAddress?.municipality,
-      ward: personal.currentAddress?.ward,
-      tole: personal.currentAddress?.tole,
-      primaryService: professional.primaryService,
-      otherService: professional.otherService,
-      additionalServices: professional.additionalServices ?? [],
-      experienceYears: professional.experienceYears,
-      primaryDistrict: professional.primaryDistrict,
-      secondaryDistricts: professional.secondaryDistricts ?? [],
-      travelRadius: professional.travelRadius,
-      bio: professional.bio,
+    new Blob([JSON.stringify(payload)], {
+      type: "application/json",
     }),
   );
+  console.log(payload, "blob");
+  // dataBlob.text().then(console.log);
+
+  // fd.append(
+  //   "data",
+  //   JSON.stringify({
+  //     fullName: personal.fullName,
+  //     dob: personal.dob,
+  //     gender: personal.gender,
+  //     phone: personal.phone,
+  //     email: personal.email,
+  //     province: personal.currentAddress?.province,
+  //     district: personal.currentAddress?.district,
+  //     municipality: personal.currentAddress?.municipality,
+  //     ward: personal.currentAddress?.ward,
+  //     tole: personal.currentAddress?.tole,
+  //     primaryService: professional.primaryService,
+  //     otherService: professional.otherService,
+  //     additionalServices: professional.additionalServices ?? [],
+  //     experienceYears: professional.experienceYears,
+  //     primaryDistrict: professional.primaryDistrict,
+  //     secondaryDistricts: professional.secondaryDistricts ?? [],
+  //     travelRadius: professional.travelRadius,
+  //     bio: professional.bio,
+  //   }),
+  // );
 
   // Mandatory files
   if (kyc.citizenshipFront) fd.append("citizenshipFront", kyc.citizenshipFront);
@@ -242,6 +273,8 @@ export function ReviewDone({
       return;
     }
 
+    console.log(allData, "ja");
+    console.log(providerToken, "j5a");
     setSubmitError("");
     setSubmitting(true);
     try {
