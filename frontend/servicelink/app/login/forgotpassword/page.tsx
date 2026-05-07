@@ -24,7 +24,7 @@ export default function Page() {
     try {
       setLoading(true);
 
-      await api.post("/auth/send-otp", {
+      await api.post("/auth/send-email-otp", {
         email: email.trim(),
       });
 

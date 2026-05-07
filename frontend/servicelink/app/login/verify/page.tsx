@@ -390,7 +390,7 @@ export default function Page() {
     try {
       setLoading(true);
 
-      await api.post("/auth/verify-otp", {
+      await api.post("/auth/verify-email-otp", {
         email: email.trim(),
         otp: code,
       });
