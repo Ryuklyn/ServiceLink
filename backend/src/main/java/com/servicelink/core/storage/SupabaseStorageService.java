@@ -8,6 +8,7 @@ import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -25,43 +26,46 @@ public class SupabaseStorageService {
     @Value("${supabase.api-key}")
     private String supabaseApiKey;
 
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
     public String uploadFile(MultipartFile file, String folder) throws Exception {
 
         validateFile(file);
 
-        String fileName =
-                UUID.randomUUID() + "_" + file.getOriginalFilename();
-
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
         String objectPath = folder + "/" + fileName;
 
-        String uploadUrl =
-                supabaseUrl +
-                "/storage/v1/object/" +
-                supabaseBucket +
-                "/" +
-                objectPath;
+        String uploadUrl = supabaseUrl
+                + "/storage/v1/object/"
+                + supabaseBucket
+                + "/"
+                + objectPath;
 
         try (CloseableHttpClient client = HttpClients.createDefault()) {
 
             HttpPost post = new HttpPost(uploadUrl);
 
-            post.setHeader(
-                    "Authorization",
-                    "Bearer " + supabaseApiKey
-            );
-
+            post.setHeader("Authorization", "Bearer " + supabaseApiKey);
             post.setHeader("apikey", supabaseApiKey);
-
             post.setHeader(
                     "Content-Type",
-                    file.getContentType()
+                    file.getContentType() != null
+                            ? file.getContentType()
+                            : "application/octet-stream"
             );
 
-            post.setEntity(
-                    new ByteArrayEntity(file.getBytes())
+            // FIXED: ByteArrayEntity constructor for Apache HttpClient 5
+            ByteArrayEntity entity = new ByteArrayEntity(
+                    file.getBytes(),
+                    ContentType.parse(
+                            file.getContentType() != null
+                                    ? file.getContentType()
+                                    : "application/octet-stream"
+                    ),
+                    null
             );
+
+            post.setEntity(entity);
 
             ClassicHttpResponse response =
                     (ClassicHttpResponse) client.execute(post);
@@ -70,20 +74,20 @@ public class SupabaseStorageService {
 
             if (statusCode != 200 && statusCode != 201) {
                 throw new RuntimeException(
-                        "Failed to upload file to Supabase"
+                        "Failed to upload file to Supabase. Status code: "
+                                + statusCode
                 );
             }
         }
 
-        return supabaseUrl +
-                "/storage/v1/object/public/" +
-                supabaseBucket +
-                "/" +
-                objectPath;
+        return supabaseUrl
+                + "/storage/v1/object/public/"
+                + supabaseBucket
+                + "/"
+                + objectPath;
     }
 
-    private void validateFile(MultipartFile file)
-            throws IOException {
+    private void validateFile(MultipartFile file) throws IOException {
 
         List<String> allowedTypes = List.of(
                 "image/jpeg",
@@ -96,9 +100,7 @@ public class SupabaseStorageService {
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new RuntimeException(
-                    "File size exceeds 10MB"
-            );
+            throw new RuntimeException("File size exceeds 10MB");
         }
     }
 }
