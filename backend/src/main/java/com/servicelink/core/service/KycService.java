@@ -8,7 +8,7 @@ import com.servicelink.core.model.KycSubmission;
 import com.servicelink.core.model.User;
 import com.servicelink.core.repository.KycRepository;
 import com.servicelink.core.repository.UserRepository;
-import com.servicelink.core.storage.StorageService;
+import com.servicelink.core.storage.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +27,7 @@ public class KycService {
 
     private final KycRepository   kycRepository;
     private final UserRepository  userRepository;
-    private final StorageService  storageService;
+    private final SupabaseStorageService storageService;
     private final KycMapper       kycMapper;
     private final EmailService    emailService;
 
@@ -42,7 +42,7 @@ public class KycService {
             MultipartFile        pan,
             MultipartFile[]      professionalCerts,
             String               applicantIdentifier   // phone (E.164) OR email
-    ) throws IOException {
+    ) throws Exception {
 
         // Resolve optional User (may not exist for new provider applicants)
         Optional<User> userOpt = userRepository.findByEmail(applicantIdentifier);
@@ -56,13 +56,13 @@ public class KycService {
         }
 
         // Upload mandatory documents
-        String frontPath = storageService.upload(citizenshipFront, "kyc/citizenship-front");
-        String backPath  = storageService.upload(citizenshipBack,  "kyc/citizenship-back");
-        String photoPath = storageService.upload(photo,            "kyc/photo");
+        String frontPath = storageService.uploadFile(citizenshipFront, "kyc/citizenship-front");
+        String backPath  = storageService.uploadFile(citizenshipBack,  "kyc/citizenship-back");
+        String photoPath = storageService.uploadFile(photo,            "kyc/photo");
 
         // Upload optional PAN
         String panPath = (pan != null && !pan.isEmpty())
-                ? storageService.upload(pan, "kyc/pan") : null;
+                ? storageService.uploadFile(pan, "kyc/pan") : null;
 
         // Upload optional professional certs
         String certPaths = buildCertPaths(professionalCerts);
@@ -101,13 +101,13 @@ public class KycService {
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private String buildCertPaths(MultipartFile[] certs) throws IOException {
+    private String buildCertPaths(MultipartFile[] certs) throws Exception {
         if (certs == null || certs.length == 0) return "[]";
         StringBuilder sb = new StringBuilder("[");
         for (MultipartFile cert : certs) {
             if (!cert.isEmpty()) {
                 sb.append("\"")
-                  .append(storageService.upload(cert, "kyc/certs"))
+                  .append(storageService.uploadFile(cert, "kyc/certs"))
                   .append("\",");
             }
         }
