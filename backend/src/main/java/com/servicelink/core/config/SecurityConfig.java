@@ -87,7 +87,7 @@ public class SecurityConfig {
 public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
 
-    config.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000")); // ⚠️ MUST match your frontend
+    config.setAllowedOriginPatterns(Arrays.asList("http://localhost:3001")); // ⚠️ MUST match your frontend
     config.setAllowedMethods(Arrays.asList("*"));
     config.setAllowedHeaders(Arrays.asList("*"));
     config.setAllowCredentials(true);

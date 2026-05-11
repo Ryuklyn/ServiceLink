@@ -67,6 +67,7 @@ export default function Hero() {
                 >
                   <div className="h-32 sm:h-40 relative overflow-hidden">
                     <img
+                      // src={service.img}
                       src={service.img}
                       alt={service.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
