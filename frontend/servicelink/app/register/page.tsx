@@ -20,7 +20,7 @@ const roles = [
       "Book reliable services for your home or office. Connect with verified professionals in minutes.",
     cta: "Start Booking",
     href: "/register/user",
-    ctaColor: "text-blue-600 hover:text-blue-800",
+    ctaColor: "text-[#1e3a8a] hover:text-[#1e3a8a]",
     image: "/images/reguser1.png",
   },
   {
@@ -30,7 +30,7 @@ const roles = [
       "Grow your independent business. Find new customers, manage bookings, and get paid securely.",
     cta: "Join the Network",
     href: "/register/provider",
-    ctaColor: "text-orange-500 hover:text-orange-700",
+    ctaColor: "text-[#e8683f] hover:text-[#d95a2f]",
     image: "/images/regprovider2.png",
   },
   {
@@ -40,21 +40,21 @@ const roles = [
       "Enterprise solutions for service teams. Manage staff, track analytics, and scale your organization.",
     cta: "Go Pro",
     href: "/register/business",
-    ctaColor: "text-blue-600 hover:text-blue-800",
+    ctaColor: "text-[#1e3a8a] hover:text-[#1e3a8a]",
     image: "/images/regbusiness1.jpeg",
   },
 ];
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#f0f4fb]">
       <Navbar />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         {/* Heading */}
         <div className="text-center mb-12">
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
-            Choose your <span className="text-blue-600">ServiceLink</span>{" "}
+            Choose your <span className="text-[#1e3a8a]">ServiceLink</span>{" "}
             journey
           </h1>
           <p className="mt-4 text-base sm:text-lg text-gray-500 max-w-lg mx-auto">

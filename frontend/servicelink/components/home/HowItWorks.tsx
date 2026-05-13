@@ -15,10 +15,10 @@ export default function HowItWorks() {
         
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-semibold tracking-widest text-orange-500 uppercase mb-3">
+          <p className="text-sm font-semibold tracking-widest text-[#e8683f] uppercase mb-3">
             Simple Process
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#1e293b] mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a8a] mb-4">
             How It Works
           </h2>
           <p className="text-gray-500">
@@ -39,12 +39,12 @@ export default function HowItWorks() {
                 <div key={idx} className="relative flex flex-col items-center text-center group">
                   
                   {/* Icon Circle */}
-                  <div className="w-20 h-20 rounded-full bg-[#1e293b] text-white flex items-center justify-center shadow-lg mb-6 group-hover:-translate-y-2 group-hover:shadow-xl transition-all duration-300">
+                  <div className="w-20 h-20 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center shadow-lg mb-6 group-hover:-translate-y-2 group-hover:shadow-xl transition-all duration-300">
                     {IconComp && <IconComp className="w-8 h-8" />}
                   </div>
 
                   {/* Number Badge */}
-                  <div className="text-sm font-bold text-orange-500 mb-3">
+                  <div className="text-sm font-bold text-[#e8683f] mb-3">
                     {step.num}
                   </div>
 

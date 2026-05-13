@@ -80,7 +80,7 @@ export default function BusinessSignInPage() {
             Manage Services, Vendors
             <br />& Operations in One Place
           </h1>
-          <p className="text-blue-200 text-sm leading-relaxed max-w-sm mb-12">
+          <p className="text-white/75 text-sm leading-relaxed max-w-sm mb-12">
             Streamline your enterprise operations with our comprehensive service
             management platform. Connect with verified providers, track
             requests, and optimize workflows.
@@ -90,7 +90,7 @@ export default function BusinessSignInPage() {
           <ul className="space-y-4">
             {FEATURES.map((f) => (
               <li key={f.label} className="flex items-center gap-4">
-                <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-blue-200 shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-white/75 shrink-0">
                   {f.icon}
                 </div>
                 <span className="text-white text-sm font-medium">
@@ -108,7 +108,7 @@ export default function BusinessSignInPage() {
               <p className="text-white text-3xl font-extrabold leading-none">
                 {s.value}
               </p>
-              <p className="text-blue-300 text-xs mt-1">{s.label}</p>
+              <p className="text-[#1e3a8a]/80 text-xs mt-1">{s.label}</p>
             </div>
           ))}
         </div>
@@ -120,7 +120,7 @@ export default function BusinessSignInPage() {
         <div className="w-full max-w-md bg-white rounded-2xl shadow-sm px-10 py-10 mt-auto mb-auto">
           {/* Heading */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-extrabold text-[#0f1b36] mb-1">
+            <h2 className="text-2xl font-extrabold text-[#1e3a8a] mb-1">
               Welcome back
             </h2>
             <p className="text-sm text-gray-400">Sign in to your workspace</p>
@@ -128,7 +128,7 @@ export default function BusinessSignInPage() {
 
           {/* Work Email */}
           <div className="mb-5">
-            <label className="block text-sm font-semibold text-[#0f1b36] mb-1.5">
+            <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
               Work Email or Phone
             </label>
             <div className="relative">
@@ -146,7 +146,7 @@ export default function BusinessSignInPage() {
 
           {/* Password */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-[#0f1b36] mb-1.5">
+            <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
               Password
             </label>
             <div className="relative">
@@ -198,14 +198,14 @@ export default function BusinessSignInPage() {
             </label>
             <Link
               href="/forgot-password"
-              className="text-sm font-semibold text-[#e8683f] hover:text-[#d9551a] transition"
+              className="text-sm font-semibold text-[#e8683f] hover:text-[#d95a2f] transition"
             >
               Forgot Password?
             </Link>
           </div>
 
           {/* Sign In button */}
-          <button className="w-full flex items-center justify-center gap-2 bg-[#e8683f] hover:bg-[#d9551a] text-white text-sm font-semibold py-3.5 rounded-lg transition mb-5">
+          <button className="w-full flex items-center justify-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold py-3.5 rounded-lg transition mb-5">
             Sign In <span>→</span>
           </button>
 
@@ -217,7 +217,7 @@ export default function BusinessSignInPage() {
           </div>
 
           {/* OTP button */}
-          <button className="w-full flex items-center justify-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-[#0f1b36] text-sm font-semibold py-3.5 rounded-lg transition mb-7">
+          <button className="w-full flex items-center justify-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-[#1e3a8a] text-sm font-semibold py-3.5 rounded-lg transition mb-7">
             <MessageCircle size={16} className="text-gray-500" />
             Continue with OTP
           </button>
@@ -229,7 +229,7 @@ export default function BusinessSignInPage() {
           <p className="text-center">
             <Link
               href="/register/business"
-              className="text-sm font-semibold text-[#e8683f] hover:text-[#d9551a] transition"
+              className="text-sm font-semibold text-[#e8683f] hover:text-[#d95a2f] transition"
             >
               Create Workspace
             </Link>

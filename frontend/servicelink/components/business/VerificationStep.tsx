@@ -25,13 +25,13 @@ export default function VerificationStep({
       {/* Header */}
       <div className="flex items-start gap-4 mb-8">
         <div className="w-12 h-12 rounded-full bg-[#e8edf8] flex items-center justify-center shrink-0">
-          <FileText size={22} className="text-[#1e2d5a]" />
+          <FileText size={22} className="text-[#1e3a8a]" />
         </div>
         <div>
-          <p className="text-[#f26522] text-sm font-semibold uppercase tracking-wide mb-1">
+          <p className="text-[#e8683f] text-sm font-semibold uppercase tracking-wide mb-1">
             Step 4 of 5
           </p>
-          <h1 className="text-[28px] font-extrabold text-[#0f1b36] leading-tight">
+          <h1 className="text-[28px] font-extrabold text-[#1e3a8a] leading-tight">
             Verify your business
           </h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -45,19 +45,19 @@ export default function VerificationStep({
       <div className="space-y-6">
         {/* PAN / VAT / Tax ID */}
         <div>
-          <label className="block text-sm font-semibold text-[#0f1b36] mb-1.5">
+          <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
             PAN / VAT / Tax ID <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#f26522]/40 focus:border-[#f26522] transition placeholder-gray-400"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
             placeholder="e.g. AAACA1234B"
           />
         </div>
 
         {/* Upload section */}
         <div>
-          <label className="block text-sm font-semibold text-[#0f1b36] mb-1">
+          <label className="block text-sm font-semibold text-[#1e3a8a] mb-1">
             Upload business document
           </label>
           <p className="text-sm text-gray-500 mb-3">
@@ -65,26 +65,26 @@ export default function VerificationStep({
             PNG, JPG)
           </p>
 
-          <label className="flex items-center gap-4 border-2 border-dashed border-gray-300 rounded-lg px-5 py-5 cursor-pointer hover:border-[#f26522] transition group">
-            <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-orange-50 flex items-center justify-center transition shrink-0">
+          <label className="flex items-center gap-4 border-2 border-dashed border-gray-300 rounded-lg px-5 py-5 cursor-pointer hover:border-[#e8683f] transition group">
+            <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-[#e8683f]/10 flex items-center justify-center transition shrink-0">
               <Upload
                 size={18}
-                className="text-gray-400 group-hover:text-[#f26522] transition"
+                className="text-gray-400 group-hover:text-[#e8683f] transition"
               />
             </div>
             <div className="flex-1">
               {fileName ? (
-                <p className="text-sm font-medium text-[#0f1b36]">{fileName}</p>
+                <p className="text-sm font-medium text-[#1e3a8a]">{fileName}</p>
               ) : (
                 <>
-                  <p className="text-sm font-medium text-[#0f1b36]">
+                  <p className="text-sm font-medium text-[#1e3a8a]">
                     Click to browse, or drop a file here
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">Max 10MB</p>
                 </>
               )}
             </div>
-            <span className="text-sm font-semibold text-[#f26522] ml-auto">
+            <span className="text-sm font-semibold text-[#e8683f] ml-auto">
               Browse
             </span>
             <input
@@ -104,7 +104,7 @@ export default function VerificationStep({
           <div
             className={`
               w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5 transition border
-              ${confirmed ? "bg-[#1e2d5a] border-[#1e2d5a]" : "bg-white border-gray-300"}
+              ${confirmed ? "bg-[#1e3a8a] border-[#1e3a8a]" : "bg-white border-gray-300"}
             `}
           >
             {confirmed && (
@@ -139,7 +139,7 @@ export default function VerificationStep({
         </button>
         <button
           onClick={onContinue}
-          className="flex items-center gap-2 bg-[#f26522] hover:bg-[#d9551a] text-white text-sm font-semibold px-7 py-3 rounded-lg transition"
+          className="flex items-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold px-7 py-3 rounded-lg transition"
         >
           Continue <span>→</span>
         </button>

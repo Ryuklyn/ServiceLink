@@ -101,12 +101,12 @@ export default function SignupPage() {
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 rounded-full bg-blue-400 opacity-20 blur-3xl" />
 
         <div className="relative z-10 max-w-sm flex flex-col items-center">
-          <div className="w-24 h-24 bg-orange-500 rounded-3xl flex items-center justify-center mb-10 shadow-lg shadow-orange-500/30">
+          <div className="w-24 h-24 bg-[#e8683f] rounded-3xl flex items-center justify-center mb-10 shadow-lg shadow-[#e8683f]/30">
             <Briefcase className="w-12 h-12 text-white" />
           </div>
 
           <h1 className="text-4xl font-bold mb-4">Join Us Today</h1>
-          <p className="text-blue-100 text-lg">
+          <p className="text-white/80 text-lg">
             Create your account and start connecting with trusted services.
           </p>
         </div>
@@ -159,7 +159,7 @@ export default function SignupPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={step === 2}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 placeholder:text-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 placeholder:text-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] outline-none disabled:bg-gray-50 disabled:text-gray-500"
                   placeholder="John Doe"
                 />
               </div>
@@ -177,14 +177,14 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={step === 2}
-                  className="w-full pl-10 text-gray-900 placeholder:text-gray-200 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full pl-10 text-gray-900 placeholder:text-gray-200 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] outline-none disabled:bg-gray-50 disabled:text-gray-500"
                   placeholder="you@email.com"
                 />
 
                 {step === 2 && (
                   <button
                     onClick={() => setStep(1)}
-                    className="absolute right-3 top-3 text-sm text-blue-600"
+                    className="absolute right-3 top-3 text-sm text-[#1e3a8a]"
                   >
                     Edit
                   </button>
@@ -206,7 +206,7 @@ export default function SignupPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-3 border border-gray-200 text-gray-900 placeholder:text-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full pl-10 pr-10 py-3 border border-gray-200 text-gray-900 placeholder:text-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] outline-none"
                     placeholder="Enter your password"
                   />
 
@@ -226,9 +226,9 @@ export default function SignupPage() {
                           : strength === 1
                             ? "w-1/4 bg-red-500"
                             : strength === 2
-                              ? "w-2/4 bg-orange-400"
+                              ? "w-2/4 bg-[#e8683f]"
                               : strength === 3
-                                ? "w-3/4 bg-yellow-400"
+                                ? "w-3/4 bg-[#e8683f]"
                                 : "w-full bg-green-500"
                       }`}
                     />
@@ -245,7 +245,7 @@ export default function SignupPage() {
             {step === 1 ? (
               <button
                 onClick={handleEmailContinue}
-                className="w-full py-3 rounded-xl bg-[#1e293b] text-white font-semibold hover:bg-[#1e3a8a]"
+                className="w-full py-3 rounded-xl bg-[#1e3a8a] text-white font-semibold hover:bg-[#e8683f]"
               >
                 Continue
               </button>
@@ -254,7 +254,7 @@ export default function SignupPage() {
                 onClick={handleSignup}
                 disabled={loading}
                 className={`w-full py-3 rounded-xl font-semibold text-white transition ${
-                  loading ? "bg-gray-400" : "bg-[#1e293b] hover:bg-[#1e3a8a]"
+                  loading ? "bg-gray-400" : "bg-[#1e3a8a] hover:bg-[#e8683f]"
                 }`}
               >
                 {loading ? "Creating account..." : "Create account"}
@@ -265,7 +265,7 @@ export default function SignupPage() {
           {/* FOOTER */}
           <p className="mt-8 text-center text-sm text-gray-500">
             Already have an account?{" "}
-            <Link href="/login" className="text-[#ea580c] font-semibold">
+            <Link href="/login" className="text-[#e8683f] font-semibold">
               Log in
             </Link>
           </p>

@@ -39,7 +39,7 @@ export function FormInput({
     <div className={`flex flex-col gap-1.5 ${className}`}>
       <label htmlFor={id} className="text-sm font-semibold text-stone-700">
         {label}
-        {required && <span className="text-amber-500 ml-0.5">*</span>}
+        {required && <span className="text-[#e8683f] ml-0.5">*</span>}
       </label>
 
       <div className="relative flex items-center">
@@ -61,7 +61,7 @@ export function FormInput({
             prefix ? "pl-[4.5rem] pr-4" : "px-4",
             error
               ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-              : "border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-100",
+              : "border-stone-200 focus:border-[#e8683f] focus:ring-2 focus:ring-[#e8683f]/20",
           ].join(" ")}
           {...props}
         />
@@ -118,7 +118,7 @@ export function FormSelect({
     <div className={`flex flex-col gap-1.5 ${className}`}>
       <label htmlFor={id} className="text-sm font-semibold text-stone-700">
         {label}
-        {required && <span className="text-amber-500 ml-0.5">*</span>}
+        {required && <span className="text-[#e8683f] ml-0.5">*</span>}
       </label>
 
       <select
@@ -135,8 +135,8 @@ export function FormSelect({
           error
             ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100 text-red-500"
             : value
-              ? "border-stone-200 text-stone-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-              : "border-stone-200 text-stone-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100",
+              ? "border-stone-200 text-stone-800 focus:border-[#e8683f] focus:ring-2 focus:ring-[#e8683f]/20"
+              : "border-stone-200 text-stone-400 focus:border-[#e8683f] focus:ring-2 focus:ring-[#e8683f]/20",
         ].join(" ")}
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a8a29e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
@@ -204,8 +204,8 @@ export function FormCheckbox({
           className={[
             "w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center",
             checked
-              ? "bg-amber-500 border-amber-500"
-              : "bg-white border-stone-300 group-hover:border-amber-400",
+              ? "bg-[#e8683f] border-[#e8683f]"
+              : "bg-white border-stone-300 group-hover:border-[#e8683f]",
           ].join(" ")}
         >
           {checked && (
@@ -245,8 +245,8 @@ export function SectionDivider({ title, icon: Icon }: SectionDividerProps) {
   return (
     <div className="flex items-center gap-3 pt-1">
       {Icon && (
-        <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-          <Icon className="w-4 h-4 text-amber-500" />
+        <div className="w-8 h-8 rounded-lg bg-[#e8683f]/10 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-[#e8683f]" />
         </div>
       )}
 

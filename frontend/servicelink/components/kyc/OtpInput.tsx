@@ -24,11 +24,11 @@ export function OtpInput({ value, onChange, error }: Props) {
               key={i}
               className={[
                 "w-11 h-14 rounded-xl border-2 flex items-center justify-center",
-                "text-xl font-bold text-[#1E3A8A] transition-all",
+                "text-xl font-bold text-[#1e3a8a] transition-all",
                 i === value.length
-                  ? "border-[#E8683F] bg-orange-50"
+                  ? "border-[#e8683f] bg-[#e8683f]/10"
                   : value[i]
-                    ? "border-[#1E3A8A]/30 bg-white"
+                    ? "border-[#1e3a8a]/30 bg-white"
                     : "border-gray-200 bg-stone-50",
               ].join(" ")}
             >
@@ -51,7 +51,7 @@ export function OtpInput({ value, onChange, error }: Props) {
             onChange(digits);
           }}
           aria-label="One-time password"
-          aria-invalid={!!error}
+          aria-invalid={error ? "true" : "false"}
           aria-describedby={error ? "otp-error" : undefined}
           className="absolute inset-0 opacity-0 cursor-text"
           autoFocus

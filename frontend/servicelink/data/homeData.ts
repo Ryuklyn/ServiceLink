@@ -18,14 +18,14 @@ export const HERO_STATS = [
 ];
 
 export const CATEGORIES = [
-  { name: "Plumbing", providers: 24, icon: Wrench, color: "text-blue-500" },
-  { name: "Electrical", providers: 31, icon: Zap, color: "text-orange-500" },
-  { name: "Cleaning", providers: 42, icon: Sparkles, color: "text-sky-500" },
-  { name: "Painting", providers: 18, icon: Paintbrush, color: "text-pink-500" },
-  { name: "Carpentry", providers: 15, icon: Hammer, color: "text-amber-700" },
-  { name: "Gardening", providers: 12, icon: TreePine, color: "text-green-500" },
-  { name: "Moving", providers: 9, icon: Truck, color: "text-amber-500" },
-  { name: "Technology", providers: 22, icon: Monitor, color: "text-indigo-500" },
+  { name: "Plumbing", providers: 24, icon: Wrench, color: "text-[#1e3a8a]" },
+  { name: "Electrical", providers: 31, icon: Zap, color: "text-[#e8683f]" },
+  { name: "Cleaning", providers: 42, icon: Sparkles, color: "text-[#1e3a8a]" },
+  { name: "Painting", providers: 18, icon: Paintbrush, color: "text-[#e8683f]" },
+  { name: "Carpentry", providers: 15, icon: Hammer, color: "text-[#d95a2f]" },
+  { name: "Gardening", providers: 12, icon: TreePine, color: "text-[#1e3a8a]" },
+  { name: "Moving", providers: 9, icon: Truck, color: "text-[#e8683f]" },
+  { name: "Technology", providers: 22, icon: Monitor, color: "text-[#1e3a8a]" },
 ];
 
 export const FEATURED_SERVICES = [

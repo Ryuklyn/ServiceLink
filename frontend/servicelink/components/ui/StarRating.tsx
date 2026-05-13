@@ -9,7 +9,7 @@ export default function StarRating({ rating }: { rating: number }) {
           size={12}
           className={
             s <= Math.floor(rating)
-              ? "fill-yellow-400 text-yellow-400"
+              ? "fill-[#e8683f] text-[#e8683f]"
               : "text-gray-300"
           }
         />

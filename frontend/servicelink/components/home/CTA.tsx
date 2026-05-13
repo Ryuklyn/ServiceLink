@@ -11,12 +11,12 @@ export default function CTA() {
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 tracking-tight drop-shadow-md">
               Ready to Get Started?
             </h2>
-            <p className="text-blue-100/90 text-lg md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed font-medium">
+            <p className="text-white/85 text-lg md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed font-medium">
               Whether you need a service or want to become a provider,
               ServiceLink has you covered.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <button className="bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30 text-white font-bold px-8 py-4 rounded-xl transition-colors">
+              <button className="bg-[#e8683f] hover:bg-[#d95a2f] shadow-lg shadow-[#e8683f]/30 text-white font-bold px-8 py-4 rounded-xl transition-colors">
                 Create Free Account
               </button>
               <button className="bg-white hover:bg-gray-100 text-[#1e3a8a] shadow-lg font-bold px-8 py-4 rounded-xl transition-colors">

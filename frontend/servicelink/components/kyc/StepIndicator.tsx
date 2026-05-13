@@ -28,9 +28,9 @@
 //                     w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300
 //                     ${
 //                       isActive
-//                         ? "bg-amber-500 text-white shadow"
+//                         ? "bg-[#e8683f] text-white shadow"
 //                         : isCompleted
-//                           ? "bg-amber-500 text-white"
+//                           ? "bg-[#e8683f] text-white"
 //                           : "bg-stone-200 text-stone-500"
 //                     }
 //                   `}
@@ -47,9 +47,9 @@
 //                     mt-2 text-xs font-medium mb-4
 //                     ${
 //                       isActive
-//                         ? "text-amber-600"
+//                         ? "text-[#d95a2f]"
 //                         : isCompleted
-//                           ? "text-amber-500"
+//                           ? "text-[#e8683f]"
 //                           : "text-stone-400"
 //                     }
 //                   `}
@@ -64,7 +64,7 @@
 //                     <div
 //                       className={`
 //           absolute top-0 left-0 h-full transition-all duration-300
-//           ${step.id < currentStep ? "bg-amber-500 w-full" : "w-0"}
+//           ${step.id < currentStep ? "bg-[#e8683f] w-full" : "w-0"}
 //         `}
 //                     />
 //                   </div>
@@ -75,7 +75,7 @@
 //                   <div className="w-16 h-[2px] bg-stone-200 relative">
 //                     <div
 //                       className={`absolute top-0 left-0 h-full transition-all duration-300
-//                         ${step.id < currentStep ? "bg-amber-500 w-full" : "w-0"}
+//                         ${step.id < currentStep ? "bg-[#e8683f] w-full" : "w-0"}
 //                       `}
 //                     />
 //                   </div>
@@ -127,9 +127,9 @@ const StepIndicator = memo(function StepIndicator({
                     transition-all duration-300
                     ${
                       isActive
-                        ? "bg-amber-500 text-white shadow-sm shadow-amber-200"
+                        ? "bg-[#e8683f] text-white shadow-sm shadow-[#e8683f]/20"
                         : isCompleted
-                          ? "bg-amber-500 text-white"
+                          ? "bg-[#e8683f] text-white"
                           : "bg-stone-200 text-stone-500"
                     }
                   `}
@@ -148,9 +148,9 @@ const StepIndicator = memo(function StepIndicator({
                   className={`mt-2 text-xs font-medium mb-4
                   ${
                     isActive
-                      ? "text-amber-600"
+                      ? "text-[#d95a2f]"
                       : isCompleted
-                        ? "text-amber-500"
+                        ? "text-[#e8683f]"
                         : "text-stone-400"
                   }
                 `}
@@ -165,7 +165,7 @@ const StepIndicator = memo(function StepIndicator({
                     <div
                       className={`
                       absolute inset-y-0 left-0 transition-all duration-500 ease-out
-                      ${step.id < currentStep ? "w-full bg-amber-500" : "w-0"}
+                      ${step.id < currentStep ? "w-full bg-[#e8683f]" : "w-0"}
                     `}
                     />
                   </div>

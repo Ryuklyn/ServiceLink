@@ -14,7 +14,7 @@ export default function Hero() {
         {/* Left Column: Text & CTA */}
         <div className="space-y-8">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
-            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            <span className="w-2 h-2 bg-[#e8683f] rounded-full animate-pulse" />
             <span className="text-sm text-white/80">
               Trusted by 10,000+ users in Nepal
             </span>
@@ -26,13 +26,13 @@ export default function Hero() {
             </span>
           </h1>
 
-          <p className="text-lg text-blue-100 max-w-lg leading-relaxed">
+          <p className="text-lg text-white/80 max-w-lg leading-relaxed">
             Book verified professionals for plumbing, electrical, cleaning, and
             50+ services across Nepal. Secure payments with escrow protection.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-2 ">
-            <button className="bg-accent-400 hover:bg-accent-500 text-white font-semibold flex items-center justify-center px-8 py-3.5 rounded-xl shadow-lg shadow-orange-500/30 transition-all group">
+            <button className="bg-accent-400 hover:bg-accent-500 text-white font-semibold flex items-center justify-center px-8 py-3.5 rounded-xl shadow-lg shadow-[#e8683f]/30 transition-all group">
               Book a Service
               <MoveRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
@@ -48,7 +48,7 @@ export default function Hero() {
                 <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
                   {stat.value}
                 </div>
-                <div className="text-xs font-medium text-blue-200 uppercase tracking-wider mt-1 lg:mt-0 lg:whitespace-nowrap">
+                <div className="text-xs font-medium text-white/75 uppercase tracking-wider mt-1 lg:mt-0 lg:whitespace-nowrap">
                   {stat.label}
                 </div>
               </div>
@@ -77,7 +77,7 @@ export default function Hero() {
                     <h4 className="font-bold text-sm sm:text-base text-white mb-1">
                       {service.title}
                     </h4>
-                    <p className="text-xs sm:text-sm text-blue-100">
+                    <p className="text-xs sm:text-sm text-white/80">
                       NPR {service.price}/hr
                     </p>
                   </div>

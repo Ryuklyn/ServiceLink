@@ -44,8 +44,8 @@ export default function Page() {
   const getBarColor = (level: number) => {
     if (strength >= level) {
       if (strength === 1) return "bg-red-500";
-      if (strength === 2) return "bg-orange-500";
-      if (strength === 3) return "bg-blue-500";
+      if (strength === 2) return "bg-[#e8683f]";
+      if (strength === 3) return "bg-[#e8683f]";
       if (strength === 4) return "bg-green-500";
     }
     return "bg-gray-200";
@@ -150,9 +150,9 @@ export default function Page() {
             strength === 1
               ? "text-red-500"
               : strength === 2
-                ? "text-orange-500"
+                ? "text-[#e8683f]"
                 : strength === 3
-                  ? "text-blue-500"
+                  ? "text-[#1e3a8a]"
                   : strength === 4
                     ? "text-green-500"
                     : "text-gray-500"

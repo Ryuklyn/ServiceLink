@@ -75,7 +75,7 @@
 
 //         <div className="flex flex-col items-center justify-center space-y-4">
 //           {profile.picture ? (
-//             <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-blue-100 shadow-md">
+//             <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-[#1e3a8a]/15 shadow-md">
 //               <Image
 //                 src={profile.picture}
 //                 alt={profile.name}
@@ -86,7 +86,7 @@
 //               />
 //             </div>
 //           ) : (
-//             <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-3xl font-bold">
+//             <div className="w-24 h-24 rounded-full bg-[#1e3a8a]/10 flex items-center justify-center text-[#1e3a8a] text-3xl font-bold">
 //               {profile.name.charAt(0).toUpperCase()}
 //             </div>
 //           )}
@@ -193,7 +193,7 @@ export default function DashboardPage() {
             className="rounded-full mx-auto"
           />
         ) : (
-          <div className="w-24 h-24 mx-auto rounded-full bg-blue-100 flex items-center justify-center text-2xl">
+          <div className="w-24 h-24 mx-auto rounded-full bg-[#1e3a8a]/10 flex items-center justify-center text-2xl">
             {profile.fullName?.charAt(0)}
           </div>
         )}

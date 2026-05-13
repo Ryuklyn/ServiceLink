@@ -8,10 +8,10 @@ export default function Testimonials() {
         
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-semibold tracking-widest text-orange-500 uppercase mb-3">
+          <p className="text-sm font-semibold tracking-widest text-[#e8683f] uppercase mb-3">
             Testimonials
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#1e293b]">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a8a]">
             What Our Users Say
           </h2>
         </div>
@@ -36,7 +36,7 @@ export default function Testimonials() {
               
               {/* User Info */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#1e293b] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                   {t.initial}
                 </div>
                 <div>

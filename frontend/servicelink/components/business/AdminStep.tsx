@@ -13,13 +13,13 @@ export default function AdminStep({ onContinue, onBack }: AdminStepProps) {
       {/* Header */}
       <div className="flex items-start gap-4 mb-8">
         <div className="w-12 h-12 rounded-full bg-[#e8edf8] flex items-center justify-center shrink-0">
-          <UserCircle size={22} className="text-[#1e2d5a]" />
+          <UserCircle size={22} className="text-[#1e3a8a]" />
         </div>
         <div>
-          <p className="text-[#f26522] text-sm font-semibold uppercase tracking-wide mb-1">
+          <p className="text-[#e8683f] text-sm font-semibold uppercase tracking-wide mb-1">
             Step 3 of 5
           </p>
-          <h1 className="text-[28px] font-extrabold text-[#0f1b36] leading-tight">
+          <h1 className="text-[28px] font-extrabold text-[#1e3a8a] leading-tight">
             Create your admin account
           </h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -32,13 +32,13 @@ export default function AdminStep({ onContinue, onBack }: AdminStepProps) {
       <div className="space-y-5">
         {/* Full name */}
         <div>
-          <label className="block text-sm font-semibold text-[#0f1b36] mb-1.5">
+          <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
             Full name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             defaultValue="Jane Cooper"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#f26522]/40 focus:border-[#f26522] transition placeholder-gray-400"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
             placeholder="Jane Cooper"
           />
         </div>
@@ -46,22 +46,22 @@ export default function AdminStep({ onContinue, onBack }: AdminStepProps) {
         {/* Password row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className="block text-sm font-semibold text-[#0f1b36] mb-1.5">
+            <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
               Password <span className="text-red-500">*</span>
             </label>
             <input
               type="password"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#f26522]/40 focus:border-[#f26522] transition placeholder-gray-400"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
               placeholder="At least 8 characters"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-[#0f1b36] mb-1.5">
+            <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
               Confirm password <span className="text-red-500">*</span>
             </label>
             <input
               type="password"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#f26522]/40 focus:border-[#f26522] transition placeholder-gray-400"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
               placeholder="Re-enter password"
             />
           </div>
@@ -69,8 +69,8 @@ export default function AdminStep({ onContinue, onBack }: AdminStepProps) {
 
         {/* Security note */}
         <div className="flex items-start gap-3 bg-[#f0f4fb] border border-[#dce5f5] rounded-lg px-4 py-3">
-          <ShieldCheck size={18} className="text-[#1e2d5a] mt-0.5 shrink-0" />
-          <p className="text-sm text-[#1e2d5a]">
+          <ShieldCheck size={18} className="text-[#1e3a8a] mt-0.5 shrink-0" />
+          <p className="text-sm text-[#1e3a8a]">
             Your password is encrypted at rest. We recommend enabling SSO after
             setup.
           </p>
@@ -90,7 +90,7 @@ export default function AdminStep({ onContinue, onBack }: AdminStepProps) {
         </button>
         <button
           onClick={onContinue}
-          className="flex items-center gap-2 bg-[#f26522] hover:bg-[#d9551a] text-white text-sm font-semibold px-7 py-3 rounded-lg transition"
+          className="flex items-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold px-7 py-3 rounded-lg transition"
         >
           Continue <span>→</span>
         </button>

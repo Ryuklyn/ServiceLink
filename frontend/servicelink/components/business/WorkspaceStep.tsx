@@ -38,13 +38,13 @@ export default function WorkspaceStep({
       {/* Header */}
       <div className="flex items-start gap-4 mb-8">
         <div className="w-12 h-12 rounded-full bg-[#e8edf8] flex items-center justify-center shrink-0">
-          <GitBranch size={22} className="text-[#1e2d5a]" />
+          <GitBranch size={22} className="text-[#1e3a8a]" />
         </div>
         <div>
-          <p className="text-[#f26522] text-sm font-semibold uppercase tracking-wide mb-1">
+          <p className="text-[#e8683f] text-sm font-semibold uppercase tracking-wide mb-1">
             Step 2 of 5
           </p>
-          <h1 className="text-[28px] font-extrabold text-[#0f1b36] leading-tight">
+          <h1 className="text-[28px] font-extrabold text-[#1e3a8a] leading-tight">
             Set up your workspace
           </h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -59,26 +59,26 @@ export default function WorkspaceStep({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Workspace name */}
           <div>
-            <label className="block text-sm font-semibold text-[#0f1b36] mb-1.5">
+            <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
               Workspace name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               defaultValue="Acme HQ Operations"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#f26522]/40 focus:border-[#f26522] transition placeholder-gray-400"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
               placeholder="Acme HQ Operations"
             />
           </div>
 
           {/* Primary branch location */}
           <div>
-            <label className="block text-sm font-semibold text-[#0f1b36] mb-1.5">
+            <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
               Primary branch location <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               defaultValue="New York, NY"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#f26522]/40 focus:border-[#f26522] transition placeholder-gray-400"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
               placeholder="New York, NY"
             />
           </div>
@@ -86,7 +86,7 @@ export default function WorkspaceStep({
 
         {/* Preferred services */}
         <div>
-          <label className="block text-sm font-semibold text-[#0f1b36] mb-1">
+          <label className="block text-sm font-semibold text-[#1e3a8a] mb-1">
             Preferred services
           </label>
           <p className="text-sm text-gray-500 mb-3">
@@ -104,8 +104,8 @@ export default function WorkspaceStep({
                     px-4 py-2 rounded-full border text-sm font-medium transition
                     ${
                       isSelected
-                        ? "bg-[#0f1b36] text-white border-[#0f1b36]"
-                        : "bg-white text-[#0f1b36] border-gray-300 hover:border-[#0f1b36]"
+                        ? "bg-[#1e3a8a] text-white border-[#1e3a8a]"
+                        : "bg-white text-[#1e3a8a] border-gray-300 hover:border-[#1e3a8a]/60"
                     }
                   `}
                 >
@@ -130,7 +130,7 @@ export default function WorkspaceStep({
         </button>
         <button
           onClick={onContinue}
-          className="flex items-center gap-2 bg-[#f26522] hover:bg-[#d9551a] text-white text-sm font-semibold px-7 py-3 rounded-lg transition"
+          className="flex items-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold px-7 py-3 rounded-lg transition"
         >
           Continue <span>→</span>
         </button>

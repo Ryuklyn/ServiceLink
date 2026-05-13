@@ -108,7 +108,7 @@ function Section({
           <button
             type="button"
             onClick={onEdit}
-            className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800"
+            className="flex items-center gap-1 text-xs text-[#d95a2f] hover:text-[#d95a2f]"
           >
             <Edit3 className="w-3.5 h-3.5" />
             Edit
@@ -292,7 +292,7 @@ export function ReviewDone({
     <div className="w-full">
       {/* Header */}
       <div className="text-center mb-8">
-        <CheckCircle2 className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+        <CheckCircle2 className="w-12 h-12 text-[#e8683f] mx-auto mb-3" />
         <h1 className="text-2xl font-bold text-gray-900">
           Review Your Details
         </h1>
@@ -374,7 +374,7 @@ export function ReviewDone({
           </div>
 
           {!allAgreed && (
-            <p className="text-xs text-amber-600 mt-3 font-medium">
+            <p className="text-xs text-[#d95a2f] mt-3 font-medium">
               ↑ Please check all boxes to enable submission.
             </p>
           )}
@@ -410,7 +410,7 @@ export function ReviewDone({
               ${
                 submitting || !allAgreed
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-amber-500 text-white hover:bg-amber-600 active:scale-[0.98] shadow-md"
+                  : "bg-[#e8683f] text-white hover:bg-[#d95a2f] active:scale-[0.98] shadow-md"
               }`}
           >
             {submitting ? (

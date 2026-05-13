@@ -159,8 +159,8 @@ export default function PersonalInfoStep({
     <div className="w-full">
       {/* HEADER */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 mb-4">
-          <User className="w-5 h-5 text-amber-500" />
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#e8683f]/10 border border-[#e8683f]/20 mb-4">
+          <User className="w-5 h-5 text-[#e8683f]" />
         </div>
 
         <h1 className="text-2xl font-bold text-stone-900">
@@ -263,7 +263,7 @@ export default function PersonalInfoStep({
           <button
             onClick={handleSubmit}
             type="button"
-            className="flex items-center gap-2 px-8 py-3 bg-amber-500 text-white rounded-xl"
+            className="flex items-center gap-2 px-8 py-3 bg-[#e8683f] text-white rounded-xl"
           >
             Continue <ArrowRight className="w-4 h-4" />
           </button>

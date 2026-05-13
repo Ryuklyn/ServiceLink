@@ -180,8 +180,8 @@ export default function KYCStepRedesign({
     <div className="max-w-3xl mx-auto">
       {/* HEADER */}
       <div className="text-center mb-6">
-        <div className="inline-flex w-12 h-12 items-center justify-center bg-amber-50 rounded-xl mb-3">
-          <ShieldCheck className="text-amber-500 w-5 h-5" />
+        <div className="inline-flex w-12 h-12 items-center justify-center bg-[#e8683f]/10 rounded-xl mb-3">
+          <ShieldCheck className="text-[#e8683f] w-5 h-5" />
         </div>
         <h1 className="text-xl font-bold text-gray-900">
           Identity Verification (KYC)
@@ -193,7 +193,7 @@ export default function KYCStepRedesign({
       </div>
 
       {/* INFO */}
-      <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm p-3 rounded-lg mb-6">
+      <div className="bg-[#1e3a8a]/10 border border-[#1e3a8a]/20 text-[#1e3a8a] text-sm p-3 rounded-lg mb-6">
         <Info className="inline w-4 h-4 mr-1" />
         Your documents are reviewed manually by our compliance team within 2–3
         business days.
@@ -280,7 +280,7 @@ export default function KYCStepRedesign({
           type="button"
           disabled={missingMandatory > 0}
           onClick={() => onNext?.(files)}
-          className="px-6 py-2 bg-amber-500 text-white rounded-lg flex items-center gap-2 disabled:opacity-50"
+          className="px-6 py-2 bg-[#e8683f] text-white rounded-lg flex items-center gap-2 disabled:opacity-50"
         >
           Next
           <ArrowRight className="w-4 h-4" />

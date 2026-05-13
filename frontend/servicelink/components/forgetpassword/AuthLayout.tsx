@@ -15,7 +15,7 @@ export default function AuthLayout({
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 rounded-full bg-blue-400 opacity-20 blur-3xl mix-blend-screen"></div>
 
         <div className="relative z-10 max-w-sm flex flex-col items-center">
-          <div className="w-24 h-24 bg-orange-500 rounded-3xl flex items-center justify-center mb-10 shadow-lg shadow-orange-500/30">
+          <div className="w-24 h-24 bg-[#e8683f] rounded-3xl flex items-center justify-center mb-10 shadow-lg shadow-[#e8683f]/30">
             <KeyRound className="w-10 h-10 text-white" />
           </div>
 
@@ -23,7 +23,7 @@ export default function AuthLayout({
             Reset Your Password
           </h1>
 
-          <p className="text-blue-100 text-lg leading-relaxed">
+          <p className="text-white/80 text-lg leading-relaxed">
             Follow the steps to recover your account and create a new secure
             password.
           </p>

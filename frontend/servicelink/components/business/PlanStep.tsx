@@ -73,13 +73,13 @@ export default function PlanStep({ onContinue, onBack }: PlanStepProps) {
       {/* Header */}
       <div className="flex items-start gap-4 mb-8">
         <div className="w-12 h-12 rounded-full bg-[#e8edf8] flex items-center justify-center shrink-0">
-          <Sparkles size={22} className="text-[#1e2d5a]" />
+          <Sparkles size={22} className="text-[#1e3a8a]" />
         </div>
         <div>
-          <p className="text-[#f26522] text-sm font-semibold uppercase tracking-wide mb-1">
+          <p className="text-[#e8683f] text-sm font-semibold uppercase tracking-wide mb-1">
             Step 5 of 5
           </p>
-          <h1 className="text-[28px] font-extrabold text-[#0f1b36] leading-tight">
+          <h1 className="text-[28px] font-extrabold text-[#1e3a8a] leading-tight">
             Choose your plan
           </h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -98,12 +98,12 @@ export default function PlanStep({ onContinue, onBack }: PlanStepProps) {
               onClick={() => setSelectedPlan(plan.id)}
               className={`
                 relative rounded-xl border-2 p-5 cursor-pointer transition
-                ${isSelected ? "border-[#1e2d5a]" : "border-gray-200 hover:border-gray-300"}
+                ${isSelected ? "border-[#1e3a8a]" : "border-gray-200 hover:border-gray-300"}
               `}
             >
               {/* Popular badge */}
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#f26522] text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e8683f] text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
                   <Sparkles size={10} />
                   POPULAR
                 </div>
@@ -111,13 +111,13 @@ export default function PlanStep({ onContinue, onBack }: PlanStepProps) {
 
               {/* Plan header */}
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-base font-bold text-[#0f1b36]">
+                <h3 className="text-base font-bold text-[#1e3a8a]">
                   {plan.name}
                 </h3>
                 <div
                   className={`
                     w-5 h-5 rounded-full border-2 flex items-center justify-center transition
-                    ${isSelected ? "border-[#1e2d5a] bg-[#1e2d5a]" : "border-gray-300 bg-white"}
+                    ${isSelected ? "border-[#1e3a8a] bg-[#1e3a8a]" : "border-gray-300 bg-white"}
                   `}
                 >
                   {isSelected && (
@@ -129,7 +129,7 @@ export default function PlanStep({ onContinue, onBack }: PlanStepProps) {
               {/* Price */}
               <div className="mb-1">
                 <span
-                  className={`font-extrabold text-[#0f1b36] ${plan.custom ? "text-2xl" : "text-3xl"}`}
+                  className={`font-extrabold text-[#1e3a8a] ${plan.custom ? "text-2xl" : "text-3xl"}`}
                 >
                   {plan.price}
                 </span>{" "}
@@ -149,7 +149,7 @@ export default function PlanStep({ onContinue, onBack }: PlanStepProps) {
                   <li key={feature} className="flex items-start gap-2">
                     <Check
                       size={14}
-                      className="text-[#1e2d5a] mt-0.5 shrink-0"
+                      className="text-[#1e3a8a] mt-0.5 shrink-0"
                       strokeWidth={3}
                     />
                     <span className="text-xs text-gray-700">{feature}</span>
@@ -174,7 +174,7 @@ export default function PlanStep({ onContinue, onBack }: PlanStepProps) {
         </button>
         <button
           onClick={onContinue}
-          className="flex items-center gap-2 bg-[#f26522] hover:bg-[#d9551a] text-white text-sm font-semibold px-7 py-3 rounded-lg transition"
+          className="flex items-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold px-7 py-3 rounded-lg transition"
         >
           Create workspace <span>→</span>
         </button>

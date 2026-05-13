@@ -56,12 +56,12 @@ export default function DoneStep({ onRestart, allData }: DoneStepProps) {
       >
         {/* Header */}
         <div className="bg-black text-white px-8 py-10">
-          <p className="text-xs uppercase tracking-widest text-amber-400 mb-4">
+          <p className="text-xs uppercase tracking-widest text-[#e8683f] mb-4">
             Application Submitted
           </p>
 
           <h1 className="font-serif text-3xl leading-tight">
-            You're all <span className="text-amber-400 italic">set.</span>
+            You're all <span className="text-[#e8683f] italic">set.</span>
           </h1>
 
           <p className="text-sm text-neutral-400 mt-2">
@@ -117,7 +117,7 @@ export default function DoneStep({ onRestart, allData }: DoneStepProps) {
 
               {/* Step 2 */}
               <div className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
+                <div className="w-7 h-7 rounded-full bg-[#e8683f]/10 flex items-center justify-center text-[#d95a2f]">
                   ⏳
                 </div>
                 <div>
@@ -130,7 +130,7 @@ export default function DoneStep({ onRestart, allData }: DoneStepProps) {
 
               {/* Step 3 */}
               <div className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
+                <div className="w-7 h-7 rounded-full bg-[#e8683f]/10 flex items-center justify-center text-[#d95a2f]">
                   ★
                 </div>
                 <div>

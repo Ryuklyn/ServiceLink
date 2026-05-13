@@ -109,7 +109,7 @@ interface Props {
 function getExperienceColor(years: number): string {
   if (years <= 5) return "#3b82f6";
   if (years <= 20) return "#22c55e";
-  return "#f59e0b";
+  return "#e8683f";
 }
 
 function getExperienceLabel(years: number): string {
@@ -250,8 +250,8 @@ export default function SkillsServicesForm({
     <div className="w-full">
       {/* ── HEADER (unchanged) ── */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 mb-4">
-          <Briefcase className="w-5 h-5 text-amber-500" />
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#e8683f]/10 border border-[#e8683f]/20 mb-4">
+          <Briefcase className="w-5 h-5 text-[#e8683f]" />
         </div>
         <h1 className="text-xl font-bold text-stone-900">
           Your Skills &amp; Services
@@ -283,7 +283,7 @@ export default function SkillsServicesForm({
               setPrimaryService(e.target.value);
               setOtherService("");
             }}
-            className="w-full appearance-none px-3 py-2.5 pr-10 border border-stone-200 rounded-xl text-stone-900 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full appearance-none px-3 py-2.5 pr-10 border border-stone-200 rounded-xl text-stone-900 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#e8683f]"
           >
             <option value="">-- Select primary service --</option>
             {primaryServiceOptions.map((opt) => (
@@ -302,7 +302,7 @@ export default function SkillsServicesForm({
             value={otherService}
             onChange={(e) => setOtherService(e.target.value)}
             placeholder="Please specify your service..."
-            className="w-full mt-2 px-3 py-2 border border-amber-200 rounded-xl text-sm text-stone-900 placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-amber-50/30"
+            className="w-full mt-2 px-3 py-2 border border-[#e8683f]/30 rounded-xl text-sm text-stone-900 placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-[#e8683f] bg-[#e8683f]/10"
           />
         )}
       </div>
@@ -316,7 +316,7 @@ export default function SkillsServicesForm({
         <p className="text-xs text-stone-400 mt-0.5 mb-2">
           Select up to 3 more categories
           {additionalServices.length > 0 && (
-            <span className="ml-2 text-amber-500 font-medium">
+            <span className="ml-2 text-[#e8683f] font-medium">
               {additionalServices.length}/3 selected
             </span>
           )}
@@ -334,8 +334,8 @@ export default function SkillsServicesForm({
                   className={`flex items-center gap-2.5 text-sm cursor-pointer py-0.5 rounded transition-colors ${
                     isDisabled
                       ? "opacity-40 cursor-not-allowed"
-                      : "hover:text-amber-600"
-                  } ${isChecked ? "text-amber-600 font-medium" : "text-stone-600"}`}
+                      : "hover:text-[#d95a2f]"
+                  } ${isChecked ? "text-[#d95a2f] font-medium" : "text-stone-600"}`}
                 >
                   <input
                     type="checkbox"
@@ -431,7 +431,7 @@ export default function SkillsServicesForm({
                 prev.filter((d) => d !== e.target.value),
               );
             }}
-            className="w-full appearance-none px-3 py-2.5 pr-10 border border-stone-200 rounded-xl text-stone-900 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full appearance-none px-3 py-2.5 pr-10 border border-stone-200 rounded-xl text-stone-900 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#e8683f]"
           >
             <option value="">-- Select primary district --</option>
             {districts.map((d) => (
@@ -464,7 +464,7 @@ export default function SkillsServicesForm({
                 className="accent-amber-500 w-3.5 h-3.5"
               />
               {primaryDistrict}{" "}
-              <span className="text-xs text-amber-500">(Primary)</span>
+              <span className="text-xs text-[#e8683f]">(Primary)</span>
             </label>
           )}
           {districts
@@ -474,8 +474,8 @@ export default function SkillsServicesForm({
                 key={d}
                 className={`flex items-center gap-2 text-sm cursor-pointer py-0.5 rounded transition-colors ${
                   secondaryDistricts.includes(d)
-                    ? "text-amber-600 font-medium"
-                    : "text-stone-600 hover:text-amber-600"
+                    ? "text-[#d95a2f] font-medium"
+                    : "text-stone-600 hover:text-[#d95a2f]"
                 }`}
               >
                 <input
@@ -501,7 +501,7 @@ export default function SkillsServicesForm({
               key={opt.value}
               className={`flex items-center gap-2.5 text-sm cursor-pointer px-3 py-2.5 rounded-xl border transition-all ${
                 travelRadius === opt.value
-                  ? "border-amber-400 bg-amber-50/60 text-amber-700 font-medium"
+                  ? "border-[#e8683f] bg-[#e8683f]/10 text-[#d95a2f] font-medium"
                   : "border-stone-100 text-stone-600 hover:border-stone-200"
               }`}
             >
@@ -549,7 +549,7 @@ export default function SkillsServicesForm({
           maxLength={150}
           rows={4}
           placeholder="Introduce yourself clearly and professionally..."
-          className="w-full px-3 py-2.5 border border-stone-200 placeholder:text-stone-300 text-stone-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+          className="w-full px-3 py-2.5 border border-stone-200 placeholder:text-stone-300 text-stone-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e8683f] resize-none"
         />
 
         <div className="flex items-center justify-between mt-1">
@@ -569,7 +569,7 @@ export default function SkillsServicesForm({
                     charPct >= 90
                       ? "#ef4444"
                       : charPct >= 70
-                        ? "#f59e0b"
+                        ? "#e8683f"
                         : "#22c55e",
                 }}
               />
@@ -579,7 +579,7 @@ export default function SkillsServicesForm({
                 charPct >= 90
                   ? "text-red-500"
                   : charPct >= 70
-                    ? "text-amber-500"
+                    ? "text-[#e8683f]"
                     : "text-stone-400"
               }`}
             >
@@ -643,7 +643,7 @@ export default function SkillsServicesForm({
                 <p className="text-sm text-stone-600 font-medium">
                   Tap to take photo or upload
                 </p>
-                <span className="inline-block mt-2 px-4 py-1.5 bg-amber-500 text-white text-xs font-semibold rounded-full">
+                <span className="inline-block mt-2 px-4 py-1.5 bg-[#e8683f] text-white text-xs font-semibold rounded-full">
                   Choose Photo
                 </span>
               </div>
@@ -715,7 +715,7 @@ export default function SkillsServicesForm({
         <button
           type="button"
           onClick={handleContinue}
-          className="flex items-center gap-2 px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold transition"
+          className="flex items-center gap-2 px-8 py-3 bg-[#e8683f] hover:bg-[#d95a2f] text-white rounded-xl text-sm font-semibold transition"
         >
           Continue <ArrowRight className="w-4 h-4" />
         </button>

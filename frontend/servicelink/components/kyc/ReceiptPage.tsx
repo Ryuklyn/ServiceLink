@@ -69,12 +69,12 @@ export default function ReceiptPage() {
           </div>
 
           <h1 className="font-serif text-2xl mt-6">
-            Application <span className="text-amber-400 italic">Receipt</span>
+            Application <span className="text-[#e8683f] italic">Receipt</span>
           </h1>
 
           <div className="mt-3 text-sm text-neutral-300 flex gap-2 flex-wrap">
             <span className="uppercase text-xs tracking-wider">Reference:</span>
-            <span className="text-amber-400 font-medium">{ref}</span>
+            <span className="text-[#e8683f] font-medium">{ref}</span>
             <span>•</span>
             <span>{formattedDate}</span>
           </div>
@@ -82,7 +82,7 @@ export default function ReceiptPage() {
 
         {/* Section */}
         <div className="p-6 border-b">
-          <p className="text-xs uppercase tracking-widest text-amber-500 mb-4">
+          <p className="text-xs uppercase tracking-widest text-[#e8683f] mb-4">
             Applicant Info
           </p>
 
@@ -111,7 +111,7 @@ export default function ReceiptPage() {
 
         {/* Tracking */}
         <div className="p-6 bg-stone-50 border-b">
-          <p className="text-xs uppercase tracking-widest text-amber-500 mb-4">
+          <p className="text-xs uppercase tracking-widest text-[#e8683f] mb-4">
             Tracking
           </p>
 
@@ -140,7 +140,7 @@ export default function ReceiptPage() {
 
         {/* Checklist */}
         <div className="p-6 border-b">
-          <p className="text-xs uppercase tracking-widest text-amber-500 mb-4">
+          <p className="text-xs uppercase tracking-widest text-[#e8683f] mb-4">
             Verification
           </p>
 
@@ -158,7 +158,7 @@ export default function ReceiptPage() {
                   className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                     done
                       ? "bg-green-100 text-green-600"
-                      : "bg-yellow-100 text-yellow-700"
+                      : "bg-[#e8683f]/10 text-[#d95a2f]"
                   }`}
                 >
                   {done ? "Done" : "Pending"}
@@ -170,7 +170,7 @@ export default function ReceiptPage() {
 
         {/* Notes */}
         <div className="p-6 bg-stone-50 border-b">
-          <p className="text-xs uppercase tracking-widest text-amber-500 mb-4">
+          <p className="text-xs uppercase tracking-widest text-[#e8683f] mb-4">
             Notes
           </p>
 
@@ -189,7 +189,7 @@ export default function ReceiptPage() {
             reference.
           </p>
 
-          <span className="text-amber-500 font-semibold">
+          <span className="text-[#e8683f] font-semibold">
             ✔ Verified Receipt
           </span>
         </div>

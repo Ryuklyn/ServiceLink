@@ -68,14 +68,14 @@
 
 //           <div className="relative z-10 max-w-sm flex flex-col items-center">
 //             {/* Main Icon */}
-//             <div className="w-24 h-24 bg-orange-500 rounded-3xl flex items-center justify-center mb-10 shadow-lg shadow-orange-500/30">
+//             <div className="w-24 h-24 bg-[#e8683f] rounded-3xl flex items-center justify-center mb-10 shadow-lg shadow-[#e8683f]/30">
 //               <Briefcase className="w-12 h-12 text-white" strokeWidth={1.5} />
 //             </div>
 
 //             <h1 className="text-4xl font-bold mb-4 tracking-tight">
 //               Welcome Back
 //             </h1>
-//             <p className="text-blue-100 text-lg leading-relaxed">
+//             <p className="text-white/80 text-lg leading-relaxed">
 //               Sign in to manage your bookings, track services, and connect with
 //               professionals.
 //             </p>
@@ -108,7 +108,7 @@
 //                     type="email"
 //                     value={email}
 //                     onChange={(e) => setEmail(e.target.value)}
-//                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-gray-900 transition-shadow outline-none"
+//                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:border-[#1e3a8a] placeholder-gray-400 text-gray-900 transition-shadow outline-none"
 //                     placeholder="you@email.com"
 //                   />
 //                 </div>
@@ -127,7 +127,7 @@
 //                     type={showPassword ? "text" : "password"}
 //                     value={password}
 //                     onChange={(e) => setPassword(e.target.value)}
-//                     className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-gray-900 transition-shadow outline-none"
+//                     className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:border-[#1e3a8a] placeholder-gray-400 text-gray-900 transition-shadow outline-none"
 //                     placeholder="Enter your password"
 //                   />
 //                   <div
@@ -162,7 +162,7 @@
 //                 <div className="text-sm">
 //                   <Link
 //                     href="/login/forgotpassword"
-//                     className="font-medium text-[#ea580c] hover:underline"
+//                     className="font-medium text-[#e8683f] hover:underline"
 //                   >
 //                     Forgot password?
 //                   </Link>
@@ -173,7 +173,7 @@
 //               <button
 //                 type="submit"
 //                 disabled={loading}
-//                 className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-[#1e293b] hover:bg-[#1e3a8a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e3a8a] transition-colors"
+//                 className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-[#1e3a8a] hover:bg-[#1e3a8a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e3a8a] transition-colors"
 //               >
 //                 {loading ? "Signing in..." : "Sign In"}
 //               </button>
@@ -213,7 +213,7 @@
 //               Don't have an account?{" "}
 //               <Link
 //                 href="/register"
-//                 className="font-bold text-[#ea580c] hover:underline"
+//                 className="font-bold text-[#e8683f] hover:underline"
 //               >
 //                 Create one
 //               </Link>
@@ -254,33 +254,33 @@ const ROLE_CARDS: RoleCard[] = [
     id: "user",
     icon: <UserCircle size={26} />,
     iconBg: "bg-[#e8edf8]",
-    iconColor: "text-[#1e2d5a]",
+    iconColor: "text-[#1e3a8a]",
     label: "Sign in as User",
     description:
       "Access your bookings, track services, and connect with verified professionals.",
-    signInColor: "text-[#1e2d5a] hover:text-[#16224a]",
+    signInColor: "text-[#1e3a8a] hover:text-[#1e3a8a]",
     href: "/login/user",
   },
   {
     id: "provider",
     icon: <Wrench size={26} />,
     iconBg: "bg-[#fde8d8]",
-    iconColor: "text-[#f26522]",
+    iconColor: "text-[#e8683f]",
     label: "Service Provider",
     description:
       "Manage your bookings, respond to clients, and grow your independent business.",
-    signInColor: "text-[#f26522] hover:text-[#d9551a]",
+    signInColor: "text-[#e8683f] hover:text-[#d95a2f]",
     href: "/login/provider",
   },
   {
     id: "business",
     icon: <Building2 size={26} />,
     iconBg: "bg-[#e8edf8]",
-    iconColor: "text-[#1e2d5a]",
+    iconColor: "text-[#1e3a8a]",
     label: "Business Organization",
     description:
       "Access your enterprise dashboard, manage your team, and track analytics.",
-    signInColor: "text-[#1e2d5a] hover:text-[#16224a]",
+    signInColor: "text-[#1e3a8a] hover:text-[#1e3a8a]",
     badge: "Enterprise",
     href: "/login/business",
   },
@@ -295,8 +295,8 @@ export default function SignInPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-16">
         {/* Heading */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-extrabold text-[#0f1b36] mb-3">
-            Welcome back to <span className="text-[#2563eb]">ServiceLink</span>
+          <h1 className="text-4xl font-extrabold text-[#1e3a8a] mb-3">
+            Welcome back to <span className="text-[#e8683f]">ServiceLink</span>
           </h1>
           <p className="text-gray-500 text-base">
             Select how you'd like to sign in and access your account.
@@ -325,7 +325,7 @@ export default function SignInPage() {
               </div>
 
               {/* Label */}
-              <h2 className="text-base font-bold text-[#0f1b36] mb-2">
+              <h2 className="text-base font-bold text-[#1e3a8a] mb-2">
                 {card.label}
               </h2>
 

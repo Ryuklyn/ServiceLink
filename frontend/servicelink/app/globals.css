@@ -4,12 +4,17 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --brand-primary: #1e3a8a;
+  --brand-accent: #e8683f;
+  --brand-accent-hover: #d95a2f;
 }
 
 @theme inline {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-accent: var(--brand-accent);
   --color-accent-400: #e8683f;
   --color-accent: #e8683f;
-  --color-accent-500: #d95a2f;
+  --color-accent-500: var(--brand-accent-hover);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: "DM Sans", var(--font-geist-sans), sans-serif;
@@ -41,7 +46,7 @@ h6 {
 
 .progress-bar {
   width: var(--progress);
-  background: linear-gradient(to right, #fbbf24, #f59e0b);
+  background: linear-gradient(to right, var(--brand-primary), var(--brand-accent));
 }
 
 .experience-slider {
@@ -50,7 +55,7 @@ h6 {
   appearance: none;
   background: linear-gradient(
     to right,
-    #f59e0b var(--progress, 0%),
+    var(--brand-accent) var(--progress, 0%),
     #e5e5e5 var(--progress, 0%)
   );
 }
@@ -60,6 +65,6 @@ h6 {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #f59e0b;
+  background: var(--brand-accent);
   cursor: pointer;
 }

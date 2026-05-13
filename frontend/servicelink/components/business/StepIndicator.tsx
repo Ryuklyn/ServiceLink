@@ -23,47 +23,58 @@ export default function StepIndicator({
   currentStep,
 }: StepIndicatorProps) {
   return (
-    <div className="flex items-center justify-center gap-0 w-full px-4 py-5">
+    <div className="flex items-start justify-center w-full px-4 py-5">
       {steps.map((step, index) => {
         const status = getStatus(step.id, currentStep);
+
         return (
-          <div key={step.id} className="flex items-center">
-            {/* Step node */}
-            <div className="flex items-center gap-2">
-              {/* Circle */}
-              <div
-                className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all
-                  ${status === "completed" ? "bg-[#1e2d5a] text-white" : ""}
-                  ${status === "active" ? "bg-[#f26522] text-white" : ""}
-                  ${status === "upcoming" ? "bg-white border-2 border-gray-300 text-gray-400" : ""}
-                `}
-              >
-                {status === "completed" ? (
-                  <Check size={14} strokeWidth={3} />
-                ) : (
-                  <span>{step.id}</span>
-                )}
-              </div>
-              {/* Label */}
+          <div key={step.id} className="flex items-start">
+            {/* ── Step node (circle + label stacked) ── */}
+            <div className="flex flex-col items-center gap-1.5">
+              {/* ── Circle with optional halo ring ── */}
+              {status === "active" ? (
+                // Active: salmon halo ring → orange inner circle
+                <div className="w-14 h-14 rounded-full bg-[#e8683f]/15 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-[#e8683f] flex items-center justify-center text-sm font-semibold text-white shadow-sm">
+                    {step.id}
+                  </div>
+                </div>
+              ) : status === "completed" ? (
+                // Completed: navy circle, no halo
+                <div className="w-14 h-14 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-[#1e3a8a] flex items-center justify-center shadow-sm">
+                    <Check size={14} strokeWidth={3} className="text-white" />
+                  </div>
+                </div>
+              ) : (
+                // Upcoming: muted blue-gray circle, no halo
+                <div className="w-14 h-14 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-[#1e3a8a]/10 flex items-center justify-center text-sm font-semibold text-[#1e3a8a]/45">
+                    {step.id}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Label below circle ── */}
               <span
                 className={`
-                  text-sm font-medium hidden sm:block
-                  ${status === "completed" ? "text-[#1e2d5a]" : ""}
-                  ${status === "active" ? "text-[#1e2d5a] font-semibold" : ""}
-                  ${status === "upcoming" ? "text-gray-400" : ""}
+                  text-xs font-medium text-center leading-tight max-w-[72px]
+                  ${status === "active" ? "text-[#1e3a8a] font-semibold" : ""}
+                  ${status === "completed" ? "text-[#1e3a8a]" : ""}
+                  ${status === "upcoming" ? "text-[#1e3a8a]/45" : ""}
                 `}
               >
                 {step.label}
               </span>
             </div>
 
-            {/* Connector line */}
+            {/* ── Connector line — vertically centred to the circle row ── */}
             {index < steps.length - 1 && (
               <div
                 className={`
-                  w-8 sm:w-12 h-[2px] mx-2
-                  ${step.id < currentStep ? "bg-[#1e2d5a]" : "bg-gray-300"}
+                  h-[2px] w-8 sm:w-14 mx-1
+                  mt-7          /* aligns with vertical centre of the 56px (w-14) circle row */
+                  ${step.id < currentStep ? "bg-[#1e3a8a]" : "bg-[#1e3a8a]/20"}
                 `}
               />
             )}

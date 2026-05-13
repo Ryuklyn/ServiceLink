@@ -10,7 +10,7 @@ export default function Categories() {
           <p className="text-sm font-semibold tracking-widest text-[#1e3a8a] uppercase mb-3">
             Categories
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#1e293b]">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a8a]">
             Explore Services by Category
           </h2>
         </div>
@@ -24,9 +24,9 @@ export default function Categories() {
               <a 
                 key={idx} 
                 href="#"
-                className="flex items-center gap-4 p-4 rounded-xl md:rounded-full bg-white border border-gray-200 hover:border-blue-200 hover:shadow-md transition-all group"
+                className="flex items-center gap-4 p-4 rounded-xl md:rounded-full bg-white border border-gray-200 hover:border-[#1e3a8a]/25 hover:shadow-md transition-all group"
               >
-                <div className={`w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-blue-50 transition-colors ${cat.color}`}>
+                <div className={`w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#1e3a8a]/10 transition-colors ${cat.color}`}>
                   <Icon strokeWidth={1.5} className="w-6 h-6" />
                 </div>
                 <div>
