@@ -108,7 +108,7 @@ export default function BusinessSignInPage() {
               <p className="text-white text-3xl font-extrabold leading-none">
                 {s.value}
               </p>
-              <p className="text-[#1e3a8a]/80 text-xs mt-1">{s.label}</p>
+              <p className="text-white text-xs mt-1">{s.label}</p>
             </div>
           ))}
         </div>

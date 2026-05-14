@@ -37,9 +37,9 @@ export default function AdminStep({ onContinue, onBack }: AdminStepProps) {
           </label>
           <input
             type="text"
-            defaultValue="Jane Cooper"
+            // defaultValue="Jane Cooper"
             className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
-            placeholder="Jane Cooper"
+            placeholder="Enter full name"
           />
         </div>
 

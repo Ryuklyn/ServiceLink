@@ -64,9 +64,9 @@ export default function WorkspaceStep({
             </label>
             <input
               type="text"
-              defaultValue="Acme HQ Operations"
+              // defaultValue="Acme HQ Operations"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
-              placeholder="Acme HQ Operations"
+              placeholder="Enter workspace name"
             />
           </div>
 
@@ -77,9 +77,9 @@ export default function WorkspaceStep({
             </label>
             <input
               type="text"
-              defaultValue="New York, NY"
+              // defaultValue="New York, NY"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
-              placeholder="New York, NY"
+              placeholder="Enter primary branch address"
             />
           </div>
         </div>

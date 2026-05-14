@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check, CreditCard, Sparkles } from "lucide-react";
+import PaymentModal from "@/components/business/payment/PaymentModal";
 
-interface Plan {
+export interface PlanCheckout {
   id: string;
   name: string;
   price: string;
   priceLabel: string;
+}
+
+interface Plan extends PlanCheckout {
   description: string;
   features: string[];
   popular?: boolean;
@@ -18,28 +22,29 @@ const PLANS: Plan[] = [
   {
     id: "starter",
     name: "Starter",
-    price: "$0",
-    priceLabel: "free for 14 days",
+    price: "NPR 1,999",
+    priceLabel: "per month",
     description: "For small teams getting started with service operations.",
     features: [
-      "Up to 5 team members",
+      "14-day free trial",
       "1 branch location",
-      "Basic request tracking",
-      "Email support",
+      "Up to 3 team members",
+      "Basic service requests",
+      "Email notifications",
     ],
   },
   {
     id: "growth",
     name: "Growth",
-    price: "$249",
+    price: "NPR 4,999",
     priceLabel: "per month",
     description: "Scaling operations with verified vendors and reporting.",
     features: [
-      "Up to 50 team members",
-      "10 branch locations",
+      "Up to 20 team members",
+      "Up to 10 branch locations",
       "Vendor verification",
-      "SLA tracking",
-      "Priority support",
+      "Analytics & reporting",
+      "Asset tracking",
     ],
     popular: true,
   },
@@ -52,104 +57,122 @@ const PLANS: Plan[] = [
     features: [
       "Unlimited members",
       "Unlimited branches",
-      "SSO + SCIM",
-      "Dedicated CSM",
-      "99.9% SLA",
+      "Dedicated Support",
+      "Advanced Analytics",
+      "Custom Integrations",
     ],
     custom: true,
   },
 ];
 
 interface PlanStepProps {
-  onContinue: () => void;
+  onContinue: (plan: PlanCheckout) => void;
   onBack: () => void;
 }
 
 export default function PlanStep({ onContinue, onBack }: PlanStepProps) {
-  const [selectedPlan, setSelectedPlan] = useState("starter");
+  const [selectedPlanId, setSelectedPlanId] = useState("growth");
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const selectedPlan =
+    PLANS.find((plan) => plan.id === selectedPlanId) ?? PLANS[0];
+
+  const openPayment = () => {
+    if (selectedPlan.custom) {
+      return;
+    }
+
+    setIsPaymentOpen(true);
+  };
+
+  const startPayment = () => {
+    setIsPaymentOpen(false);
+    onContinue({
+      id: selectedPlan.id,
+      name: selectedPlan.name,
+      price: selectedPlan.price,
+      priceLabel: selectedPlan.priceLabel,
+    });
+  };
 
   return (
     <div className="w-full">
-      {/* Header */}
-      <div className="flex items-start gap-4 mb-8">
-        <div className="w-12 h-12 rounded-full bg-[#e8edf8] flex items-center justify-center shrink-0">
+      <div className="mb-8 flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e8edf8]">
           <Sparkles size={22} className="text-[#1e3a8a]" />
         </div>
         <div>
-          <p className="text-[#e8683f] text-sm font-semibold uppercase tracking-wide mb-1">
+          <p className="mb-1 text-sm font-semibold uppercase tracking-wide text-[#e8683f]">
             Step 5 of 5
           </p>
-          <h1 className="text-[28px] font-extrabold text-[#1e3a8a] leading-tight">
+          <h1 className="text-[28px] font-extrabold leading-tight text-[#1e3a8a]">
             Choose your plan
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="mt-1 text-sm text-gray-500">
             Start free for 14 days. No credit card required. Change anytime.
           </p>
         </div>
       </div>
 
-      {/* Plans grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {PLANS.map((plan) => {
-          const isSelected = selectedPlan === plan.id;
+          const isSelected = selectedPlanId === plan.id;
           return (
             <div
               key={plan.id}
-              onClick={() => setSelectedPlan(plan.id)}
-              className={`
-                relative rounded-xl border-2 p-5 cursor-pointer transition
-                ${isSelected ? "border-[#1e3a8a]" : "border-gray-200 hover:border-gray-300"}
-              `}
+              onClick={() => setSelectedPlanId(plan.id)}
+              className={`relative cursor-pointer rounded-xl border-2 p-5 transition ${
+                isSelected
+                  ? "border-[#1e3a8a]"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
             >
-              {/* Popular badge */}
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e8683f] text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                <div className="absolute -top-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-[#e8683f] px-3 py-1 text-xs font-bold text-white">
                   <Sparkles size={10} />
                   POPULAR
                 </div>
               )}
 
-              {/* Plan header */}
-              <div className="flex items-start justify-between mb-3">
+              <div className="mb-3 flex items-start justify-between">
                 <h3 className="text-base font-bold text-[#1e3a8a]">
                   {plan.name}
                 </h3>
                 <div
-                  className={`
-                    w-5 h-5 rounded-full border-2 flex items-center justify-center transition
-                    ${isSelected ? "border-[#1e3a8a] bg-[#1e3a8a]" : "border-gray-300 bg-white"}
-                  `}
+                  className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition ${
+                    isSelected
+                      ? "border-[#1e3a8a] bg-[#1e3a8a]"
+                      : "border-gray-300 bg-white"
+                  }`}
                 >
-                  {isSelected && (
-                    <div className="w-2 h-2 rounded-full bg-white" />
-                  )}
+                  {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
                 </div>
               </div>
 
-              {/* Price */}
-              <div className="mb-1">
+              <div className="mb-1 flex flex-col">
                 <span
-                  className={`font-extrabold text-[#1e3a8a] ${plan.custom ? "text-2xl" : "text-3xl"}`}
+                  className={`font-extrabold text-[#1e3a8a] ${
+                    plan.custom ? "text-2xl" : "text-3xl"
+                  }`}
                 >
                   {plan.price}
-                </span>{" "}
-                <span className="text-xs text-gray-500">{plan.priceLabel}</span>
+                </span>
+                <span className="mt-1 text-xs text-gray-500">
+                  {plan.priceLabel}
+                </span>
               </div>
 
-              <p className="text-xs text-gray-500 mb-4 leading-snug">
+              <p className="mb-4 text-xs leading-snug text-gray-500">
                 {plan.description}
               </p>
 
-              {/* Divider */}
-              <div className="border-t border-gray-100 mb-4" />
+              <div className="mb-4 border-t border-gray-100" />
 
-              {/* Features */}
               <ul className="space-y-2">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2">
                     <Check
                       size={14}
-                      className="text-[#1e3a8a] mt-0.5 shrink-0"
+                      className="mt-0.5 shrink-0 text-[#1e3a8a]"
                       strokeWidth={3}
                     />
                     <span className="text-xs text-gray-700">{feature}</span>
@@ -161,24 +184,32 @@ export default function PlanStep({ onContinue, onBack }: PlanStepProps) {
         })}
       </div>
 
-      {/* Divider */}
-      <div className="border-t border-gray-200 my-7" />
+      <div className="my-7 border-t border-gray-200" />
 
-      {/* Footer actions */}
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 font-medium transition"
+          className="flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-gray-700"
         >
-          <span>←</span> Back
+          <span aria-hidden="true">&larr;</span> Back
         </button>
         <button
-          onClick={onContinue}
-          className="flex items-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold px-7 py-3 rounded-lg transition"
+          onClick={openPayment}
+          disabled={selectedPlan.custom}
+          className="flex items-center gap-2 rounded-lg bg-[#e8683f] px-7 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(232,104,63,0.2)] transition hover:bg-[#d95a2f] disabled:cursor-not-allowed disabled:bg-gray-300"
         >
-          Create workspace <span>→</span>
+          <CreditCard size={16} />
+          Proceed to Payment
         </button>
       </div>
+
+      <PaymentModal
+        isOpen={isPaymentOpen}
+        plan={selectedPlan}
+        workspaceName="TRukesh"
+        onClose={() => setIsPaymentOpen(false)}
+        onContinue={startPayment}
+      />
     </div>
   );
 }

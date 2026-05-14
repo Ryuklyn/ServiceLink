@@ -42,9 +42,9 @@ export default function OrganizationStep({
             </label>
             <input
               type="text"
-              defaultValue="Acme Facilities Ltd."
+              // defaultValue="Acme Facilities Ltd."
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
-              placeholder="Acme Facilities Ltd."
+              placeholder="Enter Company Name."
             />
           </div>
 
@@ -54,12 +54,20 @@ export default function OrganizationStep({
               Business type <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <select className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-400 appearance-none focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition bg-white">
-                <option value="">Select type</option>
-                <option>Facility Management</option>
-                <option>Property Management</option>
-                <option>Construction</option>
-                <option>Retail</option>
+              <select className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition bg-white">
+                <option value="">Select organization type</option>
+                <option value="office">Office / Corporate</option>
+                <option value="hotel">Hotel / Hospitality</option>
+                <option value="restaurant">Restaurant / Cafe</option>
+                <option value="apartment">Apartment / Housing</option>
+                <option value="hospital">Hospital / Clinic</option>
+                <option value="school">School / College</option>
+                <option value="retail">Retail Store / Supermarket</option>
+                <option value="facility_management">Facility Management</option>
+                <option value="property_management">Property Management</option>
+                <option value="construction">Construction</option>
+                <option value="factory">Factory / Warehouse</option>
+                <option value="other">Other</option>
               </select>
               <ChevronDown
                 size={16}
@@ -108,12 +116,12 @@ export default function OrganizationStep({
         {/* Phone number */}
         <div>
           <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
-            Phone number
+            Contact number <span className="text-red-500">*</span>
           </label>
           <input
             type="tel"
             className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
-            placeholder="+1 (555) 123-4567"
+            placeholder="Enter Contact No."
           />
         </div>
       </div>
