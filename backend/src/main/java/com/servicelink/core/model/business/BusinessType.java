@@ -1,0 +1,3 @@
+package com.servicelink.core.model.business;
+
+public enum BusinessType {    OFFICE, HOTEL, RESTAURANT, APARTMENT, HOSPITAL,    SCHOOL, RETAIL, FACILITY_MANAGEMENT, PROPERTY_MANAGEMENT,    CONSTRUCTION, FACTORY, OTHER}
