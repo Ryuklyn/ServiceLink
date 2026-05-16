@@ -15,6 +15,6 @@ public class KybResponse {
     private String documentUrl;
     private Boolean authorizedConfirmed;
     private KybStatus status;
-    private LocalDateTime createdAt;
+    private LocalDateTime submittedAt;
 
 }
