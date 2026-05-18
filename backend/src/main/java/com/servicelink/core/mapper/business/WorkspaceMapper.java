@@ -24,7 +24,7 @@ public class WorkspaceMapper {
                 .organizationId(workspace.getOrganization().getId())
                 .name(workspace.getName())
                 .primaryBranchLocation(workspace.getPrimaryBranchLocation())
-                .preferredBranchLocation(workspace.getPreferredServices())
+                .preferredServices(workspace.getPreferredServices())
                 .createdAt(workspace.getCreatedAt())
                 .build();
     }

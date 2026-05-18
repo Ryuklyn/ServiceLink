@@ -1,4 +1,4 @@
-package com.servicelink.core.service.business;
+package com.servicelink.core.controller.business;
 
 import com.servicelink.core.dto.request.business.PaymentInitiateRequest;
 import com.servicelink.core.dto.request.business.PaymentVerifyRequest;
@@ -7,6 +7,7 @@ import com.servicelink.core.dto.response.business.PaymentInitiateResponse;
 import com.servicelink.core.dto.response.business.PaymentTransactionResponse;
 import com.servicelink.core.dto.response.business.SubscriptionResponse;
 import com.servicelink.core.payment.service.PaymentService;
+import com.servicelink.core.service.business.SubscriptionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+
 
 import java.util.Base64;
 
@@ -78,7 +80,7 @@ public class PaymentController {
     ) throws Exception{
         log.info("Khalti callback: ref={} pidx={} status={}", purchaseOrderId, pidx, status);
 
-        if (!"COMPLETED".equalsIgnoreCase(status)){
+        if (!"Completed".equalsIgnoreCase(status)){
             log.warn("Khalti payment not completed: ref={} status={}", purchaseOrderId, status);
             return ResponseEntity.badRequest().build();
         }

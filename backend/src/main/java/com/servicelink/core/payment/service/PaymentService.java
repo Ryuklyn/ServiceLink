@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.Year;
+import java.util.Random;
 
 @Service
 @Slf4j
@@ -40,7 +42,10 @@ public class PaymentService {
                 .orElseThrow(() -> new RuntimeException(
                         "Subscription not found: " + request.getSubscriptionId()));
 
-        String referenceId = subscription.getReferenceId();
+//        String referenceId = subscription.getReferenceId();
+        String referenceId =
+                "SLP-" + Year.now().getValue() + "-"
+                        + String.format("%06d", new Random().nextInt(999999));
 
         log.info("Initiating payment: ref={} gateway={} amountNpr={}",
                 referenceId, request.getPaymentGateway(), request.getAmountNpr());

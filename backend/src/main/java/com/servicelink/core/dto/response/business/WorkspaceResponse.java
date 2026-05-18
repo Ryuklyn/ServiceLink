@@ -13,6 +13,6 @@ public class WorkspaceResponse {
     private Long organizationId;
     private String name;
     private String primaryBranchLocation;
-    private List<String> preferredBranchLocation;
+    private List<String> preferredServices;
     private LocalDateTime createdAt;
 }

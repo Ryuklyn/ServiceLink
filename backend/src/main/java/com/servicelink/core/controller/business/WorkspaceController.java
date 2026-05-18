@@ -9,12 +9,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/business/workspace")
 public class WorkspaceController {
 
-    private WorkspaceService workspaceService;
+    private final WorkspaceService workspaceService;
 
     @PostMapping
     public ResponseEntity<WorkspaceResponse> create(@Valid @RequestBody WorkspaceRequest request){
@@ -25,4 +27,9 @@ public class WorkspaceController {
     public ResponseEntity<WorkspaceResponse> getById(@PathVariable Long id ){
         return ResponseEntity.ok(workspaceService.findById(id));
     }
+
+//    @GetMapping
+//    public ResponseEntity<List<WorkspaceResponse>> getAll(){
+//        return ResponseEntity.ok(workspaceService.findAll());
+//    }
 }

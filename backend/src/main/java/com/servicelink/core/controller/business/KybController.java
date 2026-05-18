@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/business/kyb")
 public class KybController {
 
-    private KybService kybService;
+    private final KybService kybService;
 
     @PostMapping(value = "/submit",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<KybResponse> submit(
