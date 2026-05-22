@@ -10,6 +10,7 @@ public class PaymentMapper {
         return PaymentTransactionResponse.builder()
                 .id(paymentTransaction.getId())
                 .referenceId(paymentTransaction.getReferenceId())
+                .gatewayTransactionId(paymentTransaction.getGatewayTransactionId())
                 .gateway(paymentTransaction.getPaymentGateway())
                 .status(paymentTransaction.getPaymentStatus())
                 .amountNpr(paymentTransaction.getAmountNpr())

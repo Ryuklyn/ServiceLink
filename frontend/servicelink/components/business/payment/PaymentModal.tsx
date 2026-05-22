@@ -11,18 +11,21 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { PlanCheckout } from "@/components/business/PlanStep";
+import api from "@/utils/axios";
+import { toast } from "react-toastify";
 
 interface PaymentModalProps {
   isOpen: boolean;
   plan: PlanCheckout;
   workspaceName: string;
+  subscriptionId?: number;
   onClose: () => void;
   onContinue: () => void;
 }
 
 const PAYMENT_METHODS = [
   {
-    id: "esewa",
+    id: "ESEWA",
     name: "eSewa",
     label: "Wallet",
     description: "Pay instantly with your eSewa wallet.",
@@ -30,7 +33,7 @@ const PAYMENT_METHODS = [
     iconClassName: "text-emerald-600",
   },
   {
-    id: "khalti",
+    id: "KHALTI",
     name: "Khalti",
     label: "Wallet",
     description: "Secure digital payment & verification.",
@@ -38,12 +41,13 @@ const PAYMENT_METHODS = [
     iconClassName: "text-violet-600",
   },
   {
-    id: "bank-transfer",
+    id: "BANK_TRANSFER",
     name: "Bank Transfer",
     label: "Manual",
     description: "Wire funds directly with a reference ID.",
     icon: Landmark,
     iconClassName: "text-[#1e3a8a]",
+    disabled: true,
   },
 ];
 
@@ -51,10 +55,58 @@ export default function PaymentModal({
   isOpen,
   plan,
   workspaceName,
+  subscriptionId,
   onClose,
   onContinue,
 }: PaymentModalProps) {
-  const [selectedMethod, setSelectedMethod] = useState("esewa");
+  const [selectedMethod, setSelectedMethod] = useState("ESEWA");
+  const [loading, setLoading] = useState(false);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  const handleContinuePayment = async () => {
+    try {
+      setLoading(true);
+
+      if (!subscriptionId) {
+        toast.error("Subscription ID not found");
+        return;
+      }
+
+      const payload = {
+        subscriptionId,
+        paymentGateway: selectedMethod,
+        amountNpr: plan.amountNpr,
+        successUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/register/business/payment/success`,
+        failureUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/register/business/payment/failed`,
+      };
+
+      const response = await api.post("/business/payment/initiate", payload);
+
+      console.log("Payment Initiated:", response.data);
+
+      // Store payment reference in localStorage
+      if (response.data.referenceId) {
+        localStorage.setItem("paymentReference", response.data.referenceId);
+      }
+
+      // Redirect to payment gateway
+      if (response.data.gatewayRedirectUrl) {
+        window.location.href = response.data.gatewayRedirectUrl;
+      }
+    } catch (error: any) {
+      console.error("Payment Initiation Error:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to initiate payment";
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isOpen) {
     return null;
@@ -127,7 +179,7 @@ export default function PaymentModal({
           </p>
 
           <div className="mt-5 space-y-3">
-            {PAYMENT_METHODS.map((method) => {
+            {PAYMENT_METHODS.map((method: any) => {
               const Icon = method.icon;
               const isSelected = selectedMethod === method.id;
 
@@ -136,10 +188,13 @@ export default function PaymentModal({
                   key={method.id}
                   type="button"
                   onClick={() => setSelectedMethod(method.id)}
+                  disabled={method.disabled}
                   className={`flex w-full items-center gap-4 rounded-2xl border bg-slate-50 px-4 py-4 text-left transition ${
-                    isSelected
-                      ? "border-[#1e3a8a] ring-2 ring-[#1e3a8a]"
-                      : "border-slate-200 hover:border-[#1e3a8a]/50"
+                    method.disabled
+                      ? "cursor-not-allowed opacity-50"
+                      : isSelected
+                        ? "border-[#1e3a8a] ring-2 ring-[#1e3a8a]"
+                        : "border-slate-200 hover:border-[#1e3a8a]/50"
                   }`}
                 >
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#e8edf5]">
@@ -176,10 +231,11 @@ export default function PaymentModal({
 
           <button
             type="button"
-            onClick={onContinue}
-            className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-[#e8683f] px-6 py-4 text-sm font-bold text-white shadow-[0_18px_30px_rgba(232,104,63,0.25)] transition hover:bg-[#d95a2f]"
+            onClick={handleContinuePayment}
+            disabled={loading}
+            className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-[#e8683f] px-6 py-4 text-sm font-bold text-white shadow-[0_18px_30px_rgba(232,104,63,0.25)] transition hover:bg-[#d95a2f] disabled:bg-gray-300"
           >
-            Continue to payment
+            {loading ? "Processing..." : "Continue to payment"}
             <ArrowRight size={17} />
           </button>
 

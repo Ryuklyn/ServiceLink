@@ -51,7 +51,7 @@ public class PaymentTransaction {
 
     @PrePersist
     protected void create(){
-
+        initiatedAt = LocalDateTime.now();
     }
 
 }

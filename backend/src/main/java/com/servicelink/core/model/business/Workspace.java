@@ -31,6 +31,10 @@ public class Workspace {
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
 
+    // 🔗 One-to-one Pro user (workspace owner)
+    @OneToOne(mappedBy = "workspace", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private ProUser proUser;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
