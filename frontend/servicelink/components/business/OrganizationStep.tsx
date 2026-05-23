@@ -256,7 +256,7 @@ import api from "@/utils/axios";
 import { toast } from "react-toastify";
 
 interface OrganizationStepProps {
-  onContinue: (orgId: string) => void;
+  onContinue: (orgId: string, organizationName: string) => void;
   onBack: () => void;
 }
 
@@ -294,10 +294,26 @@ export default function OrganizationStep({
   };
 
   const handleSubmit = async () => {
+    if (!formData.companyName.trim()) {
+      toast.error("Company name is required");
+      return;
+    }
+
+    if (!formData.businessType) {
+      toast.error("Business type is required");
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await api.post("/business/organization", formData);
-      onContinue(response.data.id);
+
+      if (!response.data?.id) {
+        toast.error("Failed to get organization ID");
+        return;
+      }
+
+      onContinue(String(response.data.id), formData.companyName.trim());
     } catch (error) {
       console.error("Create Organization Error:", error);
       toast.error("Failed to create organization");

@@ -371,7 +371,9 @@ export default function PlanStep({
     }
 
     if (!workspaceId) {
-      toast.error("Workspace ID not found");
+      toast.error(
+        "Workspace ID not found - please go back and complete previous steps",
+      );
       return;
     }
 

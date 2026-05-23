@@ -68,17 +68,22 @@ public class PaymentService {
 
         // ✅ resolve gateway URL + pidx
         String gatewayRedirectUrl;
+        String gatewayMethod = "GET";
+        java.util.Map<String, String> gatewayFormFields = null;
         String pidx = null;
 
         switch (request.getPaymentGateway()) {
             case ESEWA -> {
-                gatewayRedirectUrl = esewaService.buildRedirectUrl(
+                EsewaGatewayService.EsewaPaymentForm form = esewaService.buildPaymentForm(
                         referenceId,
                         request.getAmountNpr(),
                         request.getSuccessUrl(),
                         request.getFailureUrl()
                 );
-                log.info("eSewa redirect URL built: ref={}", referenceId);
+                gatewayRedirectUrl = form.actionUrl();
+                gatewayMethod = "POST";
+                gatewayFormFields = form.fields();
+                log.info("eSewa payment form built: ref={}", referenceId);
             }
             case KHALTI -> {
                 long amountPaisa = request.getAmountNpr() * 100L;
@@ -113,6 +118,8 @@ public class PaymentService {
         return PaymentInitiateResponse.builder()
                 .referenceId(referenceId)
                 .gatewayRedirectUrl(gatewayRedirectUrl)
+                .gatewayMethod(gatewayMethod)
+                .gatewayFormFields(gatewayFormFields)
                 .gateway(request.getPaymentGateway().name())
                 .status(PaymentStatus.INITIATED.name())
                 .build();
@@ -143,7 +150,8 @@ public class PaymentService {
         boolean verified = switch (tx.getPaymentGateway()) {
             case ESEWA -> esewaService.verifyPayment(
                     tx.getReferenceId(),
-                    tx.getAmountNpr()
+                    tx.getAmountNpr(),
+                    request.getGatewayResponseData()
             );
             case KHALTI -> khaltiService.verifyPayment(
                     tx.getGatewayTransactionId(),   // pidx stored at initiation
@@ -158,6 +166,7 @@ public class PaymentService {
             // ✅ mark transaction SUCCESS
             tx.setPaymentStatus(PaymentStatus.SUCCESS);
             tx.setGatewayTransactionId(request.getGatewayTransactionId());
+            tx.setGatewayResponse(request.getGatewayResponseData());
             tx.setCompletedAt(LocalDateTime.now());
             log.info("Payment verified SUCCESS: ref={}", tx.getReferenceId());
 

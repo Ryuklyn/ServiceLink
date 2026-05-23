@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { PlanCheckout } from "@/components/business/PlanStep";
+import { useBusinessSetup } from "@/hooks/useBusinessSetup";
 import api from "@/utils/axios";
 import { toast } from "react-toastify";
 
@@ -23,7 +24,24 @@ interface PaymentModalProps {
   onContinue: () => void;
 }
 
-const PAYMENT_METHODS = [
+type PaymentMethod = {
+  id: string;
+  name: string;
+  label: string;
+  description: string;
+  icon: typeof WalletCards;
+  iconClassName: string;
+  disabled?: boolean;
+};
+
+type PaymentInitiateResponse = {
+  referenceId?: string;
+  gatewayRedirectUrl?: string;
+  gatewayMethod?: string;
+  gatewayFormFields?: Record<string, string>;
+};
+
+const PAYMENT_METHODS: PaymentMethod[] = [
   {
     id: "ESEWA",
     name: "eSewa",
@@ -61,6 +79,7 @@ export default function PaymentModal({
 }: PaymentModalProps) {
   const [selectedMethod, setSelectedMethod] = useState("ESEWA");
   const [loading, setLoading] = useState(false);
+  const { data, setPayment } = useBusinessSetup();
 
   if (!isOpen) {
     return null;
@@ -83,29 +102,91 @@ export default function PaymentModal({
         failureUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/register/business/payment/failed`,
       };
 
-      const response = await api.post("/business/payment/initiate", payload);
+      const response = await api.post<PaymentInitiateResponse>(
+        "/business/payment/initiate",
+        payload,
+      );
 
       console.log("Payment Initiated:", response.data);
 
-      // Store payment reference in localStorage
       if (response.data.referenceId) {
         localStorage.setItem("paymentReference", response.data.referenceId);
+        setPayment(response.data.referenceId, "INITIATED");
       }
 
-      // Redirect to payment gateway
-      if (response.data.gatewayRedirectUrl) {
-        window.location.href = response.data.gatewayRedirectUrl;
+      const paymentDraft = {
+        ...data,
+        subscriptionId,
+        planType: plan.name,
+        amountNpr: plan.amountNpr,
+        paymentReferenceId: response.data.referenceId,
+        paymentStatus: "INITIATED",
+        paymentGateway: selectedMethod,
+      };
+      localStorage.setItem("businessSetup", JSON.stringify(paymentDraft));
+      sessionStorage.setItem("businessSetupDraft", JSON.stringify(paymentDraft));
+      sessionStorage.setItem(
+        "paymentInitiateResponse",
+        JSON.stringify(response.data),
+      );
+      onContinue();
+
+      if (
+        response.data.gatewayMethod === "POST" &&
+        response.data.gatewayRedirectUrl &&
+        response.data.gatewayFormFields
+      ) {
+        submitGatewayForm(
+          response.data.gatewayRedirectUrl,
+          response.data.gatewayFormFields,
+        );
+        return;
       }
-    } catch (error: any) {
+
+      if (response.data.gatewayRedirectUrl) {
+        window.location.assign(response.data.gatewayRedirectUrl);
+      }
+    } catch (error: unknown) {
       console.error("Payment Initiation Error:", error);
       const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
+        getPaymentErrorMessage(error) ||
         "Failed to initiate payment";
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getPaymentErrorMessage = (error: unknown) => {
+    if (error && typeof error === "object") {
+      const maybeError = error as {
+        message?: string;
+        response?: { data?: { message?: string } };
+      };
+      return maybeError.response?.data?.message || maybeError.message;
+    }
+    return null;
+  };
+
+  const submitGatewayForm = (
+    actionUrl: string,
+    fields: Record<string, string>,
+  ) => {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = actionUrl;
+    form.style.display = "none";
+
+    Object.entries(fields).forEach(([name, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value ?? "";
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
   };
 
   if (!isOpen) {
@@ -179,7 +260,7 @@ export default function PaymentModal({
           </p>
 
           <div className="mt-5 space-y-3">
-            {PAYMENT_METHODS.map((method: any) => {
+            {PAYMENT_METHODS.map((method) => {
               const Icon = method.icon;
               const isSelected = selectedMethod === method.id;
 

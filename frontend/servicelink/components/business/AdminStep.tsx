@@ -341,7 +341,9 @@ export default function AdminStep({
       );
 
     if (!workspaceId) {
-      toast.error("Workspace ID not found");
+      toast.error(
+        "Workspace ID not found - please go back and create a workspace",
+      );
       return;
     }
 

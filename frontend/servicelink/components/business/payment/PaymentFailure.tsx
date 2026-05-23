@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AlertCircle, Home, ArrowLeft } from "lucide-react";
 import { useBusinessSetup } from "@/hooks/useBusinessSetup";
 
@@ -9,16 +9,22 @@ export default function PaymentFailure() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data, setPayment } = useBusinessSetup();
+  const failureRecorded = useRef(false);
 
-  const referenceId = searchParams.get("reference");
+  const referenceId = searchParams.get("reference") || data.paymentReferenceId;
   const reason = searchParams.get("reason") || "Payment was not completed";
   const errorCode = searchParams.get("error_code");
 
   useEffect(() => {
-    // Clear payment reference if there was a failure
+    if (failureRecorded.current) {
+      return;
+    }
+    failureRecorded.current = true;
+
+    // Keep the reference so the user can retry from the saved draft.
     if (referenceId) {
       setPayment(referenceId, "FAILED");
-      localStorage.removeItem("paymentReference");
+      localStorage.setItem("paymentReference", referenceId);
     }
   }, [referenceId, setPayment]);
 

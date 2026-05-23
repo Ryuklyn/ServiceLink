@@ -1,4 +1,5 @@
 import PaymentSuccess from "@/components/business/payment/PaymentSuccess";
+import { BusinessSetupProvider } from "@/contexts/BusinessSetupContext";
 
 export const metadata = {
   title: "Payment Successful - ServiceLink",
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function PaymentSuccessPage() {
-  return <PaymentSuccess />;
+  return (
+    <BusinessSetupProvider>
+      <PaymentSuccess />
+    </BusinessSetupProvider>
+  );
 }

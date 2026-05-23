@@ -7,4 +7,5 @@ public class PaymentVerifyRequest {
     private String referenceId;          // our internal ref
     private String gatewayTransactionId; // returned by gateway in callback
     private String gateway;              // ESEWA or KHALTI
+    private String gatewayResponseData;  // raw eSewa base64 callback payload
 }

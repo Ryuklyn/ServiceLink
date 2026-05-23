@@ -1,21 +1,76 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Home, Copy, Check } from "lucide-react";
 import { useBusinessSetup } from "@/hooks/useBusinessSetup";
+import api from "@/utils/axios";
+
+type EsewaCallbackData = {
+  transaction_code?: string;
+  total_amount?: string;
+  transaction_uuid?: string;
+};
+
+function decodeEsewaData(data: string): EsewaCallbackData | null {
+  try {
+    const normalized = data.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(normalized));
+  } catch (error) {
+    console.error("Failed to decode eSewa response:", error);
+    return null;
+  }
+}
 
 export default function PaymentSuccess() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data } = useBusinessSetup();
+  const { data, setPayment } = useBusinessSetup();
   const [copied, setCopied] = useState(false);
+  const [verificationStatus, setVerificationStatus] =
+    useState("Verifying payment...");
+  const verificationStarted = useRef(false);
 
-  const referenceId = searchParams.get("reference") || data.paymentReferenceId;
-  const amount = searchParams.get("amount");
-  const gateway = searchParams.get("gateway");
+  const esewaData = searchParams.get("data");
+  const decodedEsewa = esewaData ? decodeEsewaData(esewaData) : null;
+  const referenceId =
+    searchParams.get("reference") ||
+    decodedEsewa?.transaction_uuid ||
+    data.paymentReferenceId;
+  const amount = searchParams.get("amount") || decodedEsewa?.total_amount;
+  const gateway = searchParams.get("gateway") || (esewaData ? "ESEWA" : null);
 
   useEffect(() => {
+    if (verificationStarted.current) {
+      return;
+    }
+    verificationStarted.current = true;
+
+    const verifyEsewaPayment = async () => {
+      if (!esewaData || !referenceId) {
+        setVerificationStatus("Payment confirmed");
+        return;
+      }
+
+      try {
+        await api.post("/business/payment/verify", {
+          referenceId,
+          gatewayTransactionId: decodedEsewa?.transaction_code,
+          gateway: "ESEWA",
+          gatewayResponseData: esewaData,
+        });
+        setPayment(referenceId, "SUCCESS");
+        setVerificationStatus("Payment verified");
+        localStorage.setItem("paymentReference", referenceId);
+      } catch (error) {
+        console.error("Payment verification failed:", error);
+        setPayment(referenceId, "FAILED");
+        setVerificationStatus("Payment received, but verification failed");
+      }
+    };
+
+    verifyEsewaPayment();
+
     // Auto-clear payment reference after 5 minutes
     const timer = setTimeout(
       () => {
@@ -25,7 +80,7 @@ export default function PaymentSuccess() {
     );
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [decodedEsewa?.transaction_code, esewaData, referenceId, setPayment]);
 
   const handleCopyReference = () => {
     if (referenceId) {
@@ -50,10 +105,12 @@ export default function PaymentSuccess() {
               <CheckCircle2 size={64} className="text-white" />
             </div>
             <h1 className="text-3xl font-extrabold text-white text-center">
-              Payment Successful!
+              {verificationStatus.includes("failed")
+                ? "Payment Needs Review"
+                : "Payment Successful!"}
             </h1>
             <p className="text-emerald-100 mt-2 text-center">
-              Your subscription is now active
+              {verificationStatus}
             </p>
           </div>
 

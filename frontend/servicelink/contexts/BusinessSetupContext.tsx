@@ -66,28 +66,24 @@ interface BusinessSetupProviderProps {
 export const BusinessSetupProvider: React.FC<BusinessSetupProviderProps> = ({
   children,
 }) => {
-  const [data, setData] = useState<BusinessSetupData>(defaultData);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("businessSetup");
+  const [data, setData] = useState<BusinessSetupData>(() => {
+    const stored =
+      localStorage.getItem("businessSetup") ||
+      sessionStorage.getItem("businessSetupDraft");
     if (stored) {
       try {
-        setData(JSON.parse(stored));
+        return JSON.parse(stored);
       } catch (error) {
         console.error("Failed to parse stored business setup:", error);
       }
     }
-    setIsLoaded(true);
-  }, []);
+    return defaultData;
+  });
 
   // Save to localStorage whenever data changes
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("businessSetup", JSON.stringify(data));
-    }
-  }, [data, isLoaded]);
+    localStorage.setItem("businessSetup", JSON.stringify(data));
+  }, [data]);
 
   const setOrganization = (id: number, name: string) => {
     setData((prev) => ({
@@ -141,6 +137,8 @@ export const BusinessSetupProvider: React.FC<BusinessSetupProviderProps> = ({
   const resetSetup = () => {
     setData(defaultData);
     localStorage.removeItem("businessSetup");
+    sessionStorage.removeItem("businessSetupDraft");
+    sessionStorage.removeItem("paymentInitiateResponse");
   };
 
   const getCurrentStep = (): number => {

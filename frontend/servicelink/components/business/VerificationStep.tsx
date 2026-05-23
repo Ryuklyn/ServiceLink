@@ -239,6 +239,15 @@ interface VerificationStepProps {
   organizationId: string | null;
 }
 
+type ApiError = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+};
+
 export default function VerificationStep({
   onContinue,
   onBack,
@@ -263,7 +272,9 @@ export default function VerificationStep({
 
   const handleSubmit = async () => {
     if (!organizationId) {
-      toast.error("Organization ID not found");
+      toast.error(
+        "Organization ID not found - please go back and create an organization",
+      );
       return;
     }
     if (!taxId.trim()) {
@@ -285,9 +296,12 @@ export default function VerificationStep({
         taxId: taxId.trim(),
         authorizedConfirmed: true,
       };
-      formData.append("data", JSON.stringify(kybData), {
-        type: "application/json",
-      });
+      formData.append(
+        "data",
+        new Blob([JSON.stringify(kybData)], {
+          type: "application/json",
+        }),
+      );
 
       if (selectedFile) {
         formData.append("document", selectedFile);
@@ -299,11 +313,12 @@ export default function VerificationStep({
 
       toast.success("Business verification submitted successfully!");
       onContinue();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error submitting KYB:", err);
+      const apiError = err as ApiError;
       toast.error(
-        err?.response?.data?.message ??
-          err?.message ??
+        apiError.response?.data?.message ??
+          apiError.message ??
           "Failed to submit verification",
       );
     } finally {

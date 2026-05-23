@@ -245,7 +245,7 @@ const SERVICES = [
 ];
 
 interface WorkspaceStepProps {
-  onContinue: () => void;
+  onContinue: (workspaceId: string, workspaceName: string) => void;
   onBack: () => void;
   organizationId: string | null;
 }
@@ -290,8 +290,20 @@ export default function WorkspaceStep({
   };
 
   const handleSubmit = async () => {
+    if (!formData.workspaceName.trim()) {
+      toast.error("Workspace name is required");
+      return;
+    }
+
+    if (!formData.primaryLocation.trim()) {
+      toast.error("Primary branch location is required");
+      return;
+    }
+
     if (!organizationId) {
-      toast.error("Organization ID not found");
+      toast.error(
+        "Organization ID not found - please go back and create an organization",
+      );
       return;
     }
 
@@ -304,9 +316,14 @@ export default function WorkspaceStep({
         organizationId,
       };
 
-      await api.post("/business/workspace", payload);
+      const response = await api.post("/business/workspace", payload);
 
-      onContinue();
+      if (!response.data?.id) {
+        toast.error("Failed to get workspace ID");
+        return;
+      }
+
+      onContinue(String(response.data.id), formData.workspaceName.trim());
     } catch (error) {
       console.error("Create Workspace Error:", error);
       toast.error("Failed to create workspace");

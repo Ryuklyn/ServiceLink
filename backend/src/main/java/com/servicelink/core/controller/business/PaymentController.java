@@ -53,7 +53,7 @@ public class PaymentController {
         JsonNode json = objectMapper.readTree(decoded);
 
         String referenceId = json.get("transaction_uuid").asText();
-        String gatewayId = json.get("transaction_id").asText();
+        String gatewayId = json.get("transaction_code").asText();
         String status = json.get("status").asText();
 
         log.info("eSewa callback: ref={} status={}", referenceId, status);
@@ -66,6 +66,7 @@ public class PaymentController {
         PaymentVerifyRequest verify = new PaymentVerifyRequest();
         verify.setReferenceId(referenceId);
         verify.setGatewayTransactionId(gatewayId);
+        verify.setGatewayResponseData(data);
 
         return ResponseEntity.ok(paymentService.verifyAndComplete(verify));
 

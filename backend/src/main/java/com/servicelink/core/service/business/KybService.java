@@ -9,7 +9,6 @@ import com.servicelink.core.model.business.Organization;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
-import com.servicelink.core.mapper.KycMapper;
 import com.servicelink.core.repository.business.KybVerificationRepository;
 import com.servicelink.core.repository.business.OrganizationRepository;
 import com.servicelink.core.storage.SupabaseStorageService;
@@ -20,10 +19,12 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class KybService {
+
+     private static final String KYB_DOCUMENTS_FOLDER = "kyb/documents";
     
      private final KybVerificationRepository kRepo;
      private final OrganizationRepository oRepo;
-     private final SupabaseStorageService storageService;
+     private final SupabaseStorageService supabaseStorageService;
      private final KybMapper kMapper;
 
      @Transactional
@@ -39,7 +40,7 @@ public class KybService {
           String documentUrl = null;
 
           if (documentFile != null && !documentFile.isEmpty()){
-               documentUrl = storageService.uploadFile(documentFile, "kyb/documents");
+               documentUrl = supabaseStorageService.uploadFile(documentFile, KYB_DOCUMENTS_FOLDER);
           }
 
           KybVerification kyb = KybVerification.builder()

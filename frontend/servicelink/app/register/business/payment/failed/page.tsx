@@ -1,4 +1,5 @@
 import PaymentFailure from "@/components/business/payment/PaymentFailure";
+import { BusinessSetupProvider } from "@/contexts/BusinessSetupContext";
 
 export const metadata = {
   title: "Payment Failed - ServiceLink",
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function PaymentFailedPage() {
-  return <PaymentFailure />;
+  return (
+    <BusinessSetupProvider>
+      <PaymentFailure />
+    </BusinessSetupProvider>
+  );
 }
