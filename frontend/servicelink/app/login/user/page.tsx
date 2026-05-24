@@ -49,7 +49,7 @@ export default function LoginPage() {
       console.log("Redirecting to dashboard...");
 
       // 👉 dashboard redirect
-      router.push("/dashboard");
+      router.push("/dashboard/user");
     } catch (err: any) {
       console.error(err);
       toast.error(err?.response?.data?.message || "Login failed");
