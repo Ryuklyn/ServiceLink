@@ -30,7 +30,9 @@ export default function Page() {
 
       toast.success("OTP sent successfully");
 
-      router.push(`/login/verify?email=${encodeURIComponent(email.trim())}`);
+      router.push(
+        `/login/user/verify?email=${encodeURIComponent(email.trim())}`,
+      );
     } catch (err: any) {
       console.error("OTP Error:", err);
 

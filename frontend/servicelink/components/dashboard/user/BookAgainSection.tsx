@@ -40,39 +40,55 @@ export default function BookAgainSection({ providers }: BookAgainSectionProps) {
 
   const displayProviders = providers || defaultProviders;
 
+  const renderStars = (rating: number) => {
+    const rounded = Math.round(rating);
+    return Array.from({ length: 5 }).map((_, i) => (
+      <Star
+        key={i}
+        className={`w-3.5 h-3.5 ${
+          i < rounded ? "fill-[#e8683f] text-[#e8683f]" : "text-gray-300"
+        }`}
+      />
+    ));
+  };
+
   return (
     <section className="mb-12">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Book Again</h2>
-      <p className="text-gray-600 mb-6">Based on your recent bookings</p>
-      <div className="grid grid-cols-4 gap-6">
+      <h2 className="text-xl font-semibold text-gray-900">Book Again</h2>
+      <p className="text-sm text-gray-500 mt-1 mb-6">
+        Based on your recent bookings
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {displayProviders.map((provider) => (
           <div
             key={provider.id}
-            className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col"
+            className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col"
           >
-            <div className="p-6 flex-1 flex flex-col">
+            <div className="p-6 flex flex-col items-center">
               <div
-                className={`${provider.bgColor} w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-lg font-bold`}
+                className={`${provider.bgColor} w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-bold mb-4`}
               >
                 {provider.initials}
               </div>
-              <h3 className="font-bold text-gray-900 text-center mb-1">
+
+              <h3 className="font-semibold text-gray-900 text-center">
                 {provider.name}
               </h3>
-              <p className="text-xs text-gray-600 text-center mb-1">
-                {provider.service}
-              </p>
-              <p className="text-xs text-gray-500 text-center mb-3">
-                {provider.date}
-              </p>
-              <div className="flex items-center justify-center gap-1 mb-4">
-                <Star className="w-4 h-4 fill-[#e8683f] text-[#e8683f]" />
-                <span className="font-semibold text-gray-900 text-sm">
+
+              <p className="text-xs text-gray-500 mt-1">{provider.service}</p>
+
+              <p className="text-xs text-gray-400">{provider.date}</p>
+
+              <div className="flex items-center gap-1 mt-3">
+                {renderStars(provider.rating)}
+                <span className="ml-1 text-sm font-semibold text-gray-900">
                   {provider.rating}
                 </span>
               </div>
             </div>
-            <button className="bg-[#e8683f] text-white py-3 font-bold text-sm hover:bg-[#d75930] transition-colors">
+
+            <button className="w-full bg-[#e8683f] text-white py-3 font-semibold text-sm hover:bg-[#d75930] transition-colors">
               Book Again
             </button>
           </div>

@@ -185,7 +185,7 @@ export default function Page() {
       {/* NAV */}
       <div className="text-center mt-4 flex items-center justify-center gap-2 text-gray-500 text-[14px]">
         <ArrowLeft size={14} />
-        <Link href="/login/verify" className="hover:underline">
+        <Link href="/login/user/verify" className="hover:underline">
           Back to Verify
         </Link>
       </div>

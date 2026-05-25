@@ -118,7 +118,7 @@ export default function Page() {
 
     if (!email) {
       toast.error("Email missing. Restart process.");
-      router.push("/login/forgotpassword");
+      router.push("/login/user/forgotpassword");
       return;
     }
 
@@ -132,7 +132,9 @@ export default function Page() {
 
       toast.success("OTP verified successfully");
 
-      router.push(`/login/reset?email=${encodeURIComponent(email.trim())}`);
+      router.push(
+        `/login/user/reset?email=${encodeURIComponent(email.trim())}`,
+      );
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Invalid OTP");
     } finally {
@@ -144,7 +146,7 @@ export default function Page() {
   const handleResend = async () => {
     if (!email) {
       toast.error("Email missing. Restart process.");
-      router.push("/login/forgotpassword");
+      router.push("/login/user/forgotpassword");
       return;
     }
 
@@ -247,7 +249,10 @@ export default function Page() {
       {/* LINKS */}
       <div className="text-center mt-6 flex items-center justify-center gap-2 text-gray-500">
         <ArrowLeft size={14} />
-        <Link href="/login/forgotpassword" className="text-sm hover:underline">
+        <Link
+          href="/login/user/forgotpassword"
+          className="text-sm hover:underline"
+        >
           Change email address
         </Link>
       </div>
