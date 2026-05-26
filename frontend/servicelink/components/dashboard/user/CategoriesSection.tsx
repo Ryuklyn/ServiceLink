@@ -3,12 +3,12 @@
 import {
   Zap,
   Droplet,
-  Leaf,
-  Paintbrush,
+  Sparkles,
+  Paintbrush2,
   Wind,
   Hammer,
   Wifi,
-  Settings,
+  Settings2,
 } from "lucide-react";
 
 interface Category {
@@ -16,7 +16,8 @@ interface Category {
   name: string;
   icon: React.ReactNode;
   count: number;
-  color: string;
+  iconBg: string;
+  iconColor: string;
 }
 
 interface CategoriesSectionProps {
@@ -30,58 +31,66 @@ export default function CategoriesSection({
     {
       id: "1",
       name: "Electrician",
-      icon: <Zap className="w-6 h-6" />,
+      icon: <Zap className="w-5 h-5" />,
       count: 12,
-      color: "bg-blue-700",
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-500",
     },
     {
       id: "2",
       name: "Plumbing",
-      icon: <Droplet className="w-6 h-6" />,
+      icon: <Droplet className="w-5 h-5" />,
       count: 9,
-      color: "bg-teal-500",
+      iconBg: "bg-teal-100",
+      iconColor: "text-teal-500",
     },
     {
       id: "3",
       name: "Cleaning",
-      icon: <Leaf className="w-6 h-6" />,
+      icon: <Sparkles className="w-5 h-5" />,
       count: 15,
-      color: "bg-green-500",
+      iconBg: "bg-green-100",
+      iconColor: "text-green-500",
     },
     {
       id: "4",
       name: "Painting",
-      icon: <Paintbrush className="w-6 h-6" />,
+      icon: <Paintbrush2 className="w-5 h-5" />,
       count: 7,
-      color: "bg-purple-600",
+      iconBg: "bg-purple-100",
+      iconColor: "text-purple-500",
     },
     {
       id: "5",
       name: "AC Repair",
-      icon: <Wind className="w-6 h-6" />,
+      icon: <Wind className="w-5 h-5" />,
       count: 11,
-      color: "bg-cyan-500",
+      iconBg: "bg-sky-100",
+      iconColor: "text-sky-500",
     },
     {
       id: "6",
       name: "Carpentry",
-      icon: <Hammer className="w-6 h-6" />,
+      icon: <Hammer className="w-5 h-5" />,
       count: 6,
-      color: "bg-amber-700",
+      iconBg: "bg-orange-100",
+      iconColor: "text-orange-500",
     },
     {
       id: "7",
       name: "Internet Repair",
-      icon: <Wifi className="w-6 h-6" />,
-      count: 5,
-      color: "bg-blue-900",
+      icon: <Wifi className="w-5 h-5" />,
+      count: 8,
+      iconBg: "bg-indigo-100",
+      iconColor: "text-indigo-500",
     },
     {
       id: "8",
       name: "Appliance Repair",
-      icon: <Settings className="w-6 h-6" />,
+      icon: <Settings2 className="w-5 h-5" />,
       count: 10,
-      color: "bg-orange-600",
+      iconBg: "bg-red-100",
+      iconColor: "text-red-400",
     },
   ];
 
@@ -89,24 +98,30 @@ export default function CategoriesSection({
 
   return (
     <section className="mb-12">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
+      <h2 className="text-xl font-bold text-gray-900 mb-5">
         Browse Categories
       </h2>
-      <div className="grid grid-cols-4 gap-6">
+
+      <div className="grid grid-cols-4 gap-4">
         {displayCategories.map((category) => (
           <button
             key={category.id}
-            className="group p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105 text-center cursor-pointer"
+            className="group bg-white border border-gray-100 rounded-2xl p-5 text-left hover:shadow-md hover:border-gray-200 transition-all duration-200 cursor-pointer"
           >
+            {/* Icon circle — light pastel bg, colored icon */}
             <div
-              className={`${category.color} w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold group-hover:scale-110 transition-transform`}
+              className={`${category.iconBg} ${category.iconColor} w-11 h-11 rounded-full flex items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-200`}
             >
               {category.icon}
             </div>
-            <h3 className="font-semibold text-gray-900 mb-1">
+
+            {/* Name */}
+            <h3 className="font-bold text-gray-900 text-sm leading-tight mb-1">
               {category.name}
             </h3>
-            <p className="text-sm text-gray-600">{category.count} providers</p>
+
+            {/* Count */}
+            <p className="text-xs text-gray-500">{category.count} providers</p>
           </button>
         ))}
       </div>

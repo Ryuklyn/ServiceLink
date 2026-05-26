@@ -1,6 +1,6 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { Star, ChevronRight } from "lucide-react";
 
 interface BookAgainProvider {
   id: string;
@@ -20,33 +20,36 @@ export default function BookAgainSection({ providers }: BookAgainSectionProps) {
   const defaultProviders: BookAgainProvider[] = [
     {
       id: "1",
-      initials: "MH",
-      name: "Meena Home Care",
-      service: "Deep Cleaning",
-      date: "May 2026",
-      rating: 4.9,
+      initials: "CA",
+      name: "CoolBreeze AC Service",
+      service: "AC Service",
+      date: "May 18, 2026",
+      rating: 4.5,
       bgColor: "bg-[#1e3a8a]",
     },
     {
       id: "2",
-      initials: "SC",
-      name: "Sita Cleaning Services",
-      service: "Deep Cleaning",
-      date: "May 2026",
-      rating: 4.9,
-      bgColor: "bg-[#2d5aa8]",
+      initials: "SP",
+      name: "Sita Plumbing Solutions",
+      service: "Pipe Repair",
+      date: "May 10, 2026",
+      rating: 4.6,
+      bgColor: "bg-[#1e3a8a]",
     },
   ];
 
   const displayProviders = providers || defaultProviders;
 
   const renderStars = (rating: number) => {
-    const rounded = Math.round(rating);
     return Array.from({ length: 5 }).map((_, i) => (
       <Star
         key={i}
-        className={`w-3.5 h-3.5 ${
-          i < rounded ? "fill-[#e8683f] text-[#e8683f]" : "text-gray-300"
+        className={`w-4 h-4 ${
+          i < Math.floor(rating)
+            ? "fill-[#e8683f] text-[#e8683f]"
+            : i < rating
+              ? "fill-[#e8683f]/50 text-[#e8683f]/50"
+              : "fill-gray-200 text-gray-200"
         }`}
       />
     ));
@@ -54,43 +57,65 @@ export default function BookAgainSection({ providers }: BookAgainSectionProps) {
 
   return (
     <section className="mb-12">
-      <h2 className="text-xl font-semibold text-gray-900">Book Again</h2>
-      <p className="text-sm text-gray-500 mt-1 mb-6">
-        Based on your recent bookings
-      </p>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Book Again</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Based on your recent bookings
+          </p>
+        </div>
+        <button className="flex items-center gap-1 text-[#e8683f] text-sm font-semibold hover:underline shrink-0 mt-1">
+          See All
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      {/* Cards */}
+      <div className="flex gap-5">
         {displayProviders.map((provider) => (
           <div
             key={provider.id}
-            className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col"
+            className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
+            style={{ width: "260px" }}
           >
-            <div className="p-6 flex flex-col items-center">
-              <div
-                className={`${provider.bgColor} w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-bold mb-4`}
-              >
-                {provider.initials}
+            {/* Card Body */}
+            <div className="p-5">
+              {/* Top row: avatar + info */}
+              <div className="flex items-center gap-4 mb-5">
+                <div
+                  className={`${provider.bgColor} w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0`}
+                >
+                  {provider.initials}
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                    {provider.name}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {provider.service}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {provider.date}
+                  </p>
+                </div>
               </div>
 
-              <h3 className="font-semibold text-gray-900 text-center">
-                {provider.name}
-              </h3>
-
-              <p className="text-xs text-gray-500 mt-1">{provider.service}</p>
-
-              <p className="text-xs text-gray-400">{provider.date}</p>
-
-              <div className="flex items-center gap-1 mt-3">
-                {renderStars(provider.rating)}
-                <span className="ml-1 text-sm font-semibold text-gray-900">
+              {/* Stars + rating */}
+              <div className="flex items-center gap-1.5 mb-5">
+                <div className="flex items-center gap-0.5">
+                  {renderStars(provider.rating)}
+                </div>
+                <span className="text-sm font-semibold text-gray-800">
                   {provider.rating}
                 </span>
               </div>
-            </div>
 
-            <button className="w-full bg-[#e8683f] text-white py-3 font-semibold text-sm hover:bg-[#d75930] transition-colors">
-              Book Again
-            </button>
+              {/* Book Again button inside card */}
+              <button className="w-full bg-[#e8683f] hover:bg-[#d75930] text-white py-2.5 rounded-xl font-bold text-sm transition-colors">
+                Book Again
+              </button>
+            </div>
           </div>
         ))}
       </div>
