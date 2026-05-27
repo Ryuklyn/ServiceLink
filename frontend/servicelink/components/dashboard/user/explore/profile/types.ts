@@ -3,6 +3,8 @@ export interface ProviderService {
   duration: string;
   priceMin: number;
   priceMax: number;
+  category: string; // <-- ADDED: Crucial for separating Electrician, Carpentry, Painting, etc.
+  priceNote?: string; // <-- ADDED: For sub-labels like "(Minimum 1 hour)" or "(Includes first visit)"
 }
 
 export interface ProviderReview {
@@ -34,7 +36,11 @@ export interface ProviderData {
   verified: boolean;
   available: boolean;
   areas: string[];
-  // Extended profile fields
+
+  location?: string;
+  categories?: string[];
+  avatarUrl?: string;
+
   verificationId: string;
   registeredName: string;
   primaryDistrict: string;
@@ -52,7 +58,7 @@ export interface ProviderData {
   };
   coverageRadius: number;
   coverageCenter: { lat: number; lng: number };
-  services: ProviderService[];
+  services: ProviderService[]; // <-- Harnesses our upgraded ProviderService schema layout
   providerReviews: ProviderReview[];
   portfolio: PortfolioItem[];
 }
