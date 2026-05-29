@@ -486,39 +486,6 @@ export default function ProviderPage() {
   };
 
   // ── UI ──────────────────────────────────────────────────────────────────
-
-  // return (
-  //   <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col lg:flex-row gap-6">
-  //     {/* LEFT SIDE */}
-  //     <div className="flex-1 flex flex-col gap-6">
-  //       {/* Services */}
-  //       <ServicesPricing
-  //         provider={EXAMPLE_PROVIDER}
-  //         onBookService={handleAddService}
-  //       />
-
-  //       {/* Describe Issue */}
-  //       <DescribeIssue onIssueChange={setIssueDescription} />
-
-  //       {/* Availability Calendar */}
-  //       <AvailabilityCalendar
-  //         onDateChange={handleDateChange}
-  //         onPeriodChange={handlePeriodChange}
-  //       />
-  //     </div>
-
-  //     {/* RIGHT SIDEBAR */}
-  //     <div className="lg:w-80 lg:sticky lg:top-6 lg:self-start">
-  //       <BookingSidebar
-  //         provider={EXAMPLE_PROVIDER}
-  //         selectedServices={selectedServices}
-  //         issueDescription={issueDescription}
-  //         selectedDate={selectedDate}
-  //         selectedPeriod={selectedPeriod}
-  //       />
-  //     </div>
-  //   </div>
-  // );
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 flex gap-6 items-start">
       {/* ───────────────── LEFT CONTENT ───────────────── */}
