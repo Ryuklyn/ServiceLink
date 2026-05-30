@@ -197,152 +197,165 @@ export default function BookingsPage() {
             </p>
           </div>
         ) : (
-          filteredBookings.map((booking) => (
-            <div
-              key={booking.id}
-              className="bg-white rounded-xl border-t-4 border-t-[#e8683f] md:border-t-0 md:border-l-4 md:border-l-[#e8683f] border border-gray-200 shadow-xs p-5 transition-all duration-200 relative overflow-hidden group"
-            >
-              {/* Header Meta Line Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3.5">
-                  {/* Left Provider Initials Circle Badge */}
-                  <div className="w-11 h-11 bg-blue-900/10 text-[#1e3a8a] rounded-full flex items-center justify-center text-sm font-bold shrink-0 border border-blue-900/5">
-                    {booking.initials}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base leading-tight">
-                      {booking.providerName}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-0.5 font-medium">
-                      {booking.serviceName}
-                    </p>
+          filteredBookings.map((booking) => {
+            // Define the status-specific border color mapping cleanly inside the map scope
+            const borderColors = {
+              Active: "border-t-[#e8683f] md:border-l-[#e8683f]",
+              Upcoming: "border-t-[#1e3a8a] md:border-l-[#1e3a8a]", // matches tracking status color theme
+              Completed: "border-t-emerald-600 md:border-l-emerald-600",
+            };
 
-                    {/* Colored Status Tag Indicators */}
-                    <div className="mt-2 flex items-center gap-2">
-                      {booking.status === "Active" && (
-                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-200 uppercase tracking-wide">
-                          <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-                          {booking.statusText}
-                        </span>
-                      )}
-                      {booking.status === "Upcoming" && (
-                        <span className="inline-flex items-center gap-1 bg-blue-50 text-[#1e3a8a] text-[10px] font-bold px-2 py-0.5 rounded-md border border-blue-200 uppercase tracking-wide">
-                          <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                          {booking.statusText}
-                        </span>
-                      )}
-                      {booking.status === "Completed" && (
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-200 uppercase tracking-wide">
-                          ✓ {booking.statusText}
-                        </span>
-                      )}
+            const statusBorderClass =
+              borderColors[booking.status] ||
+              "border-t-[#e8683f] md:border-l-[#e8683f]";
+
+            return (
+              <div
+                key={booking.id}
+                className={`bg-white rounded-xl border-t-4 md:border-t-0 md:border-l-4 border border-gray-200 shadow-xs p-5 transition-all duration-200 relative overflow-hidden group ${statusBorderClass}`}
+              >
+                {/* Header Meta Line Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3.5">
+                    {/* Left Provider Initials Circle Badge */}
+                    <div className="w-11 h-11 bg-blue-900/10 text-[#1e3a8a] rounded-full flex items-center justify-center text-sm font-bold shrink-0 border border-blue-900/5">
+                      {booking.initials}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-base leading-tight">
+                        {booking.providerName}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-0.5 font-medium">
+                        {booking.serviceName}
+                      </p>
+
+                      {/* Colored Status Tag Indicators */}
+                      <div className="mt-2 flex items-center gap-2">
+                        {booking.status === "Active" && (
+                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-200 uppercase tracking-wide">
+                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                            {booking.statusText}
+                          </span>
+                        )}
+                        {booking.status === "Upcoming" && (
+                          <span className="inline-flex items-center gap-1 bg-blue-50 text-[#1e3a8a] text-[10px] font-bold px-2 py-0.5 rounded-md border border-blue-200 uppercase tracking-wide">
+                            <span className="w-1.5 h-1.5 bg-[#1e3a8a] rounded-full" />
+                            {booking.statusText}
+                          </span>
+                        )}
+                        {booking.status === "Completed" && (
+                          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-200 uppercase tracking-wide">
+                            ✓ {booking.statusText}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Right Top Price Container Alignment Block */}
-                <div className="text-left sm:text-right self-start sm:self-center">
-                  <p className="text-base font-black text-[#1e3a8a]">
-                    Rs. {booking.price.toLocaleString()}
-                  </p>
-                  <span className="inline-block text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md mt-1 uppercase tracking-wider">
-                    {booking.isPaid ? "Paid" : "Pay after service"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Middle Core Details Layout (Date / Location Coordinates) */}
-              <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs text-gray-600 font-medium">
-                <div className="flex items-center gap-2">
-                  <Calendar size={15} className="text-gray-400 shrink-0" />
-                  <span>{booking.dateDisplay}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock size={15} className="text-gray-400 shrink-0" />
-                  <span>{booking.timeDisplay}</span>
-                </div>
-                <div className="flex items-center gap-2 lg:col-span-1">
-                  <MapPin size={15} className="text-gray-400 shrink-0" />
-                  <span className="truncate">{booking.address}</span>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-gray-400 mt-2 font-mono">
-                Booking Reference: {booking.id}
-              </p>
-
-              {/* Bottom Control Actions Panel Row Footer Block */}
-              <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                {/* Modifications State Warn message if locked */}
-                <div>
-                  {booking.modificationsLocked && (
-                    <p className="text-xs text-amber-600 font-semibold flex items-center gap-1">
-                      ✕ Modifications locked — provider is en route
+                  {/* Right Top Price Container Alignment Block */}
+                  <div className="text-left sm:text-right self-start sm:self-center">
+                    <p className="text-base font-black text-[#1e3a8a]">
+                      Rs. {booking.price.toLocaleString()}
                     </p>
-                  )}
-                  {booking.status === "Upcoming" && (
-                    <p className="text-xs text-gray-400 font-normal">
-                      * Changes allowed up to 2 hours before the schedule.
-                    </p>
-                  )}
+                    <span className="inline-block text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md mt-1 uppercase tracking-wider">
+                      {booking.isPaid ? "Paid" : "Pay after service"}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Action Buttons context aware based on dynamic state logic */}
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  {booking.status === "Active" && (
-                    <>
-                      <button
-                        onClick={() => handleOpenDetails(booking)}
-                        className="px-4 py-2 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
-                      >
-                        Track
-                      </button>
-                      <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
-                        <MessageSquare size={13} fill="white" /> WhatsApp
-                      </button>
-                    </>
-                  )}
+                {/* Middle Core Details Layout (Date / Location Coordinates) */}
+                <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs text-gray-600 font-medium">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={15} className="text-gray-400 shrink-0" />
+                    <span>{booking.dateDisplay}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock size={15} className="text-gray-400 shrink-0" />
+                    <span>{booking.timeDisplay}</span>
+                  </div>
+                  <div className="flex items-center gap-2 lg:col-span-1">
+                    <MapPin size={15} className="text-gray-400 shrink-0" />
+                    <span className="truncate">{booking.address}</span>
+                  </div>
+                </div>
 
-                  {booking.status === "Upcoming" && (
-                    <>
-                      <button
-                        onClick={() => handleOpenDetails(booking)}
-                        className="px-3.5 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-xs rounded-lg transition-colors"
-                      >
-                        Reschedule
-                      </button>
-                      <button className="px-3.5 py-2 border border-red-200 text-red-600 hover:bg-red-50 font-semibold text-xs rounded-lg transition-colors">
-                        Cancel
-                      </button>
-                      <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
-                        <MessageSquare size={13} fill="white" /> WhatsApp
-                      </button>
-                    </>
-                  )}
+                <p className="text-[11px] text-gray-400 mt-2 font-mono">
+                  Booking Reference: {booking.id}
+                </p>
 
-                  {booking.status === "Completed" && (
-                    <>
-                      {booking.providerName.includes("CoolTech") ? (
-                        <button className="px-3.5 py-2 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
-                          <Star size={13} fill="white" /> Leave Review
-                        </button>
-                      ) : (
+                {/* Bottom Control Actions Panel Row Footer Block */}
+                <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  {/* Modifications State Warn message if locked */}
+                  <div>
+                    {booking.modificationsLocked && (
+                      <p className="text-xs text-amber-600 font-semibold flex items-center gap-1">
+                        ✕ Modifications locked — provider is on the way
+                      </p>
+                    )}
+                    {booking.status === "Upcoming" && (
+                      <p className="text-xs text-gray-400 font-normal">
+                        * Changes allowed up to 2 hours before the schedule.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Action Buttons context aware based on dynamic state logic */}
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    {booking.status === "Active" && (
+                      <>
                         <button
                           onClick={() => handleOpenDetails(booking)}
-                          className="px-3.5 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
+                          className="px-4 py-2 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
                         >
-                          <Eye size={13} /> View Details
+                          Track
                         </button>
-                      )}
-                      <button className="px-3.5 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold text-xs rounded-lg transition-colors">
-                        Book Again
-                      </button>
-                    </>
-                  )}
+                        <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
+                          <MessageSquare size={13} fill="white" /> WhatsApp
+                        </button>
+                      </>
+                    )}
+
+                    {booking.status === "Upcoming" && (
+                      <>
+                        <button
+                          onClick={() => handleOpenDetails(booking)}
+                          className="px-3.5 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-xs rounded-lg transition-colors"
+                        >
+                          Reschedule
+                        </button>
+                        <button className="px-3.5 py-2 border border-red-200 text-red-600 hover:bg-red-50 font-semibold text-xs rounded-lg transition-colors">
+                          Cancel
+                        </button>
+                        <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
+                          <MessageSquare size={13} fill="white" /> WhatsApp
+                        </button>
+                      </>
+                    )}
+
+                    {booking.status === "Completed" && (
+                      <>
+                        {booking.providerName.includes("CoolTech") ? (
+                          <button className="px-3.5 py-2 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
+                            <Star size={13} fill="white" /> Leave Review
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleOpenDetails(booking)}
+                            className="px-3.5 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
+                          >
+                            <Eye size={13} /> View Details
+                          </button>
+                        )}
+                        <button className="px-3.5 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold text-xs rounded-lg transition-colors">
+                          Book Again
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
