@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Star,
 } from "lucide-react";
+import Link from "next/link";
 import BookingDetailsModal from "@/components/dashboard/user/explore/profile/BookingDetailsModal"; // Adjust relative route based on your structure
 
 // Define structure for our local bookings state management
@@ -302,14 +303,27 @@ export default function BookingsPage() {
                   {/* Action Buttons context aware based on dynamic state logic */}
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     {booking.status === "Active" && (
+                      // <>
+                      //   <button
+                      //     onClick={() => handleOpenDetails(booking)}
+                      //     className="px-4 py-2 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
+                      //   >
+                      //     Track
+                      //   </button>
+                      //   <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
+                      //     <MessageSquare size={13} fill="white" /> WhatsApp
+                      //   </button>
+                      // </>
                       <>
-                        <button
-                          onClick={() => handleOpenDetails(booking)}
-                          className="px-4 py-2 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
+                        <Link
+                          // href={`/bookings/${booking.id}`} // Adjust this path template to match your folder structure
+                          href="/bookings/track"
+                          className="px-4 py-2 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm"
                         >
-                          Track
-                        </button>
-                        <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
+                          <MapPin size={13} /> Track
+                        </Link>
+
+                        <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
                           <MessageSquare size={13} fill="white" /> WhatsApp
                         </button>
                       </>
@@ -335,9 +349,16 @@ export default function BookingsPage() {
                     {booking.status === "Completed" && (
                       <>
                         {booking.providerName.includes("CoolTech") ? (
-                          <button className="px-3.5 py-2 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
+                          // <button className="px-3.5 py-2 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
+                          //   <Star size={13} fill="white" /> Leave Review
+                          // </button>
+                          <Link
+                            // href={`/dashboard/user/bookings/${booking.id}/review`} // Adjust this path template to match your folder structure
+                            href="/dashboard/user/bookings/review"
+                            className="px-3.5 py-2 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm"
+                          >
                             <Star size={13} fill="white" /> Leave Review
-                          </button>
+                          </Link>
                         ) : (
                           <button
                             onClick={() => handleOpenDetails(booking)}
