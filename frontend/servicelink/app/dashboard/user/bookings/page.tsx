@@ -466,7 +466,7 @@ export default function BookingsPage() {
       )}
 
       {/* ── Cancellation Modal ── */}
-      {selectedBooking && isCancelModalOpen && (
+      {/* {selectedBooking && isCancelModalOpen && (
         <CancellationModal
           isOpen={isCancelModalOpen}
           onClose={() => {
@@ -478,6 +478,25 @@ export default function BookingsPage() {
             date: selectedBooking.dateDisplay,
             time: selectedBooking.timeDisplay,
             provider: selectedBooking.providerName,
+          }}
+        />
+      )} */}
+      {selectedBooking && isCancelModalOpen && (
+        <CancellationModal
+          isOpen={isCancelModalOpen}
+          onClose={() => {
+            setIsCancelModalOpen(false);
+            setSelectedBooking(null);
+          }}
+          isLate={(selectedBooking.hoursRemaining ?? 48) < 24}
+          bookingData={{
+            id: selectedBooking.id,
+            providerName: selectedBooking.providerName,
+            serviceName: selectedBooking.serviceName,
+            dateDisplay: selectedBooking.dateDisplay,
+            timeDisplay: selectedBooking.timeDisplay,
+            locationDisplay: selectedBooking.address,
+            price: selectedBooking.price,
           }}
         />
       )}
