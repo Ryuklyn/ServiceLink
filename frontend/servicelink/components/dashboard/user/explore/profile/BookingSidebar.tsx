@@ -20,6 +20,7 @@ import {
   Navigation,
   Loader2,
   Calendar,
+  ShieldCheck,
 } from "lucide-react";
 import { ProviderData } from "./types";
 import BookingDetailModal from "./BookingDetailsModal";
@@ -581,11 +582,44 @@ export default function BookingSidebar({
 
         {/* ── Cancellation Notice ── */}
         <div className="px-5 py-3">
-          <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
-            <Info size={13} className="text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700 leading-relaxed">
-              Free cancellation up to 2 hours before scheduled time
-            </p>
+          {/* Policy Container with sharp brand accents */}
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm select-none">
+            {/* Header Ribbon - Styled with #1e3a8a and subtle top border */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border-b border-slate-100 px-4 py-2.5 text-[12px] font-bold text-[#1e3a8a]">
+              <ShieldCheck
+                size={14}
+                className="text-[#1e3a8a] shrink-0"
+                strokeWidth={2.5}
+              />
+              <span>Cancellation & Rescheduling policy</span>
+            </div>
+
+            {/* 3-Tier Matrix Grid (Replicates layout from image_412b53.png) */}
+            <div className="grid grid-cols-3 text-center text-[11px] bg-white divide-x divide-slate-150">
+              {/* Tier 1: 48+ Hours */}
+              <div className="py-3 px-1">
+                <div className="text-gray-400 font-medium mb-1">48+ hrs</div>
+                <div className="text-[14px] font-bold text-emerald-600">
+                  Free
+                </div>
+              </div>
+
+              {/* Tier 2: 2 - 48 Hours - Using your #e8683f Accent */}
+              <div className="py-3 px-1">
+                <div className="text-gray-400 font-medium mb-1">2–48 hrs</div>
+                <div className="text-[14px] font-bold text-[#e8683f]">
+                  Rs. 50
+                </div>
+              </div>
+
+              {/* Tier 3: Less than 2 Hours */}
+              <div className="py-3 px-1">
+                <div className="text-gray-400 font-medium mb-1">&lt; 2 hrs</div>
+                <div className="text-[14px] font-bold text-red-500">
+                  Rs. 100
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

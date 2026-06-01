@@ -5,16 +5,13 @@ import {
   X,
   MapPin,
   Mic,
+  ShieldCheck,
   CheckCircle2,
   ChevronRight,
   Clock,
   Calendar,
 } from "lucide-react";
 import { ProviderData } from "./types";
-
-// If using react-leaflet, uncomment your map module imports here:
-// import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-// import "leaflet/dist/leaflet.css";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -227,15 +224,6 @@ export default function BookingDetailsModal({
 
                 {/* React Leaflet Integration Mount Wrapper */}
                 <div className="mt-3 w-full h-36 bg-blue-50/40 border border-blue-100 rounded-xl relative overflow-hidden group z-0">
-                  {/* Uncomment and configure this module block when implementing react-leaflet:
-                    <MapContainer center={[27.6713, 85.4278]} zoom={15} className="h-full w-full">
-                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                      <Marker position={[27.6713, 85.4278]}>
-                        <Popup>{address || "Nayabato, Suryabinayak Road"}</Popup>
-                      </Marker>
-                    </MapContainer>
-                  */}
-
                   {/* Fallback Viewport Graphics Layer */}
                   <div className="absolute inset-0 bg-[linear-gradient(rgba(30,58,138,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(30,58,138,0.03)_1px,transparent_1px)] bg-[size:12px_12px] flex items-center justify-center">
                     <div className="w-8 h-8 bg-[#e8683f] rounded-full flex items-center justify-center shadow-md border-2 border-white relative animate-bounce">
@@ -326,12 +314,78 @@ export default function BookingDetailsModal({
                 </p>
               </div>
 
-              <div className="bg-gray-50 mb-12 border border-gray-200 rounded-xl p-4 text-[11px] text-gray-500 leading-relaxed">
+              {/* <div className="bg-gray-50 mb-12 border border-gray-200 rounded-xl p-4 text-[11px] text-gray-500 leading-relaxed">
                 <span className="font-bold text-gray-700">
                   Cancellation Policy:
                 </span>{" "}
                 Free cancellation up to 2 hours before the scheduled time. Late
                 cancellations may incur a fee.
+              </div> */}
+              <div className="bg-slate-50 mb-12 border border-slate-200 rounded-xl p-5 text-[11px] text-gray-500 select-none">
+                {/* Header Section */}
+                <div className="flex items-center gap-1.5 font-bold mb-3 text-[#1e3a8a] text-[12px]">
+                  <ShieldCheck
+                    className="w-4 h-4 text-[#1e3a8a]"
+                    strokeWidth={2.5}
+                  />
+                  <span>Cancellation & Reschedule Policy</span>
+                </div>
+
+                {/* 3-Tier Grid Layout */}
+                <div className="grid grid-cols-3 border border-slate-200 rounded-lg overflow-hidden bg-white text-center mb-3">
+                  {/* Tier 1: More than 24 hours */}
+                  <div className="p-3 border-r border-slate-150">
+                    <div className="text-gray-400 font-medium mb-1">
+                      More than 24 hrs before
+                    </div>
+                    <div className="text-[14px] font-bold text-emerald-600 mb-0.5">
+                      Free
+                    </div>
+                    <div className="text-gray-400 text-[10px]">
+                      No charges added
+                    </div>
+                  </div>
+
+                  {/* Tier 2: 2 to 24 hours */}
+                  <div className="p-3 border-r border-slate-150">
+                    <div className="text-gray-400 font-medium mb-1">
+                      2 to 24 hrs before
+                    </div>
+                    <div className="text-[14px] font-bold text-[#e8683f] mb-0.5">
+                      Rs. 50
+                    </div>
+                    <div className="text-gray-400 text-[10px]">
+                      Added to next bill
+                    </div>
+                  </div>
+
+                  {/* Tier 3: Less than 2 hours */}
+                  <div className="p-3">
+                    <div className="text-gray-400 font-medium mb-1">
+                      Less than 2 hrs before
+                    </div>
+                    <div className="text-[14px] font-bold text-red-600 mb-0.5">
+                      Rs. 100
+                    </div>
+                    <div className="text-gray-400 text-[10px]">
+                      Added to next bill
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dynamic Timeline Pill Status Indicator */}
+                <div className="bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg py-2 px-3 flex items-center gap-1.5 font-medium">
+                  <Clock
+                    className="w-3.5 h-3.5 text-emerald-600"
+                    strokeWidth={2.5}
+                  />
+                  <span>
+                    Current Status:{" "}
+                    <span className="font-bold">
+                      Free to cancel until June 4, 10:00 AM
+                    </span>
+                  </span>
+                </div>
               </div>
             </div>
           </div>

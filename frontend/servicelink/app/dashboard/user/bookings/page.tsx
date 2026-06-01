@@ -8,11 +8,12 @@ import {
   Eye,
   MessageSquare,
   Star,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
-import BookingDetailsModal from "@/components/dashboard/user/explore/profile/BookingDetailsModal"; // Adjust relative route based on your structure
+import ReschedulingModal from "@/components/dashboard/user/bookings/ReschedulingModal";
+import CancellationModal from "@/components/dashboard/user/bookings/CancelationModal";
 
-// Define structure for our local bookings state management
 interface BookingItem {
   id: string;
   providerName: string;
@@ -23,6 +24,7 @@ interface BookingItem {
   statusText: string;
   dateDisplay: string;
   timeDisplay: string;
+  hoursRemaining?: number;
   address: string;
   landmark?: string;
   ward?: string;
@@ -39,9 +41,11 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(
     null,
   );
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Mock data mimicking matching values from your provided images
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] =
+    useState<boolean>(false);
+
   const mockBookings: BookingItem[] = [
     {
       id: "SL-2026-1042",
@@ -70,14 +74,35 @@ export default function BookingsPage() {
       initials: "CS",
       status: "Upcoming",
       statusText: "Upcoming",
-      dateDisplay: "Tomorrow",
+      dateDisplay: "June 3, 2026",
       timeDisplay: "10:00 AM",
+      hoursRemaining: 36, // > 24 hrs — FREE tier
       address: "New Baneshwor, Kathmandu",
       landmark: "Behind Eyeplex Mall",
       ward: "Ward 10",
       price: 1600,
       taskSummary:
         "Full deep cleaning of 2BHK apartment including kitchen scrubbing and window wiping.",
+      modificationsLocked: false,
+      isPaid: false,
+    },
+    {
+      id: "SL-2026-1040",
+      providerName: "Kaji Carpenter Services",
+      specialty: "Furniture Builder",
+      serviceName: "Door Shaving & Repair",
+      initials: "KS",
+      status: "Upcoming",
+      statusText: "Upcoming",
+      dateDisplay: "Today",
+      timeDisplay: "9:00 AM",
+      hoursRemaining: 14, // < 24 hrs — LATE tier
+      address: "Koteshwor, Kathmandu",
+      landmark: "Near Mahadevsthan Temple",
+      ward: "Ward 32",
+      price: 750,
+      taskSummary:
+        "Fixing the master bathroom wooden door frame friction due to structural expansion.",
       modificationsLocked: false,
       isPaid: false,
     },
@@ -115,7 +140,6 @@ export default function BookingsPage() {
     },
   ];
 
-  // Filtering counts for the tab pill badges
   const activeCount = mockBookings.filter((b) => b.status === "Active").length;
   const upcomingCount = mockBookings.filter(
     (b) => b.status === "Upcoming",
@@ -124,116 +148,89 @@ export default function BookingsPage() {
     (b) => b.status === "Completed",
   ).length;
 
-  // Filter listings rendered based on selected layout status tab
   const filteredBookings = mockBookings.filter((b) => {
     if (activeTab === "Active") return b.status === "Active";
     if (activeTab === "Upcoming") return b.status === "Upcoming";
     return b.status === "Completed";
   });
 
-  const handleOpenDetails = (booking: BookingItem) => {
-    setSelectedBooking(booking);
-    setIsModalOpen(true);
-  };
-
   return (
-    <div className="space-y-6">
-      {/* ── Tabs Navigation Header ── */}
-      <div className="flex items-center gap-3 border-b border-gray-100 pb-2">
-        <button
-          onClick={() => setActiveTab("Active")}
-          className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-150 ${
-            activeTab === "Active"
-              ? "bg-[#1e3a8a] text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
-        >
-          Active{" "}
-          <span
-            className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === "Active" ? "bg-[#3a57b5] text-white" : "bg-gray-200 text-gray-700"}`}
-          >
-            {activeCount}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("Upcoming")}
-          className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-150 ${
-            activeTab === "Upcoming"
-              ? "bg-[#1e3a8a] text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
-        >
-          Upcoming{" "}
-          <span
-            className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === "Upcoming" ? "bg-[#3a57b5] text-white" : "bg-gray-200 text-gray-700"}`}
-          >
-            {upcomingCount}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("History")}
-          className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-150 ${
-            activeTab === "History"
-              ? "bg-[#1e3a8a] text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
-        >
-          History{" "}
-          <span
-            className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === "History" ? "bg-[#3a57b5] text-white" : "bg-gray-200 text-gray-700"}`}
-          >
-            {historyCount}
-          </span>
-        </button>
+    <div className="space-y-6 max-w-6xl mx-auto p-4">
+      {/* ── Tabs ── */}
+      <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+        {(["Active", "Upcoming", "History"] as const).map((tab) => {
+          const count =
+            tab === "Active"
+              ? activeCount
+              : tab === "Upcoming"
+                ? upcomingCount
+                : historyCount;
+          const isSelected = activeTab === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 ${
+                isSelected
+                  ? "bg-[#1e3a8a] text-white shadow-sm"
+                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {tab}
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  isSelected
+                    ? "bg-white/20 text-white"
+                    : "bg-gray-200 text-gray-700"
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* ── Bookings Cards Stack List Container ── */}
+      {/* ── Cards ── */}
       <div className="space-y-4">
         {filteredBookings.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+          <div className="bg-white rounded-2xl border border-gray-150 p-16 text-center shadow-sm">
             <p className="text-gray-400 text-sm font-medium">
               No bookings found in this section.
             </p>
           </div>
         ) : (
           filteredBookings.map((booking) => {
-            // Define the status-specific border color mapping cleanly inside the map scope
             const borderColors = {
-              Active: "border-t-[#e8683f] md:border-l-[#e8683f]",
-              Upcoming: "border-t-[#1e3a8a] md:border-l-[#1e3a8a]", // matches tracking status color theme
-              Completed: "border-t-emerald-600 md:border-l-emerald-600",
+              Active: "border-l-[#e8683f]",
+              Upcoming: "border-l-[#1e3a8a]",
+              Completed: "border-l-emerald-600",
             };
 
-            const statusBorderClass =
-              borderColors[booking.status] ||
-              "border-t-[#e8683f] md:border-l-[#e8683f]";
+            const hoursRemaining = booking.hoursRemaining ?? 48;
+            const isLateWindow = hoursRemaining < 24;
 
             return (
               <div
                 key={booking.id}
-                className={`bg-white rounded-xl border-t-4 md:border-t-0 md:border-l-4 border border-gray-200 shadow-xs p-5 transition-all duration-200 relative overflow-hidden group ${statusBorderClass}`}
+                className={`bg-white rounded-2xl border-l-4 border-y border-r border-gray-200 shadow-sm p-6 transition-all duration-200 ${borderColors[booking.status]}`}
               >
-                {/* Header Meta Line Row */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3.5">
-                    {/* Left Provider Initials Circle Badge */}
-                    <div className="w-11 h-11 bg-blue-900/10 text-[#1e3a8a] rounded-full flex items-center justify-center text-sm font-bold shrink-0 border border-blue-900/5">
+                {/* Top */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-gray-100">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-blue-50 text-[#1e3a8a] rounded-xl flex items-center justify-center text-sm font-bold shrink-0 border border-blue-100">
                       {booking.initials}
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 text-base leading-tight">
+                      <h3 className="font-bold text-gray-900 text-base tracking-tight">
                         {booking.providerName}
                       </h3>
-                      <p className="text-xs text-gray-400 mt-0.5 font-medium">
+                      <p className="text-xs text-gray-500 mt-0.5 font-medium">
                         {booking.serviceName}
                       </p>
-
-                      {/* Colored Status Tag Indicators */}
-                      <div className="mt-2 flex items-center gap-2">
+                      <div className="mt-2">
                         {booking.status === "Active" && (
-                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-200 uppercase tracking-wide">
+                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-200 uppercase tracking-wide">
                             <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
                             {booking.statusText}
                           </span>
@@ -245,7 +242,7 @@ export default function BookingsPage() {
                           </span>
                         )}
                         {booking.status === "Completed" && (
-                          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-200 uppercase tracking-wide">
+                          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-200 uppercase tracking-wide">
                             ✓ {booking.statusText}
                           </span>
                         )}
@@ -253,19 +250,18 @@ export default function BookingsPage() {
                     </div>
                   </div>
 
-                  {/* Right Top Price Container Alignment Block */}
-                  <div className="text-left sm:text-right self-start sm:self-center">
+                  <div className="sm:text-right self-start sm:self-auto shrink-0 bg-gray-50/60 p-2.5 rounded-xl border border-gray-100 min-w-[120px]">
                     <p className="text-base font-black text-[#1e3a8a]">
                       Rs. {booking.price.toLocaleString()}
                     </p>
-                    <span className="inline-block text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md mt-1 uppercase tracking-wider">
+                    <span className="block text-[9px] font-bold text-gray-400 mt-0.5 uppercase tracking-wider">
                       {booking.isPaid ? "Paid" : "Pay after service"}
                     </span>
                   </div>
                 </div>
 
-                {/* Middle Core Details Layout (Date / Location Coordinates) */}
-                <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs text-gray-600 font-medium">
+                {/* Meta */}
+                <div className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-gray-600 font-medium border-b border-gray-100">
                   <div className="flex items-center gap-2">
                     <Calendar size={15} className="text-gray-400 shrink-0" />
                     <span>{booking.dateDisplay}</span>
@@ -274,74 +270,152 @@ export default function BookingsPage() {
                     <Clock size={15} className="text-gray-400 shrink-0" />
                     <span>{booking.timeDisplay}</span>
                   </div>
-                  <div className="flex items-center gap-2 lg:col-span-1">
+                  <div className="flex items-center gap-2">
                     <MapPin size={15} className="text-gray-400 shrink-0" />
                     <span className="truncate">{booking.address}</span>
                   </div>
                 </div>
 
-                <p className="text-[11px] text-gray-400 mt-2 font-mono">
-                  Booking Reference: {booking.id}
-                </p>
+                {/* Bottom */}
+                <div className="pt-4 grid grid-cols-1 md:grid-cols-12 gap-5 items-end">
+                  {/* Left */}
+                  <div className="md:col-span-8 space-y-3">
+                    <p className="text-[10px] text-gray-400 font-mono tracking-tight">
+                      Booking Reference: {booking.id}
+                    </p>
 
-                {/* Bottom Control Actions Panel Row Footer Block */}
-                <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* Modifications State Warn message if locked */}
-                  <div>
                     {booking.modificationsLocked && (
-                      <p className="text-xs text-amber-600 font-semibold flex items-center gap-1">
+                      <p className="text-xs text-amber-600 font-semibold flex items-center gap-1 bg-amber-50/50 p-2 rounded-lg border border-amber-100 w-fit">
                         ✕ Modifications locked — provider is on the way
                       </p>
                     )}
+
                     {booking.status === "Upcoming" && (
-                      <p className="text-xs text-gray-400 font-normal">
-                        * Changes allowed up to 2 hours before the schedule.
-                      </p>
+                      <div className="space-y-2 max-w-2xl">
+                        {isLateWindow ? (
+                          <div className="bg-amber-50 text-amber-900 border border-amber-200 rounded-xl p-2.5 flex items-center gap-2 text-xs font-medium">
+                            <Clock
+                              size={14}
+                              className="text-amber-600 shrink-0"
+                              strokeWidth={2.5}
+                            />
+                            <span>
+                              Emergency Zone: Changes incur a late fee or
+                              require an exception token.
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-xl p-2.5 flex items-center gap-2 text-xs font-medium">
+                            <Clock
+                              size={14}
+                              className="text-emerald-600 shrink-0"
+                              strokeWidth={2.5}
+                            />
+                            <span>
+                              Free window active. You can cancel or reschedule
+                              without tokens or fees.
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 flex flex-wrap items-center gap-2 text-xs">
+                          <div className="flex items-center gap-1 font-bold text-[#1e3a8a] text-[11px] uppercase tracking-wider mr-1">
+                            <Info
+                              size={13}
+                              className="text-[#1e3a8a] shrink-0"
+                              strokeWidth={2.5}
+                            />
+                            <span>Tiers:</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-md bg-white text-emerald-800 border border-emerald-200 text-[10px] font-medium shadow-sm">
+                            24h+: <span className="font-bold">Free</span>
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-white text-orange-800 border border-orange-200 text-[10px] font-medium shadow-sm">
+                            2–24 hrs:{" "}
+                            <span className="font-bold text-[#e8683f]">
+                              Rs. 50
+                            </span>
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-white text-red-800 border border-red-200 text-[10px] font-medium shadow-sm">
+                            &lt; 2 hrs:{" "}
+                            <span className="font-bold text-red-600">
+                              Rs. 100
+                            </span>
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
 
-                  {/* Action Buttons context aware based on dynamic state logic */}
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                  {/* Right — Actions */}
+                  <div className="md:col-span-4 flex flex-row sm:flex-row md:flex-col justify-end gap-2 w-full">
                     {booking.status === "Active" && (
-                      // <>
-                      //   <button
-                      //     onClick={() => handleOpenDetails(booking)}
-                      //     className="px-4 py-2 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
-                      //   >
-                      //     Track
-                      //   </button>
-                      //   <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
-                      //     <MessageSquare size={13} fill="white" /> WhatsApp
-                      //   </button>
-                      // </>
                       <>
                         <Link
-                          // href={`/bookings/${booking.id}`} // Adjust this path template to match your folder structure
-                          href="/bookings/track"
-                          className="px-4 py-2 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm"
+                          href="/dashboard/user/bookings/track"
+                          className="px-4 py-2.5 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm w-full text-center"
                         >
-                          <MapPin size={13} /> Track
+                          <MapPin size={13} /> Track Order
                         </Link>
-
-                        <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                        <button className="px-4 py-2.5 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm w-full">
                           <MessageSquare size={13} fill="white" /> WhatsApp
+                          Support
                         </button>
                       </>
                     )}
 
                     {booking.status === "Upcoming" && (
                       <>
-                        <button
-                          onClick={() => handleOpenDetails(booking)}
-                          className="px-3.5 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-xs rounded-lg transition-colors"
-                        >
-                          Reschedule
-                        </button>
-                        <button className="px-3.5 py-2 border border-red-200 text-red-600 hover:bg-red-50 font-semibold text-xs rounded-lg transition-colors">
-                          Cancel
-                        </button>
-                        <button className="px-4 py-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
+                        <div className="flex gap-2 w-full">
+                          {isLateWindow ? (
+                            <>
+                              {/* LATE TIER button */}
+                              <button
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setIsRescheduleModalOpen(true);
+                                }}
+                                className="flex-1 px-3 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-xs rounded-xl transition-colors text-center"
+                              >
+                                Late Reschedule
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setIsCancelModalOpen(true);
+                                }}
+                                className="flex-1 px-3 py-2.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 font-bold text-xs rounded-xl transition-colors text-center"
+                              >
+                                Late Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {/* FREE TIER button */}
+                              <button
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setIsRescheduleModalOpen(true);
+                                }}
+                                className="flex-1 px-3 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors text-center"
+                              >
+                                Reschedule
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setIsCancelModalOpen(true);
+                                }}
+                                className="flex-1 px-3 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs rounded-xl transition-colors text-center"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        <button className="px-4 py-2.5 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm w-full">
                           <MessageSquare size={13} fill="white" /> WhatsApp
+                          Support
                         </button>
                       </>
                     )}
@@ -349,25 +423,18 @@ export default function BookingsPage() {
                     {booking.status === "Completed" && (
                       <>
                         {booking.providerName.includes("CoolTech") ? (
-                          // <button className="px-3.5 py-2 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-xs">
-                          //   <Star size={13} fill="white" /> Leave Review
-                          // </button>
                           <Link
-                            // href={`/dashboard/user/bookings/${booking.id}/review`} // Adjust this path template to match your folder structure
                             href="/dashboard/user/bookings/review"
-                            className="px-3.5 py-2 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm"
+                            className="px-4 py-2.5 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm w-full text-center"
                           >
                             <Star size={13} fill="white" /> Leave Review
                           </Link>
                         ) : (
-                          <button
-                            onClick={() => handleOpenDetails(booking)}
-                            className="px-3.5 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
-                          >
+                          <button className="px-4 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 w-full">
                             <Eye size={13} /> View Details
                           </button>
                         )}
-                        <button className="px-3.5 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold text-xs rounded-lg transition-colors">
+                        <button className="px-4 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors w-full">
                           Book Again
                         </button>
                       </>
@@ -380,35 +447,37 @@ export default function BookingsPage() {
         )}
       </div>
 
-      {/* ── Dynamic Structural Modal Mounting Injection Tree ── */}
-      {selectedBooking && (
-        <BookingDetailsModal
-          isOpen={isModalOpen}
+      {/* ── Rescheduling Modal ── */}
+      {selectedBooking && isRescheduleModalOpen && (
+        <ReschedulingModal
+          isOpen={isRescheduleModalOpen}
           onClose={() => {
-            setIsModalOpen(false);
+            setIsRescheduleModalOpen(false);
             setSelectedBooking(null);
           }}
-          provider={{
-            name: selectedBooking.providerName,
-            initials: selectedBooking.initials,
-            specialty: selectedBooking.specialty,
-            categories: [selectedBooking.serviceName, "Verified"],
+          currentBooking={{
+            id: selectedBooking.id,
+            date: selectedBooking.dateDisplay,
+            time: selectedBooking.timeDisplay,
+            provider: selectedBooking.providerName,
           }}
-          bookingDetails={{
-            services: [
-              {
-                name: selectedBooking.serviceName,
-                priceMin: selectedBooking.price,
-                priceMax: selectedBooking.price,
-              },
-            ],
-            taskSummary: selectedBooking.taskSummary,
-            dateDisplay: selectedBooking.dateDisplay,
-            timeDisplay: selectedBooking.timeDisplay,
-            estimatedMin: selectedBooking.price,
-            estimatedMax: selectedBooking.price,
-            address: selectedBooking.address,
-            photos: [], // Defaults fallback arrays mapping structure parameters
+          isLate={(selectedBooking.hoursRemaining ?? 48) < 24}
+        />
+      )}
+
+      {/* ── Cancellation Modal ── */}
+      {selectedBooking && isCancelModalOpen && (
+        <CancellationModal
+          isOpen={isCancelModalOpen}
+          onClose={() => {
+            setIsCancelModalOpen(false);
+            setSelectedBooking(null);
+          }}
+          currentBooking={{
+            id: selectedBooking.id,
+            date: selectedBooking.dateDisplay,
+            time: selectedBooking.timeDisplay,
+            provider: selectedBooking.providerName,
           }}
         />
       )}
