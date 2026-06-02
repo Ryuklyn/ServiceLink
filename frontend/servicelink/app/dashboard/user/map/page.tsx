@@ -223,7 +223,10 @@ export default function ServiceMapPage() {
             max="25"
             value={rangeRadius}
             onChange={(e) => setRangeRadius(Number(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#e8683f] focus:outline-none transition-all"
+            style={{
+              background: `linear-gradient(to right, #e8683f 0%, #e8683f ${((rangeRadius - 1) / (25 - 1)) * 100}%, #374151 ${((rangeRadius - 1) / (25 - 1)) * 100}%, #374151 100%)`,
+            }}
+            className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#e8683f] focus:outline-none transition-all"
           />
         </div>
       </div>

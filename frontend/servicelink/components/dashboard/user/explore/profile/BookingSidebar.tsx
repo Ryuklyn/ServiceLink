@@ -580,11 +580,11 @@ export default function BookingSidebar({
           </p>
         </div>
 
-        {/* ── Cancellation Notice ── */}
+        {/* ── Cancellation & Rescheduling Notice ── */}
         <div className="px-5 py-3">
           {/* Policy Container with sharp brand accents */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm select-none">
-            {/* Header Ribbon - Styled with #1e3a8a and subtle top border */}
+            {/* Header Ribbon */}
             <div className="flex items-center gap-1.5 bg-slate-50 border-b border-slate-100 px-4 py-2.5 text-[12px] font-bold text-[#1e3a8a]">
               <ShieldCheck
                 size={14}
@@ -594,29 +594,59 @@ export default function BookingSidebar({
               <span>Cancellation & Rescheduling policy</span>
             </div>
 
-            {/* 3-Tier Matrix Grid (Replicates layout from image_412b53.png) */}
-            <div className="grid grid-cols-3 text-center text-[11px] bg-white divide-x divide-slate-150">
-              {/* Tier 1: 48+ Hours */}
-              <div className="py-3 px-1">
-                <div className="text-gray-400 font-medium mb-1">48+ hrs</div>
-                <div className="text-[14px] font-bold text-emerald-600">
+            {/* New Policy Structure Matrix */}
+            <div className="flex flex-col text-[11px] bg-white divide-y divide-slate-100">
+              {/* Safe Window: More than 24 Hours */}
+              <div className="flex items-center justify-between px-4 py-3 bg-emerald-50/30">
+                <div>
+                  <div className="font-bold text-gray-700 text-xs">
+                    Before 24 hours
+                  </div>
+                  <div className="text-gray-400 text-[10px]">
+                    Applies to both changes & cancellations
+                  </div>
+                </div>
+                <div className="text-[14px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
                   Free
                 </div>
               </div>
 
-              {/* Tier 2: 2 - 48 Hours - Using your #e8683f Accent */}
-              <div className="py-3 px-1">
-                <div className="text-gray-400 font-medium mb-1">2–48 hrs</div>
-                <div className="text-[14px] font-bold text-[#e8683f]">
-                  Rs. 50
+              {/* Late Window Split: Less than 24 Hours */}
+              <div className="grid grid-cols-2 divide-x divide-slate-100">
+                {/* Late Rescheduling */}
+                <div className="p-3 text-center">
+                  <div className="text-gray-400 font-medium mb-1.5 leading-tight">
+                    <div>Under 24 hrs</div>
+                    <div className="text-slate-500 font-semibold mt-0.5">
+                      Reschedule
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center justify-center gap-0.5">
+                    <span className="text-[14px] font-bold text-[#e8683f]">
+                      Rs. 50
+                    </span>
+                    <span className="text-[10px] font-medium text-gray-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-150">
+                      or 1 Token
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Tier 3: Less than 2 Hours */}
-              <div className="py-3 px-1">
-                <div className="text-gray-400 font-medium mb-1">&lt; 2 hrs</div>
-                <div className="text-[14px] font-bold text-red-500">
-                  Rs. 100
+                {/* Late Cancellation */}
+                <div className="p-3 text-center">
+                  <div className="text-gray-400 font-medium mb-1.5 leading-tight">
+                    <div>Under 24 hrs</div>
+                    <div className="text-slate-500 font-semibold mt-0.5">
+                      Cancel
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center justify-center gap-0.5">
+                    <span className="text-[14px] font-bold text-red-500">
+                      Rs. 100
+                    </span>
+                    <span className="text-[10px] font-medium text-gray-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-150">
+                      or 1 Token
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

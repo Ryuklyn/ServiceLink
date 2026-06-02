@@ -16,7 +16,21 @@ import {
   Moon,
   Laptop,
   MessageSquare,
+  CheckCircle2,
+  Mail,
+  Phone,
+  PencilLine,
   Globe,
+  ShieldCheck,
+  CalendarDays,
+  Ticket,
+  Info,
+  Briefcase,
+  XCircle,
+  Calendar,
+  Trash2,
+  FileText,
+  Smartphone,
 } from "lucide-react";
 
 interface SavedAddress {
@@ -84,133 +98,281 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12 font-sans text-gray-800">
-      {/* ──────────────────────────────────────────────────────── */}
-      {/* CARD 1: CORE PROFILE & ADDRESSES SECTION (image_b9067f.png) */}
-      {/* ──────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6 md:p-8 space-y-6">
-        {/* User Badge Avatar Row */}
-        <div className="flex flex-col sm:flex-row items-center gap-5">
-          <div className="relative">
-            <div className="w-24 h-24 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center text-3xl font-bold tracking-wide shadow-inner">
-              RS
-            </div>
-            <button className="absolute bottom-0 right-0 p-2 bg-[#e8683f] hover:bg-[#d45b34] text-white rounded-full transition-colors shadow-md border-2 border-white">
-              <Camera size={14} fill="white" />
-            </button>
-          </div>
-
-          <div className="text-center sm:text-left space-y-1 flex-1">
-            <div className="flex items-center justify-center sm:justify-start gap-2 group">
-              <h2 className="text-xl font-bold text-gray-900">{name}</h2>
-              <Edit2
-                size={13}
-                className="text-gray-400 cursor-pointer hover:text-gray-600"
-              />
-            </div>
-            <p className="text-sm text-gray-400 font-medium">{email}</p>
-            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-gray-500 font-medium">
-              <span>{phone}</span>
-              <Edit2
-                size={11}
-                className="text-gray-400 cursor-pointer hover:text-gray-600"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Saved Addresses Subsegment */}
-        <div className="space-y-3 pt-2">
-          <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-            Saved Addresses
-          </h3>
-
-          <div className="space-y-2.5">
-            {addresses.map((addr) => (
-              <div
-                key={addr.id}
-                className="flex items-center justify-between text-sm py-2 px-3 border border-gray-50 rounded-lg hover:bg-gray-50/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <MapPin size={16} className="text-gray-400 shrink-0" />
-                  <span className="min-w-[55px] font-bold text-xs bg-blue-50 text-[#1e3a8a] px-2 py-0.5 rounded-md text-center">
-                    {addr.type}
-                  </span>
-                  <span className="text-gray-600 text-xs font-medium">
-                    {addr.address}
-                  </span>
-                </div>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Edit2 size={13} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <button className="inline-flex items-center gap-1 text-xs font-bold text-[#e8683f] hover:text-[#d45b34] transition-colors mt-1">
-            <Plus size={14} strokeWidth={2.5} /> Add New Address
-          </button>
-        </div>
-
-        {/* Global Save Trigger Block */}
-        <div className="pt-2 border-t border-gray-50">
-          <button className="w-full py-3 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-sm rounded-xl transition-colors shadow-xs tracking-wide">
-            Save Changes
-          </button>
-        </div>
-      </div>
-
-      {/* ──────────────────────────────────────────────────────── */}
-      {/* CARD 2: SAVED PROVIDERS SCROLLER SECTION (image_b9067f.png) */}
-      {/* ──────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6 space-y-4">
-        <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-          Saved Providers
+      {/* ── CARD 1: PROFILE INFORMATION ── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 md:p-8">
+        <h3 className="text-sm font-bold text-[#1e3a8a] tracking-tight mb-8">
+          Profile Information
         </h3>
 
-        {/* Horizontal Card Slider Container */}
-        <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar w-full">
-          {savedProviders.map((prov) => (
-            <div
-              key={prov.id}
-              className="min-w-[240px] md:min-w-[260px] bg-white border border-gray-100 rounded-xl p-3.5 space-y-3.5 shadow-2xs shrink-0"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#1e3a8a] text-white font-bold text-xs rounded-full flex items-center justify-center shrink-0">
-                  {prov.initials}
-                </div>
-                <div className="overflow-hidden">
-                  <h4 className="font-bold text-xs text-gray-900 truncate">
-                    {prov.name}
-                  </h4>
-                  <p className="text-[10px] text-gray-400 font-medium mt-0.5">
-                    {prov.specialty}
-                  </p>
-                  <div className="flex items-center gap-0.5 mt-1">
-                    {[...Array(prov.rating)].map((_, i) => (
-                      <span key={i} className="text-amber-500 text-xs">
-                        ★
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
+          {/* LEFT SIDE */}
+          <div className="flex flex-col md:flex-row items-center gap-10 flex-1">
+            {/* IMPROVISED AVATAR BLOCK (Matches image_57c107.png scale) */}
+            <div className="relative shrink-0">
+              <div className="w-40 h-40 rounded-full bg-[#0a337a] flex items-center justify-center text-white text-6xl font-bold select-none">
+                RS
+              </div>
+
+              <button className="absolute bottom-4 right-0 w-10 h-10 rounded-full bg-[#e8683f] hover:bg-[#d45b34] border-[3px] border-white shadow-lg flex items-center justify-center text-white transition-all duration-200">
+                <Camera size={18} fill="currentColor" />
+              </button>
+            </div>
+
+            {/* User Information */}
+            <div className="flex-1 min-w-0z">
+              {/* Name */}
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
+                {name || "Rukesh Shrestha"}
+              </h2>
+
+              {/* Verified Account Pill Badge Row */}
+              <div className="flex items-center gap-1.5 mt-2">
+                <CheckCircle2
+                  size={15}
+                  fill="#10b981"
+                  className="text-white shrink-0"
+                />
+                <span className="text-xs font-semibold text-[#10b981]">
+                  Verified Account
+                </span>
+              </div>
+
+              {/* Contact Information */}
+              <div className="mt-6 pt-5 border-t border-slate-100">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">
+                  Contact Information
+                </h4>
+
+                <div className="space-y-4 max-w-md">
+                  {/* EMAIL ROW */}
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Mail size={16} className="text-slate-400 shrink-0" />
+                      <span className="text-sm text-slate-700 truncate">
+                        {email || "rukesh@email.com"}
                       </span>
-                    ))}
+                    </div>
+
+                    <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-xs font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
+                      <ShieldCheck
+                        className="w-3.5 h-3.5 fill-[#10b981]/10"
+                        strokeWidth={2.5}
+                      />
+                      Verified
+                    </span>
+                  </div>
+
+                  {/* PHONE ROW */}
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Phone size={16} className="text-slate-400 shrink-0" />
+                      {phone ? (
+                        <span className="text-sm text-slate-700 truncate">
+                          {phone}
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-400">
+                            Not Available
+                          </span>
+                          <button className="text-[#e8683f] text-sm font-semibold hover:underline">
+                            Add
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {phone ? (
+                      <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-xs font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
+                        <ShieldCheck
+                          className="w-3.5 h-3.5 fill-[#10b981]/10"
+                          strokeWidth={2.5}
+                        />
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-red-500 shrink-0 select-none">
+                        Unverified
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
-
-              {/* Action Operations Mini Bar */}
-              <div className="flex items-center gap-1.5 pt-1">
-                <button className="flex-1 py-1.5 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-[10px] rounded-md transition-colors flex items-center justify-center gap-1 shadow-2xs">
-                  <MessageSquare size={11} fill="white" /> WhatsApp
-                </button>
-                <button className="px-3 py-1.5 border border-[#e8683f] text-[#e8683f] hover:bg-orange-50 font-bold text-[10px] rounded-md transition-colors">
-                  Book
-                </button>
-              </div>
             </div>
-          ))}
+          </div>
+
+          {/* RIGHT SIDE ACTION */}
+          <div className="lg:self-end shrink-0">
+            <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#e8683f] text-[#e8683f] hover:bg-[#fff7f4] font-medium text-sm transition-all duration-200">
+              <PencilLine size={16} />
+              Edit Profile
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ──────────────────────────────────────────────────────── */}
-      {/* CARD 3: PREFERENCES PANEL SECTION (image_b90699.png Customised) */}
+      {/* CARD 2: FLEX TOKEN WALLET SECTION (image_56d4a6.png)     */}
+      {/* ──────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6 space-y-5">
+        {/* Header Block */}
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-bold text-gray-900 tracking-tight">
+            Flex Token Wallet
+          </h3>
+          <Info
+            size={14}
+            className="text-gray-400 cursor-pointer hover:text-gray-600 shrink-0"
+          />
+        </div>
+
+        {/* Token Cards Grid Container */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Reschedule Flex Token Card */}
+          <div className="bg-[#f0f4ff]/60 border border-[#dbe4ff] rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-[#f0f4ff]/80">
+            {/* Icon Wrapper Badge */}
+            <div className="w-14 h-14 rounded-full bg-[#dbe4ff] flex items-center justify-center text-[#1e3a8a] shrink-0 shadow-2xs">
+              <Ticket size={24} className="rotate-45" />
+            </div>
+
+            {/* Metrics Data */}
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-bold text-[#1e3a8a]">
+                Reschedule Flex Token
+              </h4>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-[#1e3a8a]">3</span>
+                <span className="text-[10px] text-gray-500 font-medium">
+                  Available
+                </span>
+              </div>
+              <p className="text-[9px] text-gray-400 font-normal italic">
+                3 emergency tokens allocated per year
+              </p>
+            </div>
+          </div>
+
+          {/* Cancellation Flex Token Card */}
+          <div className="bg-[#fff2ee]/60 border border-[#ffe3da] rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-[#fff2ee]/80">
+            {/* Icon Wrapper Badge */}
+            <div className="w-14 h-14 rounded-full bg-[#ffe3da] flex items-center justify-center text-[#e8683f] shrink-0 shadow-2xs">
+              <Ticket size={24} className="-rotate-45" />
+            </div>
+
+            {/* Metrics Data */}
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-bold text-gray-900">
+                Cancellation Flex Token
+              </h4>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-[#e8683f]">2</span>
+                <span className="text-[10px] text-gray-500 font-medium">
+                  Available
+                </span>
+              </div>
+              <p className="text-[9px] text-gray-400 font-normal italic">
+                2 emergency tokens allocated per year
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Disclaimer Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1.5 text-xs border-t border-gray-50">
+          <p className="text-gray-500 text-[11px] font-medium">
+            Use Flex Tokens to reschedule or cancel bookings without additional
+            service charges.
+          </p>
+          <button className="text-[#e8683f] hover:text-[#d45b34] font-bold text-[11px] shrink-0 self-start sm:self-center hover:underline transition-all">
+            Learn more
+          </button>
+        </div>
+      </div>
+
+      {/* ──────────────────────────────────────────────────────── */}
+      {/* CARD 3: BOOKING ACTIVITY SECTION (image_56c5c2.png)     */}
+      {/* ──────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6 space-y-5">
+        {/* Section Header */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-gray-900 tracking-tight">
+            Booking Activity
+          </h3>
+        </div>
+
+        {/* Activity Grid Layout (Responsive 1 col -> 2 cols -> 4 cols layout) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 1. Upcoming Bookings Metric */}
+          <div className="bg-[#f0f4ff]/60 border border-[#dbe4ff] rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-[#f0f4ff]/80">
+            {/* Circle Icon Badge */}
+            <div className="w-12 h-12 rounded-full bg-[#dbe4ff] flex items-center justify-center text-[#1e3a8a] shrink-0 shadow-2xs">
+              <Calendar size={20} />
+            </div>
+            {/* Content */}
+            <div className="space-y-0.5">
+              <h4 className="text-[11px] font-bold text-gray-500 leading-tight">
+                Upcoming Bookings
+              </h4>
+              <span className="text-2xl font-black text-[#1e3a8a] block">
+                2
+              </span>
+            </div>
+          </div>
+
+          {/* 2. Completed Services Metric */}
+          <div className="bg-[#f0fdf4]/60 border border-[#dcfce7] rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-[#f0fdf4]/80">
+            {/* Circle Icon Badge */}
+            <div className="w-12 h-12 rounded-full bg-[#dcfce7] flex items-center justify-center text-[#16a34a] shrink-0 shadow-2xs">
+              <CheckCircle2 size={20} />
+            </div>
+            {/* Content */}
+            <div className="space-y-0.5">
+              <h4 className="text-[11px] font-bold text-gray-500 leading-tight">
+                Completed Services
+              </h4>
+              <span className="text-2xl font-black text-[#16a34a] block">
+                12
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Cancelled Services Metric */}
+          <div className="bg-[#fff2ee]/60 border border-[#ffe3da] rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-[#fff2ee]/80">
+            {/* Circle Icon Badge */}
+            <div className="w-12 h-12 rounded-full bg-[#ffe3da] flex items-center justify-center text-[#e8683f] shrink-0 shadow-2xs">
+              <XCircle size={20} />
+            </div>
+            {/* Content */}
+            <div className="space-y-0.5">
+              <h4 className="text-[11px] font-bold text-gray-500 leading-tight">
+                Cancelled Services
+              </h4>
+              <span className="text-2xl font-black text-[#e8683f] block">
+                1
+              </span>
+            </div>
+          </div>
+
+          {/* 4. Total Bookings Metric */}
+          <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-[#f1f5f9]">
+            {/* Circle Icon Badge */}
+            <div className="w-12 h-12 rounded-full bg-[#e2e8f0] flex items-center justify-center text-[#334155] shrink-0 shadow-2xs">
+              <Briefcase size={20} />
+            </div>
+            {/* Content */}
+            <div className="space-y-0.5">
+              <h4 className="text-[11px] font-bold text-gray-500 leading-tight">
+                Total Bookings
+              </h4>
+              <span className="text-2xl font-black text-[#1e293b] block">
+                15
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* ──────────────────────────────────────────────────────── */}
+      {/* CARD 4: PREFERENCES PANEL SECTION (image_b90699.png Customised) */}
       {/* ──────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6 space-y-5">
         <h3 className="text-sm font-bold text-gray-900 tracking-tight">
@@ -321,84 +483,178 @@ export default function SettingsPage() {
       </div>
 
       {/* ──────────────────────────────────────────────────────── */}
-      {/* CARD 4: SECURITY & SUPPORT LIST SECTION (image_b90699.png) */}
+      {/* CARD 5: SECURITY & SUPPORT OVERHAUL SECTION              */}
       {/* ──────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6 space-y-4">
-        <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-          Security & Support
-        </h3>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 tracking-tight">
+            Security & Support
+          </h3>
+          <p className="text-xs text-gray-400 mt-0.5 font-medium">
+            Manage your account security configurations, authentication factors,
+            and legal resources.
+          </p>
+        </div>
 
-        <div className="space-y-1 text-xs font-medium text-gray-600">
-          {/* Item 1 */}
-          <button className="w-full flex items-center justify-between py-3 px-2 rounded-xl hover:bg-gray-50 text-left transition-colors group">
+        {/* Main Menu Action Block */}
+        <div className="divide-y divide-gray-50 text-xs font-medium">
+          {/* ITEM 1: Change Password */}
+          <button className="w-full flex items-center justify-between py-3.5 px-1 hover:bg-gray-50/70 text-left transition-colors group rounded-xl">
             <div className="flex items-center gap-3">
-              <Key
-                size={16}
-                className="text-gray-400 group-hover:text-gray-600"
-              />
-              <span className="text-gray-700">Change Password</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 group-hover:bg-slate-100 transition-colors">
+                <Key size={15} />
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-gray-800 font-bold block">
+                  Change Password
+                </span>
+                <span className="text-[10px] text-gray-400 font-normal block">
+                  Update your master security passphrase regularly
+                </span>
+              </div>
             </div>
             <ChevronRight
-              size={15}
-              className="text-gray-300 group-hover:text-gray-400"
+              size={14}
+              className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all"
             />
           </button>
 
-          {/* Item 2 */}
-          <button className="w-full flex items-center justify-between py-3 px-2 rounded-xl hover:bg-gray-50 text-left transition-colors group">
+          {/* ITEM 2: Change Contact Number (NEW ADDITION) */}
+          <button className="w-full flex items-center justify-between py-3.5 px-1 hover:bg-gray-50/70 text-left transition-colors group rounded-xl">
             <div className="flex items-center gap-3">
-              <ShieldAlert
-                size={16}
-                className="text-gray-400 group-hover:text-gray-600"
-              />
-              <span className="text-gray-700">Two-Factor Authentication</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 group-hover:bg-slate-100 transition-colors">
+                <Smartphone size={15} />
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-gray-800 font-bold block">
+                  Update Contact Number
+                </span>
+                <span className="text-[10px] text-gray-400 font-normal block">
+                  Modify linked phone for emergency token dynamic alerts
+                </span>
+              </div>
             </div>
             <ChevronRight
-              size={15}
-              className="text-gray-300 group-hover:text-gray-400"
+              size={14}
+              className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all"
             />
           </button>
 
-          {/* Item 3 */}
-          <button className="w-full flex items-center justify-between py-3 px-2 rounded-xl hover:bg-gray-50 text-left transition-colors group">
+          {/* ITEM 3: Two-Factor Authentication Status Overhaul */}
+          <div className="w-full flex items-center justify-between py-3.5 px-1 rounded-xl">
             <div className="flex items-center gap-3">
-              <AlertCircle
-                size={16}
-                className="text-gray-400 group-hover:text-gray-600"
+              <div className="w-8 h-8 rounded-lg bg-blue-50/50 flex items-center justify-center text-[#1e3a8a]">
+                <ShieldAlert size={15} />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-800 font-bold">
+                    Two-Factor Authentication
+                  </span>
+                  {/* Status indicators */}
+                  <span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1.5 py-0.5 rounded-md font-bold">
+                    Enabled
+                  </span>
+                </div>
+                <span className="text-[10px] text-gray-400 font-normal block">
+                  Secure login sessions using secondary verification strings
+                </span>
+              </div>
+            </div>
+
+            {/* Quick-action state toggle element */}
+            <label className="relative inline-flex items-center cursor-pointer select-none">
+              <input
+                type="checkbox"
+                defaultChecked={true}
+                className="sr-only peer"
+                onChange={() => {
+                  /* Handler to toggle 2FA configuration state */
+                }}
               />
-              <span className="text-gray-700">Report an Issue</span>
+              <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#e8683f]"></div>
+            </label>
+          </div>
+
+          {/* ITEM 4: Report an Issue */}
+          <button className="w-full flex items-center justify-between py-3.5 px-1 hover:bg-gray-50/70 text-left transition-colors group rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 group-hover:bg-slate-100 transition-colors">
+                <AlertCircle size={15} />
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-gray-800 font-bold block">
+                  Report an Issue
+                </span>
+                <span className="text-[10px] text-gray-400 font-normal block">
+                  Flag bugs, incorrect metrics, or provider exceptions
+                </span>
+              </div>
             </div>
             <ChevronRight
-              size={15}
-              className="text-gray-300 group-hover:text-gray-400"
+              size={14}
+              className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all"
             />
           </button>
 
-          {/* Item 4 */}
-          <button className="w-full flex items-center justify-between py-3 px-2 rounded-xl hover:bg-gray-50 text-left transition-colors group">
+          {/* ITEM 5: Contact Support */}
+          <button className="w-full flex items-center justify-between py-3.5 px-1 hover:bg-gray-50/70 text-left transition-colors group rounded-xl">
             <div className="flex items-center gap-3">
-              <HelpCircle
-                size={16}
-                className="text-gray-400 group-hover:text-gray-600"
-              />
-              <span className="text-gray-700">Contact Support</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 group-hover:bg-slate-100 transition-colors">
+                <HelpCircle size={15} />
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-gray-800 font-bold block">
+                  Contact Support
+                </span>
+                <span className="text-[10px] text-gray-400 font-normal block">
+                  Connect with operations teams regarding flex transactions
+                </span>
+              </div>
             </div>
             <ChevronRight
-              size={15}
-              className="text-gray-300 group-hover:text-gray-400"
+              size={14}
+              className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all"
             />
           </button>
 
-          {/* Item 5 - Logout Trigger */}
-          <button className="w-full flex items-center justify-between py-3 px-2 rounded-xl hover:bg-red-50/50 text-left transition-colors group">
+          {/* ITEM 6: Terms & Privacy Section (NEW ADDITION) */}
+          <button className="w-full flex items-center justify-between py-3.5 px-1 hover:bg-gray-50/70 text-left transition-colors group rounded-xl">
             <div className="flex items-center gap-3">
-              <LogOut size={16} className="text-red-500" />
-              <span className="text-red-600 font-semibold">Logout</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 group-hover:bg-slate-100 transition-colors">
+                <FileText size={15} />
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-gray-800 font-bold block">
+                  Terms of Service & Privacy Policy
+                </span>
+                <span className="text-[10px] text-gray-400 font-normal block">
+                  Review cancellation legalities and account privacy parameters
+                </span>
+              </div>
             </div>
             <ChevronRight
-              size={15}
-              className="text-red-400 group-hover:translate-x-0.5 transition-transform"
+              size={14}
+              className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all"
             />
+          </button>
+        </div>
+
+        {/* Dangerous Account Destruction Perimeter */}
+        <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
+          {/* Logout Button */}
+          <button className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors group">
+            <LogOut
+              size={14}
+              className="text-slate-500 group-hover:text-slate-700"
+            />
+            <span>Sign Out</span>
+          </button>
+
+          {/* Delete Account Button (NEW ADDITION) */}
+          <button className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-red-50/40 hover:bg-red-50 text-red-600 border border-transparent hover:border-red-100 font-bold text-xs transition-all group">
+            <Trash2 size={14} className="text-red-500" />
+            <span>Delete Account</span>
           </button>
         </div>
       </div>

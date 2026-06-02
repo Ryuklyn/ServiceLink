@@ -314,13 +314,6 @@ export default function BookingDetailsModal({
                 </p>
               </div>
 
-              {/* <div className="bg-gray-50 mb-12 border border-gray-200 rounded-xl p-4 text-[11px] text-gray-500 leading-relaxed">
-                <span className="font-bold text-gray-700">
-                  Cancellation Policy:
-                </span>{" "}
-                Free cancellation up to 2 hours before the scheduled time. Late
-                cancellations may incur a fee.
-              </div> */}
               <div className="bg-slate-50 mb-12 border border-slate-200 rounded-xl p-5 text-[11px] text-gray-500 select-none">
                 {/* Header Section */}
                 <div className="flex items-center gap-1.5 font-bold mb-3 text-[#1e3a8a] text-[12px]">
@@ -331,44 +324,60 @@ export default function BookingDetailsModal({
                   <span>Cancellation & Reschedule Policy</span>
                 </div>
 
-                {/* 3-Tier Grid Layout */}
-                <div className="grid grid-cols-3 border border-slate-200 rounded-lg overflow-hidden bg-white text-center mb-3">
+                {/* New 2-Tier Balanced Layout */}
+                <div className="border border-slate-200 rounded-lg overflow-hidden bg-white text-center mb-3 divide-y divide-slate-100">
                   {/* Tier 1: More than 24 hours */}
-                  <div className="p-3 border-r border-slate-150">
-                    <div className="text-gray-400 font-medium mb-1">
-                      More than 24 hrs before
+                  <div className="flex items-center justify-between px-4 py-3 bg-emerald-50/20">
+                    <div className="text-left">
+                      <div className="text-gray-700 font-bold text-xs">
+                        Before 24 hours
+                      </div>
+                      <div className="text-gray-400 text-[10px] mt-0.5">
+                        Applies to both cancellations & reschedules
+                      </div>
                     </div>
-                    <div className="text-[14px] font-bold text-emerald-600 mb-0.5">
+                    <div className="text-[13px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
                       Free
                     </div>
-                    <div className="text-gray-400 text-[10px]">
-                      No charges added
-                    </div>
                   </div>
 
-                  {/* Tier 2: 2 to 24 hours */}
-                  <div className="p-3 border-r border-slate-150">
-                    <div className="text-gray-400 font-medium mb-1">
-                      2 to 24 hrs before
+                  {/* Tier 2: Under 24 Hours Split Grid */}
+                  <div className="grid grid-cols-2 divide-x divide-slate-100 bg-white">
+                    {/* Late Rescheduling */}
+                    {/* Late Rescheduling */}
+                    <div className="p-3 text-center">
+                      <div className="text-gray-400 font-medium mb-2 text-xs whitespace-nowrap">
+                        Under 24 hrs{" "}
+                        <span className="text-slate-500 font-semibold ml-0.5">
+                          Reschedule
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <span className="text-[14px] font-bold text-[#e8683f]">
+                          Rs. 50
+                        </span>
+                        <span className="text-[9px] font-medium text-gray-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-150">
+                          or 1 Token
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-[14px] font-bold text-[#e8683f] mb-0.5">
-                      Rs. 50
-                    </div>
-                    <div className="text-gray-400 text-[10px]">
-                      Added to next bill
-                    </div>
-                  </div>
 
-                  {/* Tier 3: Less than 2 hours */}
-                  <div className="p-3">
-                    <div className="text-gray-400 font-medium mb-1">
-                      Less than 2 hrs before
-                    </div>
-                    <div className="text-[14px] font-bold text-red-600 mb-0.5">
-                      Rs. 100
-                    </div>
-                    <div className="text-gray-400 text-[10px]">
-                      Added to next bill
+                    {/* Late Cancellation */}
+                    <div className="p-3 text-center">
+                      <div className="text-gray-400 font-medium mb-2 text-xs whitespace-nowrap">
+                        Under 24 hrs{" "}
+                        <span className="text-slate-500 font-semibold ml-0.5">
+                          Cancel
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <span className="text-[14px] font-bold text-red-500">
+                          Rs. 100
+                        </span>
+                        <span className="text-[9px] font-medium text-gray-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-150">
+                          or 1 Token
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -382,7 +391,7 @@ export default function BookingDetailsModal({
                   <span>
                     Current Status:{" "}
                     <span className="font-bold">
-                      Free to cancel until June 4, 10:00 AM
+                      Free to modify until June 4, 10:00 AM
                     </span>
                   </span>
                 </div>

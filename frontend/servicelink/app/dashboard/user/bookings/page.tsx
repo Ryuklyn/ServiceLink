@@ -317,8 +317,8 @@ export default function BookingsPage() {
                             </span>
                           </div>
                         )}
-
                         <div className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 flex flex-wrap items-center gap-2 text-xs">
+                          {/* Header Section */}
                           <div className="flex items-center gap-1 font-bold text-[#1e3a8a] text-[11px] uppercase tracking-wider mr-1">
                             <Info
                               size={13}
@@ -327,19 +327,34 @@ export default function BookingsPage() {
                             />
                             <span>Tiers:</span>
                           </div>
+
+                          {/* Tier 1: Safe Modification Window */}
                           <span className="px-2 py-0.5 rounded-md bg-white text-emerald-800 border border-emerald-200 text-[10px] font-medium shadow-sm">
-                            24h+: <span className="font-bold">Free</span>
-                          </span>
-                          <span className="px-2 py-0.5 rounded-md bg-white text-orange-800 border border-orange-200 text-[10px] font-medium shadow-sm">
-                            2–24 hrs:{" "}
-                            <span className="font-bold text-[#e8683f]">
-                              Rs. 50
+                            24h+:{" "}
+                            <span className="font-bold text-emerald-600">
+                              Free
                             </span>
                           </span>
+
+                          {/* Tier 2: Late Reschedule Rule */}
+                          <span className="px-2 py-0.5 rounded-md bg-white text-orange-800 border border-orange-200 text-[10px] font-medium shadow-sm">
+                            &lt; 24h Reschedule:{" "}
+                            <span className="font-bold text-[#e8683f]">
+                              Rs. 50{" "}
+                              <span className="text-[9px] text-gray-400 font-normal">
+                                or 1 Token
+                              </span>
+                            </span>
+                          </span>
+
+                          {/* Tier 3: Late Cancellation Rule */}
                           <span className="px-2 py-0.5 rounded-md bg-white text-red-800 border border-red-200 text-[10px] font-medium shadow-sm">
-                            &lt; 2 hrs:{" "}
+                            &lt; 24h Cancel:{" "}
                             <span className="font-bold text-red-600">
-                              Rs. 100
+                              Rs. 100{" "}
+                              <span className="text-[9px] text-gray-400 font-normal">
+                                or 1 Token
+                              </span>
                             </span>
                           </span>
                         </div>
@@ -465,22 +480,6 @@ export default function BookingsPage() {
         />
       )}
 
-      {/* ── Cancellation Modal ── */}
-      {/* {selectedBooking && isCancelModalOpen && (
-        <CancellationModal
-          isOpen={isCancelModalOpen}
-          onClose={() => {
-            setIsCancelModalOpen(false);
-            setSelectedBooking(null);
-          }}
-          currentBooking={{
-            id: selectedBooking.id,
-            date: selectedBooking.dateDisplay,
-            time: selectedBooking.timeDisplay,
-            provider: selectedBooking.providerName,
-          }}
-        />
-      )} */}
       {selectedBooking && isCancelModalOpen && (
         <CancellationModal
           isOpen={isCancelModalOpen}
