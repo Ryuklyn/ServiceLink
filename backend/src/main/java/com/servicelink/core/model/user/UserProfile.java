@@ -1,4 +1,4 @@
-package com.servicelink.core.model;
+package com.servicelink.core.model.user;
 
 import jakarta.persistence.*;
 import lombok.Data;

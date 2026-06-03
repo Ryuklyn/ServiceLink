@@ -2,7 +2,7 @@ package com.servicelink.core.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.servicelink.core.model.User;
+import com.servicelink.core.model.user.User;
 
 import java.util.Optional;
 

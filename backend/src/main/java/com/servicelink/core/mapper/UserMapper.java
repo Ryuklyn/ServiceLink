@@ -1,8 +1,8 @@
 //package com.servicelink.mapper;
 //
 //import com.servicelink.core.dto.response.UserResponseDTO;
-//import com.servicelink.core.model.User;
-//import com.servicelink.core.model.UserProfile;
+//import com.servicelink.core.model.user.User;
+//import com.servicelink.core.model.user.UserProfile;
 //
 //import java.util.List;
 //import java.util.stream.Collectors;
@@ -36,9 +36,9 @@ package com.servicelink.core.mapper;
 
 import com.servicelink.core.dto.request.RegisterRequestDTO;
 import com.servicelink.core.dto.response.UserResponseDTO;
-import com.servicelink.core.model.AuthProvider;
-import com.servicelink.core.model.User;
-import com.servicelink.core.model.UserProfile;
+import com.servicelink.core.model.auth.AuthProvider;
+import com.servicelink.core.model.user.User;
+import com.servicelink.core.model.user.UserProfile;
 import org.springframework.stereotype.Component;
 
 @Component

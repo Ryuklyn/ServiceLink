@@ -4,8 +4,8 @@ import com.servicelink.core.dto.request.KycSubmitRequestDTO;
 import com.servicelink.core.dto.response.KycStatusResponseDTO;
 import com.servicelink.core.dto.response.KycSubmitResponseDTO;
 import com.servicelink.core.mapper.KycMapper;
-import com.servicelink.core.model.KycSubmission;
-import com.servicelink.core.model.User;
+import com.servicelink.core.model.common.KycSubmission;
+import com.servicelink.core.model.user.User;
 import com.servicelink.core.repository.KycRepository;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.storage.SupabaseStorageService;
@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.Optional;
 
 @Service

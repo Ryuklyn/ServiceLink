@@ -1,7 +1,7 @@
 package com.servicelink.core.service;
 
-import com.servicelink.core.model.User;
-import com.servicelink.core.model.UserProfile;
+import com.servicelink.core.model.user.User;
+import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
 import org.springframework.stereotype.Service;
 

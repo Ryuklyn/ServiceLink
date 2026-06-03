@@ -1,6 +1,7 @@
 
-package com.servicelink.core.model;
+package com.servicelink.core.model.user;
 
+import com.servicelink.core.model.auth.AuthProvider;
 import jakarta.persistence.*;
 import lombok.Data;
 

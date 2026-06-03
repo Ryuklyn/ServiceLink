@@ -1,7 +1,7 @@
 package com.servicelink.core.dto.response;
 import java.time.LocalDateTime;
 
-import com.servicelink.core.model.AuthProvider;
+import com.servicelink.core.model.auth.AuthProvider;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

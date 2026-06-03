@@ -1,6 +1,6 @@
 // package com.servicelink.core.security;
 
-// import com.servicelink.core.model.User;
+// import com.servicelink.core.model.user.User;
 // import com.servicelink.core.repository.UserRepository;
 // import jakarta.servlet.ServletException;
 // import jakarta.servlet.http.HttpServletRequest;
@@ -57,7 +57,9 @@
 
 package com.servicelink.core.security;
 
-import com.servicelink.core.model.*;
+import com.servicelink.core.model.auth.AuthProvider;
+import com.servicelink.core.model.user.User;
+import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

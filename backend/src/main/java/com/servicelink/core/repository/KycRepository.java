@@ -1,7 +1,7 @@
 package com.servicelink.core.repository;
 
-import com.servicelink.core.model.KycSubmission;
-import com.servicelink.core.model.User;
+import com.servicelink.core.model.common.KycSubmission;
+import com.servicelink.core.model.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

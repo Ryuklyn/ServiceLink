@@ -1,4 +1,4 @@
-package com.servicelink.core.model;
+package com.servicelink.core.model.auth;
 
 import java.time.Instant;
 

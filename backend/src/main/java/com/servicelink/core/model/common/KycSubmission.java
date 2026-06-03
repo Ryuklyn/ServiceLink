@@ -1,5 +1,6 @@
-package com.servicelink.core.model;
+package com.servicelink.core.model.common;
 
+import com.servicelink.core.model.user.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

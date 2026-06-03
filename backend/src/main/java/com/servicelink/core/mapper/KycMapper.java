@@ -3,9 +3,9 @@ package com.servicelink.core.mapper;
 import com.servicelink.core.dto.request.KycSubmitRequestDTO;
 import com.servicelink.core.dto.response.KycSubmitResponseDTO;
 import com.servicelink.core.dto.response.KycStatusResponseDTO;
-import com.servicelink.core.model.KycStatus;
-import com.servicelink.core.model.KycSubmission;
-import com.servicelink.core.model.User;
+import com.servicelink.core.model.common.KycStatus;
+import com.servicelink.core.model.common.KycSubmission;
+import com.servicelink.core.model.user.User;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;

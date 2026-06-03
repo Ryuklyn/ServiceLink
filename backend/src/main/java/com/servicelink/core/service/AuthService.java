@@ -3,16 +3,15 @@ package com.servicelink.core.service;
 import com.servicelink.core.dto.request.LoginRequestDTO;
 import com.servicelink.core.dto.request.RegisterRequestDTO;
 import com.servicelink.core.dto.response.AuthResponseDTO;
-import com.servicelink.core.model.AuthProvider;
-import com.servicelink.core.model.User;
-import com.servicelink.core.model.UserProfile;
+import com.servicelink.core.model.auth.AuthProvider;
+import com.servicelink.core.model.user.User;
+import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Service
