@@ -1,15 +1,5 @@
 "use client";
 
-/**
- * page.tsx
- *
- * Provider profile + booking flow
- * - ServicesPricing
- * - DescribeIssue
- * - AvailabilityCalendar
- * - BookingSidebar
- */
-
 import { useState } from "react";
 
 import BookingSidebar from "../../../../../components/dashboard/user/explore/profile/BookingSidebar";
@@ -27,10 +17,6 @@ import {
   RatingsBreakdown,
   ReviewsSection,
 } from "@/components/dashboard/user/explore/profile";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface SelectedService {
   name: string;
