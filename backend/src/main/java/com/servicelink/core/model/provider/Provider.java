@@ -56,9 +56,6 @@ public class Provider {
     @Column(name = "business_name")
     private String businessName;
 
-    @Column(name = "title")
-    private String title;
-
     @Column(name = "profile_picture_url")
     private String profilePictureUrl;
 
@@ -92,17 +89,6 @@ public class Provider {
     private Integer travelRadiusKm;
 
     // Ratings
-//    @Column(name = "average_rating")
-//    private Double averageRating = 5.0;
-//
-//    @Column(name = "total_reviews")
-//    private Integer totalReviews = 0;
-//
-//    private Integer punctualityScore;
-//    private Integer qualityScore;
-//    private Integer communicationScore;
-//    private Integer valueScore;
-
     @Column(name = "average_rating")
     private Double averageRating = 5.0;
 
@@ -162,50 +148,6 @@ public class Provider {
                 .average()
                 .orElse(5.0);
     }
-
-//    public void updateRatingMetrics() {
-//        if (reviews.isEmpty()) {
-//            this.averageRating = 5.0;
-//            this.totalReviews = 0;
-//            this.punctualityScore = null;
-//            this.qualityScore = null;
-//            this.communicationScore = null;
-//            this.valueScore = null;
-//            return;
-//        }
-//
-//        this.averageRating = calculateAverageRating();
-//        this.totalReviews = reviews.size();
-//
-//        this.punctualityScore = (int) reviews.stream()
-//                .map(Review::getPunctualityScore)
-//                .filter(Objects::nonNull)
-//                .mapToInt(Integer::intValue)
-//                .average()
-//                .orElse(null);
-//
-//        this.qualityScore = (int) reviews.stream()
-//                .map(Review::getQualityScore)
-//                .filter(Objects::nonNull)
-//                .mapToInt(Integer::intValue)
-//                .average()
-//                .orElse(null);
-//
-//        this.communicationScore = (double) reviews.stream()
-//                .map(Review::getCommunicationScore)
-//                .filter(Objects::nonNull)
-//                .mapToInt(Integer::intValue)
-//                .average()
-//                .orElse(null);
-//
-//        this.valueScore = (int) reviews.stream()
-//                .map(Review::getValueScore)
-//                .filter(Objects::nonNull)
-//                .mapToInt(Integer::intValue)
-//                .average()
-//                .orElse(null);
-//    }
-
     public void updateRatingMetrics() {
         if (reviews.isEmpty()) {
             this.averageRating = 5.0;
