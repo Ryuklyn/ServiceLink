@@ -6,4 +6,5 @@ public enum ServiceCategory {
     CARPENTER,
     PAINTER,
     CLEANER,
+    AC_REPAIR,
 }

@@ -19,70 +19,102 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     // ── User dashboard ────────────────────────────────────────────────────────
 
-    /**
-     * All appointments for a customer, newest first, paged.
-     * Fetches provider and providerService in one query to avoid N+1.
-     */
+    // Paged + JOIN FETCH — use this for the dashboard list
     @Query("""
             SELECT a FROM Appointment a
             JOIN FETCH a.provider p
-            JOIN FETCH a.providerService ps
-            JOIN FETCH ps.catalogItem
-            WHERE a.customer.id = :customerId
-            ORDER BY a.appointmentDate DESC, a.estimatedStartTime DESC
+            JOIN FETCH a.serviceCatalog sc
+            WHERE a.customerId = :customerId
+            ORDER BY a.appointmentDate DESC, a.scheduledAt DESC
             """)
     Page<Appointment> findByCustomerIdWithDetails(
             @Param("customerId") Long customerId, Pageable pageable);
 
-    /**
-     * Single appointment detail — verifies customer ownership.
-     */
+    // Ownership-validated single fetch — use this for appointment detail page
     @Query("""
             SELECT a FROM Appointment a
             JOIN FETCH a.provider p
-            JOIN FETCH a.providerService ps
-            JOIN FETCH ps.catalogItem
-            WHERE a.id = :appointmentId AND a.customer.id = :customerId
+            JOIN FETCH a.serviceCatalog sc
+            WHERE a.id = :id AND a.customerId = :customerId
             """)
     Optional<Appointment> findByIdAndCustomerId(
-            @Param("appointmentId") Long appointmentId,
+            @Param("id") Long id,
             @Param("customerId") Long customerId);
+
+    // Plain list — kept for simple internal use where pagination isn't needed
+    List<Appointment> findByCustomerId(Long customerId);
+
+    // Status-filtered for a specific customer (with JOIN FETCH)
+    @Query("""
+            SELECT a FROM Appointment a
+            JOIN FETCH a.provider p
+            JOIN FETCH a.serviceCatalog sc
+            WHERE a.customerId = :customerId AND a.status = :status
+            ORDER BY a.appointmentDate DESC
+            """)
+    List<Appointment> findByCustomerIdAndStatus(
+            @Param("customerId") Long customerId,
+            @Param("status") AppointmentStatus status);
 
     // ── Slot conflict detection ───────────────────────────────────────────────
 
-    /**
-     * All non-cancelled appointments for a provider on a given date+slot.
-     * Used to detect time overlaps and enforce slot capacity.
-     */
+    // Slot-aware conflict check — core of the booking engine
     @Query("""
             SELECT a FROM Appointment a
             WHERE a.provider.id = :providerId
               AND a.appointmentDate = :date
               AND a.timeSlot = :slot
               AND a.status NOT IN ('CANCELLED', 'NO_SHOW')
-            ORDER BY a.estimatedStartTime ASC
+            ORDER BY a.estimatedStartTime ASC NULLS FIRST
             """)
-    List<Appointment> findActiveByProviderDateSlot(
+    List<Appointment> findActiveByProviderDateAndSlot(
             @Param("providerId") Long providerId,
             @Param("date") LocalDate date,
             @Param("slot") TimeSlot slot);
 
-    // ── Provider dashboard (for future use) ───────────────────────────────────
+    // Full day view — all slots combined, useful for provider calendar rendering
+    List<Appointment> findByProviderIdAndAppointmentDate(
+            Long providerId, LocalDate appointmentDate);
 
+    // ── Provider dashboard ────────────────────────────────────────────────────
+
+    // Paged provider view with JOIN FETCH
     @Query("""
             SELECT a FROM Appointment a
-            JOIN FETCH a.customer u
-            JOIN FETCH a.providerService ps
-            JOIN FETCH ps.catalogItem
+            JOIN FETCH a.serviceCatalog sc
             WHERE a.provider.id = :providerId
-            ORDER BY a.appointmentDate DESC, a.estimatedStartTime DESC
+            ORDER BY a.appointmentDate DESC, a.scheduledAt DESC
             """)
     Page<Appointment> findByProviderIdWithDetails(
             @Param("providerId") Long providerId, Pageable pageable);
+
+    // Upcoming only — used for provider's home screen job queue
+    @Query("""
+            SELECT a FROM Appointment a
+            JOIN FETCH a.serviceCatalog sc
+            WHERE a.provider.id = :providerId
+              AND a.appointmentDate >= :currentDate
+            ORDER BY a.appointmentDate ASC, a.estimatedStartTime ASC
+            """)
+    List<Appointment> findUpcomingByProvider(
+            @Param("providerId") Long providerId,
+            @Param("currentDate") LocalDate currentDate);
+
+    // ── Admin ─────────────────────────────────────────────────────────────────
+
+    // System-wide status filter — admin dashboard
+    List<Appointment> findByStatus(AppointmentStatus status);
+
+    // Analytics: all bookings for a specific sub-service
+    List<Appointment> findByServiceCatalogId(Long serviceCatalogId);
 
     // ── Stats ─────────────────────────────────────────────────────────────────
 
     long countByProvider_IdAndStatus(Long providerId, AppointmentStatus status);
 
-    long countByCustomer_IdAndStatus(Long customerId, AppointmentStatus status);
+    long countByCustomerIdAndStatus(Long customerId, AppointmentStatus status);
+
+    // Review gate: customer can only review after a COMPLETED booking with this provider
+    boolean existsByCustomerIdAndProvider_IdAndStatus(
+            Long customerId, Long providerId, AppointmentStatus status);
 }

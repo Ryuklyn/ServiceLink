@@ -2,6 +2,7 @@ package com.servicelink.core.model.appointment;
 
 import com.servicelink.core.model.common.TimeSlot;
 import com.servicelink.core.model.provider.Provider;
+import com.servicelink.core.model.provider.ServiceCatalog;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -23,11 +24,12 @@ public class Appointment {
     @JoinColumn(name = "provider_id", nullable = false)
     private Provider provider;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "servive_catalog_id", nullable = false)
+    private ServiceCatalog serviceCatalog;
+
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
-
-    @Column(name = "service_name", nullable = false)
-    private String serviceName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "time_slot", nullable = false)
@@ -49,11 +51,18 @@ public class Appointment {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "attached_img_url", length =  1024)
+    private String attachedImgUrl;
+
+    @Column(name = "attached_video_url", length =  1024)
+    private String attachedVideoUrl;
+
     @Column(name = "total_price")
     private Integer totalPrice;
 
     @PrePersist
     protected void onCreate() {
         if (this.status == null) this.status = AppointmentStatus.PENDING;
+        if (this.scheduledAt == null) this.scheduledAt = LocalDateTime.now();
     }
 }
