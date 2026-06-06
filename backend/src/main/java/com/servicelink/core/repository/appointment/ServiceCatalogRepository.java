@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ServiceCatalogRepository extends JpaRepository<ServiceCatalog, Long> {
@@ -24,6 +25,8 @@ public interface ServiceCatalogRepository extends JpaRepository<ServiceCatalog, 
      * Used for admin overview and home screen full catalog display.
      */
     List<ServiceCatalog> findByIsActiveTrueOrderByCategoryAscSubServiceNameAsc();
+
+    Optional<ServiceCatalog> findByIdAndIsActiveTrue(Long id);
 
     // ── Admin operations ──────────────────────────────────────────────────────
 

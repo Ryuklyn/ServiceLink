@@ -36,6 +36,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", message);
     }
 
+    @ExceptionHandler(AppException.class)
+    public ResponseEntity<Map<String, Object>> handleAppException(AppException ex) {
+        return build(ex.getStatus(), ex.getErrorCode(), ex.getMessage(), ex.getDetails());
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return build(HttpStatus.BAD_REQUEST, "BAD_REQUEST", ex.getMessage());
@@ -55,10 +60,18 @@ public class GlobalExceptionHandler {
 
     private static ResponseEntity<Map<String, Object>> build(
             HttpStatus status, String code, String message) {
+        return build(status, code, message, null);
+    }
+
+    private static ResponseEntity<Map<String, Object>> build(
+            HttpStatus status, String code, String message, String details) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("status",    status.value());
         body.put("code",      code);
         body.put("message",   message);
+        if (details != null && !details.isBlank()) {
+            body.put("details", details);
+        }
         body.put("timestamp", Instant.now().toString());
         return ResponseEntity.status(status).body(body);
     }

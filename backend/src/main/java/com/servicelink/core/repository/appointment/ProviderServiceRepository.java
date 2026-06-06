@@ -65,6 +65,17 @@ public interface ProviderServiceRepository extends JpaRepository<ProviderService
             @Param("providerId") Long providerId,
             @Param("catalogId") Long catalogId);
 
+    @Query("""
+            SELECT ps FROM ProviderService ps
+            JOIN FETCH ps.catalogItem
+            WHERE ps.provider.id = :providerId
+              AND ps.catalogItem.id = :catalogId
+              AND ps.isAvailable = true
+            """)
+    Optional<ProviderService> findAvailableByProviderAndCatalog(
+            @Param("providerId") Long providerId,
+            @Param("catalogId") Long catalogId);
+
     // ── Catalog-item-scoped fetches ───────────────────────────────────────────
 
     /**
