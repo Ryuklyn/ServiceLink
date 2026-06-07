@@ -1,5 +1,5 @@
 // com/servicelink/core/mapper/AppointmentMapper.java
-package com.servicelink.core.mapper;
+package com.servicelink.core.mapper.appointment;
 
 import com.servicelink.core.dto.response.appointment.AppointmentResponseDTO;
 import com.servicelink.core.dto.response.appointment.AppointmentSummaryDTO;

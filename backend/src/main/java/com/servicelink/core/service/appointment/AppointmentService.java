@@ -8,7 +8,7 @@ import com.servicelink.core.dto.response.appointment.AppointmentSummaryDTO;
 import com.servicelink.core.exception.BusinessException;
 import com.servicelink.core.exception.ConflictException;
 import com.servicelink.core.exception.ResourceNotFoundException;
-import com.servicelink.core.mapper.AppointmentMapper;
+import com.servicelink.core.mapper.appointment.AppointmentMapper;
 import com.servicelink.core.model.appointment.Appointment;
 import com.servicelink.core.model.appointment.AppointmentStatus;
 import com.servicelink.core.model.provider.Provider;
