@@ -148,24 +148,27 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // ── Public: Auth ──────────────────────────────────────
+                        // ── Public: Auth & System ─────────────────────────────
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/oauth2/**",
                                 "/error"
                         ).permitAll()
 
-                        // ── Public: KYC ───────────────────────────────────────
+                        // ── Public: Providers & Catalog ───────────────────────
+                        // Allows unauthorized clients to browse the general catalog
+                        // and view verified public profiles (Phases 2, 10, 12 verification).
+                        .requestMatchers(HttpMethod.GET, "/api/providers/catalog").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/providers/{providerId}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/providers/{providerId}/reviews").permitAll()
+
+                        // ── Public: KYC Onboarding ────────────────────────────
                         .requestMatchers(
                                 "/api/kyc/submit/**",
                                 "/api/kyc/**"
                         ).permitAll()
 
-                        // ── Public: Payment ───────────────────────────────────
-                        // subscription + initiate are public to allow
-                        // unauthenticated users to start payment flow.
-                        // callbacks MUST be public — gateway hits them directly,
-                        // no JWT token is present in those redirects.
+                        // ── Public: Payment Gateways ──────────────────────────
                         .requestMatchers(
                                 "/api/business/payment/subscription",
                                 "/api/business/**",
@@ -176,7 +179,17 @@ public class SecurityConfig {
                                 "/api/business/payment/khalti/callback"
                         ).permitAll()
 
-                        // ── Protected: everything else needs JWT ──────────────
+                        // ── Protected: Admin Operations ───────────────────────
+                        // Restricts catalog creation, KYC approval, and specialized overrides
+                        // strictly to user accounts bearing the ADMIN authority (Phases 2, 4, 5).
+                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+
+                        // ── Protected: Marketplace Core ───────────────────────
+                        // Requires a signed JWT (Provider Profile Management, Appointments, Reviews).
+                        .requestMatchers("/api/providers/me/**").authenticated()
+                        .requestMatchers("/api/appointments/**").authenticated()
+
+                        // ── Protected: Default Fallback ───────────────────────
                         .anyRequest().authenticated()
                 )
 
