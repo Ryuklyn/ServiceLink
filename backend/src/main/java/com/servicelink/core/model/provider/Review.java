@@ -8,7 +8,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "reviews")
-@Data
+@Getter  @Setter @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,6 +16,7 @@ public class Review {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

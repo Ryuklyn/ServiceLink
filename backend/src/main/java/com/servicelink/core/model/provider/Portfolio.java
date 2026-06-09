@@ -6,7 +6,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "portfolio")
-@Data
+@Getter @Setter @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,6 +14,7 @@ public class Portfolio {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

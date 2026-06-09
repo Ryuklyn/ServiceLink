@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "providers")
-@Data
+@Getter @Setter @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,6 +20,7 @@ public class Provider {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)

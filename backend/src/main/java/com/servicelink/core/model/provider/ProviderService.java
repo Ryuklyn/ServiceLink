@@ -9,7 +9,7 @@ import java.math.BigDecimal;
         name = "provider_services",
         uniqueConstraints = {@UniqueConstraint(columnNames = {"provider_id", "catalog_id"})}
 )
-@Data
+@Getter  @Setter @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,6 +17,7 @@ public class ProviderService {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
