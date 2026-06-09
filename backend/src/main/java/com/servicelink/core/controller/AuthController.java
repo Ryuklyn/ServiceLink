@@ -55,7 +55,7 @@ public class AuthController {
         if (auth == null || !auth.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        User user    = userRepository.findByEmail(auth.getName())
+        User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         UserProfile profile = user.getProfile();
         return ResponseEntity.ok(
@@ -75,13 +75,6 @@ public class AuthController {
 
     // ─── Phone OTP ────────────────────────────────────────────────────────────
 
-    /**
-     * POST /api/auth/send-phone-otp
-     * Body: { "phone": "+9779812345678" }
-     *
-     * Returns delivery method and (if WhatsApp fallback) the deep-link URL
-     * so the frontend can display a "Open WhatsApp" button.
-     */
     @PostMapping("/send-phone-otp")
     public ResponseEntity<OtpSendResponseDTO> sendPhoneOtp(
             @RequestBody Map<String, String> body) {
@@ -103,13 +96,6 @@ public class AuthController {
                 .build());
     }
 
-    /**
-     * POST /api/auth/verify-phone-otp
-     * Body: { "phone": "+9779812345678", "otp": "123456" }
-     *
-     * On success issues a short-lived provider token (15 min) that the
-     * frontend uses to authenticate the KYC submission.
-     */
     @PostMapping("/verify-phone-otp")
     public ResponseEntity<OtpVerifyResponseDTO> verifyPhoneOtp(
             @RequestBody Map<String, String> body) {
@@ -130,10 +116,11 @@ public class AuthController {
                             .build());
         }
 
-        // Issue a short-lived "provider applicant" token (15 min = 900_000 ms)
+        // Issue a short-lived "provider applicant" token explicitly timed for 15 minutes (900_000 ms)
         String providerToken = jwtService.generateToken(
                 Map.of("type", "PHONE_VERIFIED", "role", "PROVIDER_APPLICANT"),
-                phone   // sub = phone number
+                phone,
+                900000L
         );
 
         return ResponseEntity.ok(OtpVerifyResponseDTO.builder()
@@ -145,10 +132,6 @@ public class AuthController {
 
     // ─── Email OTP ────────────────────────────────────────────────────────────
 
-    /**
-     * POST /api/auth/send-email-otp
-     * Body: { "email": "user@example.com" }
-     */
     @PostMapping("/send-email-otp")
     public ResponseEntity<OtpSendResponseDTO> sendEmailOtp(
             @RequestBody OtpRequestDto request) {
@@ -167,10 +150,6 @@ public class AuthController {
                 .build());
     }
 
-    /**
-     * POST /api/auth/verify-email-otp
-     * Body: { "email": "user@example.com", "otp": "123456" }
-     */
     @PostMapping("/verify-email-otp")
     public ResponseEntity<OtpVerifyResponseDTO> verifyEmailOtp(
             @RequestBody Map<String, String> body) {
@@ -191,9 +170,11 @@ public class AuthController {
                             .build());
         }
 
+        // Issue a short-lived "provider applicant" token explicitly timed for 15 minutes (900_000 ms)
         String providerToken = jwtService.generateToken(
                 Map.of("type", "EMAIL_VERIFIED", "role", "PROVIDER_APPLICANT"),
-                email
+                email,
+                900000L
         );
 
         return ResponseEntity.ok(OtpVerifyResponseDTO.builder()

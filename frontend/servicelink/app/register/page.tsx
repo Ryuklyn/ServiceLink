@@ -105,8 +105,9 @@ export default function RegisterPage() {
 
                 {/* CTA */}
                 <Link
-                  href={role.href}
-                  className={`mt-5 inline-flex items-center gap-1.5 text-sm font-medium ${role.ctaColor} transition-colors`}
+                    href={role.href}
+                    onClick={() => console.log("Navigating to " + role.href)}
+                    className={`mt-5 inline-flex items-center gap-1.5 text-sm font-medium ${role.ctaColor} transition-colors`}
                 >
                   {role.cta}
                   <ArrowRight size={15} />

@@ -32,23 +32,46 @@ public class KycController {
     private final KycService kycService;
     private final JwtService jwtService;
 
+//    @PostMapping(value = "/submit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public ResponseEntity<KycSubmitResponseDTO> submit(
+//            @RequestPart("data")                                    String dataJson,
+//            @RequestPart("citizenshipFront")                        MultipartFile citizenshipFront,
+//            @RequestPart("citizenshipBack")                         MultipartFile citizenshipBack,
+//            @RequestPart("photo")                                   MultipartFile photo,
+//            @RequestPart(value = "pan",              required = false) MultipartFile pan,
+//            @RequestPart(value = "professionalCerts", required = false) MultipartFile[] certs,
+//            @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
+//            Authentication auth
+//    ) throws Exception {
+//
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        KycSubmitRequestDTO dto =
+//            objectMapper.readValue(dataJson, KycSubmitRequestDTO.class);
+//
+//        String applicantIdentifier = resolveIdentifier(providerToken, auth);
+//
+//        return ResponseEntity.ok(
+//                kycService.submit(dto, citizenshipFront, citizenshipBack,
+//                        photo, pan, certs, applicantIdentifier)
+//        );
+//    }
+
     @PostMapping(value = "/submit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<KycSubmitResponseDTO> submit(
-            @RequestPart("data")                                    String dataJson,
-            @RequestPart("citizenshipFront")                        MultipartFile citizenshipFront,
-            @RequestPart("citizenshipBack")                         MultipartFile citizenshipBack,
-            @RequestPart("photo")                                   MultipartFile photo,
-            @RequestPart(value = "pan",              required = false) MultipartFile pan,
+            @RequestPart("data")                                       String dataJson,
+            @RequestPart("citizenshipFront")                           MultipartFile citizenshipFront,
+            @RequestPart("citizenshipBack")                            MultipartFile citizenshipBack,
+            @RequestPart("photo")                                      MultipartFile photo,
+            @RequestPart(value = "pan",               required = false) MultipartFile pan,
             @RequestPart(value = "professionalCerts", required = false) MultipartFile[] certs,
             @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
             Authentication auth
     ) throws Exception {
 
         ObjectMapper objectMapper = new ObjectMapper();
-        KycSubmitRequestDTO dto =
-            objectMapper.readValue(dataJson, KycSubmitRequestDTO.class);
+        KycSubmitRequestDTO dto = objectMapper.readValue(dataJson, KycSubmitRequestDTO.class);
 
-        String applicantIdentifier = resolveIdentifier(providerToken, auth);
+        String applicantIdentifier = resolveIdentifier(providerToken, auth, dto.getApplicantIdentifier());
 
         return ResponseEntity.ok(
                 kycService.submit(dto, citizenshipFront, citizenshipBack,
@@ -56,32 +79,64 @@ public class KycController {
         );
     }
 
-    @GetMapping("/status")
-    public ResponseEntity<KycStatusResponseDTO> status(
-            @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
-            Authentication auth) {
+//    @GetMapping("/status")
+//    public ResponseEntity<KycStatusResponseDTO> status(
+//            @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
+//            Authentication auth) {
+//
+//        String identifier = resolveIdentifier(providerToken, auth);
+//        return ResponseEntity.ok(kycService.getStatus(identifier));
+//    }
+        @GetMapping("/status")
+        public ResponseEntity<KycStatusResponseDTO> status(
+                @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
+                Authentication auth) {
 
-        String identifier = resolveIdentifier(providerToken, auth);
-        return ResponseEntity.ok(kycService.getStatus(identifier));
-    }
+            String identifier = resolveIdentifier(providerToken, auth, null); // status still requires auth
+            return ResponseEntity.ok(kycService.getStatus(identifier));
+        }
 
     /**
      * Resolves the applicant identifier from either a provider token or the
      * standard Spring Security authentication principal.
      */
-    private String resolveIdentifier(String providerToken, Authentication auth) {
+//    private String resolveIdentifier(String providerToken, Authentication auth) {
+//        if (providerToken != null && !providerToken.isBlank()) {
+//            // Validate and extract the subject (phone or email) from the provider token
+//            try {
+//                return jwtService.extractUsername(providerToken);
+//            } catch (Exception e) {
+//                throw new IllegalArgumentException("Invalid or expired provider token");
+//            }
+//        }
+//        if (auth != null && auth.isAuthenticated()) {
+//            return auth.getName();
+//        }
+//        throw new IllegalArgumentException(
+//                "Authentication required. Provide a provider token or log in.");
+//    }
+
+    private String resolveIdentifier(String providerToken, Authentication auth, String dtoIdentifier) {
+        // 1. Provider token (login flow)
         if (providerToken != null && !providerToken.isBlank()) {
-            // Validate and extract the subject (phone or email) from the provider token
             try {
                 return jwtService.extractUsername(providerToken);
             } catch (Exception e) {
                 throw new IllegalArgumentException("Invalid or expired provider token");
             }
         }
+
+        // 2. Authenticated session (existing user re-submitting)
         if (auth != null && auth.isAuthenticated()) {
             return auth.getName();
         }
+
+        // 3. New provider registration — identifier comes directly from the form
+        if (dtoIdentifier != null && !dtoIdentifier.isBlank()) {
+            return dtoIdentifier;
+        }
+
         throw new IllegalArgumentException(
-                "Authentication required. Provide a provider token or log in.");
+                "Applicant identifier is required. Provide a phone or email.");
     }
 }

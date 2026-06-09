@@ -4,6 +4,7 @@ import com.servicelink.core.dto.request.LoginRequestDTO;
 import com.servicelink.core.dto.request.RegisterRequestDTO;
 import com.servicelink.core.dto.response.AuthResponseDTO;
 import com.servicelink.core.model.auth.AuthProvider;
+import com.servicelink.core.model.user.Role;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
@@ -11,8 +12,6 @@ import com.servicelink.core.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -27,22 +26,22 @@ public class AuthService {
             throw new IllegalArgumentException("Email already in use.");
         }
 
-        // ✅ Build user
+        // ✅ Build user and explicitly set default role
         User user = new User();
         user.setEmail(request.getEmail().trim());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setProvider(AuthProvider.LOCAL);
+        user.setRole(Role.CUSTOMER); // Explicitly ensure standard signups start as CUSTOMER
 
         // ✅ Build profile — fullName set, profileImage null until upload
         UserProfile profile = new UserProfile();
         profile.setFullName(request.getFullName());
-        profile.setProfileImage(null); // user will upload later
+        profile.setProfileImage(null);
         profile.setUser(user);
         user.setProfile(profile);
 
         userRepository.save(user);
 
-        // ✅ Return a response but DO NOT issue JWT — redirect to login instead
         return AuthResponseDTO.builder()
                 .message("Registration successful. Please log in.")
                 .build();
@@ -57,10 +56,8 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid credentials");
         }
 
-        String token = jwtService.generateToken(
-                Map.of("email", user.getEmail()),
-                user.getEmail()
-        );
+        // ✅ Cleanly calls updated dual-argument signature packing the role claim
+        String token = jwtService.generateToken(user.getEmail(), user.getRole());
 
         UserProfile profile = user.getProfile();
 
@@ -73,16 +70,12 @@ public class AuthService {
                 .build();
     }
 
-    
-        public void resetPassword(String email, String newPassword) {
-
+    public void resetPassword(String email, String newPassword) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        
+
         System.out.println("RESET EMAIL: [" + email + "]");
-
         user.setPassword(passwordEncoder.encode(newPassword));
-
         userRepository.save(user);
     }
 }

@@ -181,8 +181,8 @@ public class SecurityConfig {
 
                         // ── Protected: Admin Operations ───────────────────────
                         // Restricts catalog creation, KYC approval, and specialized overrides
-                        // strictly to user accounts bearing the ADMIN authority (Phases 2, 4, 5).
-                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                        // strictly to user accounts bearing the ADMIN role (Phases 2, 4, 5).
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         // ── Protected: Marketplace Core ───────────────────────
                         // Requires a signed JWT (Provider Profile Management, Appointments, Reviews).

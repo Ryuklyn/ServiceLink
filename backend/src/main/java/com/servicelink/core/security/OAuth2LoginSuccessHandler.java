@@ -136,6 +136,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         extraClaims.put("email", email);
         extraClaims.put("name", user.getProfile().getFullName());
         extraClaims.put("picture", user.getProfile().getProfileImage());
+        extraClaims.put("role", user.getRole().name());
 
         String jwt = jwtService.generateToken(extraClaims, email);
 

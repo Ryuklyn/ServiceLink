@@ -7,6 +7,8 @@ import java.util.List;
 @Data
 public class KycSubmitRequestDTO {
 
+    private String applicantIdentifier; // ← add this
+
     // Personal
     private String fullName;
     private String dob;

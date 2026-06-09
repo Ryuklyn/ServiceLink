@@ -1,9 +1,11 @@
 package com.servicelink.core.repository;
 
 import com.servicelink.core.model.common.KycSubmission;
+import com.servicelink.core.model.common.KycStatus; // Imported your status Enum
 import com.servicelink.core.model.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface KycRepository extends JpaRepository<KycSubmission, Long> {
@@ -18,4 +20,7 @@ public interface KycRepository extends JpaRepository<KycSubmission, Long> {
     boolean existsByUser(User user);
 
     boolean existsByApplicantIdentifier(String applicantIdentifier);
+
+    // ✅ FIXED: Changed parameter type from String to KycStatus
+    List<KycSubmission> findByStatus(KycStatus status);
 }

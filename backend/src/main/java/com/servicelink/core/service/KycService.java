@@ -5,7 +5,9 @@ import com.servicelink.core.dto.response.KycStatusResponseDTO;
 import com.servicelink.core.dto.response.KycSubmitResponseDTO;
 import com.servicelink.core.mapper.KycMapper;
 import com.servicelink.core.model.common.KycSubmission;
+import com.servicelink.core.model.common.KycStatus; // ✅ Explicitly import your Enum type
 import com.servicelink.core.model.user.User;
+import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.KycRepository;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.storage.SupabaseStorageService;
@@ -16,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -40,13 +44,11 @@ public class KycService {
             MultipartFile        photo,
             MultipartFile        pan,
             MultipartFile[]      professionalCerts,
-            String               applicantIdentifier   // phone (E.164) OR email
+            String               applicantIdentifier
     ) throws Exception {
 
-        // Resolve optional User (may not exist for new provider applicants)
         Optional<User> userOpt = userRepository.findByEmail(applicantIdentifier);
 
-        // Duplicate check — keyed on phone OR on user
         if (userOpt.isPresent() && kycRepository.existsByUser(userOpt.get())) {
             throw new IllegalStateException("KYC already submitted for this account.");
         }
@@ -54,19 +56,15 @@ public class KycService {
             throw new IllegalStateException("A KYC application already exists for this contact.");
         }
 
-        // Upload mandatory documents
         String frontPath = storageService.uploadFile(citizenshipFront, "kyc/citizenship-front");
         String backPath  = storageService.uploadFile(citizenshipBack,  "kyc/citizenship-back");
         String photoPath = storageService.uploadFile(photo,            "kyc/photo");
 
-        // Upload optional PAN
         String panPath = (pan != null && !pan.isEmpty())
                 ? storageService.uploadFile(pan, "kyc/pan") : null;
 
-        // Upload optional professional certs
         String certPaths = buildCertPaths(professionalCerts);
 
-        // Build entity — user may be null for new applicants
         KycSubmission submission = kycMapper.toEntity(
                 dto,
                 userOpt.orElse(null),
@@ -77,7 +75,6 @@ public class KycService {
         log.info("KYC submitted for applicant [{}] — ref: {}",
                 mask(applicantIdentifier), submission.getReferenceNumber());
 
-        // Send confirmation email asynchronously (non-critical)
         String notifyEmail = dto.getEmail() != null ? dto.getEmail() : applicantIdentifier;
         emailService.sendKycConfirmationEmail(notifyEmail, submission.getReferenceNumber());
 
@@ -90,12 +87,52 @@ public class KycService {
         KycSubmission submission = kycRepository
                 .findByApplicantIdentifier(applicantIdentifier)
                 .orElseGet(() -> {
-                    // Fallback: try by User (for email-authenticated users)
                     return userRepository.findByEmail(applicantIdentifier)
                             .flatMap(kycRepository::findByUser)
                             .orElseThrow(() -> new RuntimeException("No KYC submission found"));
                 });
         return kycMapper.toStatusResponse(submission);
+    }
+
+    // ─── Phase 4: Admin Infrastructure ────────────────────────────────────────
+
+    /**
+     * Fetches all provider onboarding records currently awaiting administrative verification.
+     */
+    public List<KycSubmission> getPendingSubmissions() {
+        // ✅ FIXED: Pass Enum token instead of raw String
+        return kycRepository.findByStatus(KycStatus.PENDING);
+    }
+
+    /**
+     * Approves an application, elevates the target user account profile to PROVIDER,
+     * and tracks auditing notes.
+     */
+    @Transactional
+    public void approveKyc(String applicantIdentifier, String reviewNotes) {
+        KycSubmission submission = kycRepository
+                .findByApplicantIdentifier(applicantIdentifier)
+                .orElseThrow(() -> new RuntimeException("KYC registration record not found"));
+
+        // ✅ FIXED: Using type-safe Enum assignment instead of a raw String
+        submission.setStatus(KycStatus.APPROVED);
+        submission.setReviewedAt(Instant.now());
+
+        if (reviewNotes != null) {
+            submission.setReviewNotes(reviewNotes);
+        }
+        kycRepository.save(submission);
+
+        // Elevate user system role permissions upon onboarding validation success
+        Optional<User> userOpt = userRepository.findByEmail(applicantIdentifier);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            user.setRole(Role.PROVIDER);
+            userRepository.save(user);
+            log.info("User [{}] role elevated to PROVIDER following KYC approval.", mask(applicantIdentifier));
+        }
+
+        log.info("KYC Approved for identifier [{}]", mask(applicantIdentifier));
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -106,8 +143,8 @@ public class KycService {
         for (MultipartFile cert : certs) {
             if (!cert.isEmpty()) {
                 sb.append("\"")
-                  .append(storageService.uploadFile(cert, "kyc/certs"))
-                  .append("\",");
+                        .append(storageService.uploadFile(cert, "kyc/certs"))
+                        .append("\",");
             }
         }
         if (sb.length() > 1) sb.deleteCharAt(sb.length() - 1);

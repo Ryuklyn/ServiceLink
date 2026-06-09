@@ -23,6 +23,8 @@ public class JwtService {
     @Value("${application.security.jwt.expiration}")
     private long jwtExpiration;
 
+    // ─── Extraction Utilities ──────────────────────────────────────────────────
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -32,23 +34,55 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    public String generateToken(Map<String, Object> extraClaims, String email) {
+    // ─── Token Generation Methods ──────────────────────────────────────────────
+
+    /**
+     * Primary Token Generation Method for standard system users.
+     * Extracts the Role enum string dynamically to inject it as a claim.
+     */
+    public String generateToken(String email, com.servicelink.core.model.user.Role role) {
+        Map<String, Object> extraClaims = new HashMap<>();
+        if (role != null) {
+            extraClaims.put("role", role.name());
+        }
         return buildToken(extraClaims, email, jwtExpiration);
     }
 
-    public String generateToken(String email) {
-        return generateToken(new HashMap<>(), email);
+    /**
+     * Specialized Token Generation featuring arbitrary claims and explicit duration.
+     * Perfect for handling transient verification environments (like 15-minute OTP sessions).
+     */
+    public String generateToken(Map<String, Object> extraClaims, String subject, long expirationMillis) {
+        return buildToken(extraClaims, subject, expirationMillis);
     }
+
+    /**
+     * Legacy Overload Support - Generates a token with an arbitrary claims layout
+     * utilizing the standard system expiration configuration window.
+     */
+    public String generateToken(Map<String, Object> extraClaims, String subject) {
+        return buildToken(extraClaims, subject, jwtExpiration);
+    }
+
+    /**
+     * Basic Fallback Token Generation - Generates an empty-claims payload
+     * targeting the subject identity string directly.
+     */
+    public String generateToken(String email) {
+        return buildToken(new HashMap<>(), email, jwtExpiration);
+    }
+
+    // ─── Private Infrastructure Mechanics ──────────────────────────────────────
 
     private String buildToken(
             Map<String, Object> extraClaims,
-            String email,
+            String subject,
             long expiration
     ) {
         return Jwts
                 .builder()
                 .setClaims(extraClaims)
-                .setSubject(email)
+                .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
