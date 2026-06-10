@@ -27,8 +27,15 @@ export default function UserDashboardLayout({
 
     const fetchProfile = async () => {
       try {
-        const token =
-          localStorage.getItem("authToken") || localStorage.getItem("token");
+        // const token =
+        //   localStorage.getItem("authToken") || localStorage.getItem("token");
+        //
+        // if (!token) {
+        //   router.push("/login");
+        //   return;
+        // }
+
+        const token = localStorage.getItem("accessToken");
 
         if (!token) {
           router.push("/login");
@@ -44,8 +51,8 @@ export default function UserDashboardLayout({
         setProfile(res.data);
       } catch (err) {
         console.error(err);
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("token");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
         router.push("/login");
       } finally {
         setIsLoading(false);

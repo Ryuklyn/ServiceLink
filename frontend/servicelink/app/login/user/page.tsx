@@ -41,15 +41,31 @@ export default function LoginPage() {
       // localStorage.setItem("token", res.data.token);
       console.log("FULL RESPONSE:", res.data);
 
-      localStorage.setItem("token", res.data.token);
+      // localStorage.setItem("token", res.data.token);
+      localStorage.setItem("accessToken", res.data.token);
+      console.log("Token from API:", res.data.token);
+      console.log("Token from storage:", localStorage.getItem("token"));
+
+      if (res.data.refreshToken) {
+        localStorage.setItem("refreshToken", res.data.refreshToken);
+      }
 
       console.log("Saved token:", localStorage.getItem("token"));
 
       toast.success("Login successful");
-      console.log("Redirecting to dashboard...");
+      // console.log("Redirecting to dashboard...");
+      // router.push("/dashboard/user");
 
-      // 👉 dashboard redirect
+      console.log("Before router push");
+
       router.push("/dashboard/user");
+
+      console.log("After router push");
+
+      console.log("FULL RESPONSE:", res.data);
+      console.log("TOKEN FIELD:", res.data.token);
+      console.log("ACCESS TOKEN FIELD:", res.data.accessToken);
+      console.log("JWT FIELD:", res.data.jwt);
     } catch (err: any) {
       console.error(err);
       toast.error(err?.response?.data?.message || "Login failed");

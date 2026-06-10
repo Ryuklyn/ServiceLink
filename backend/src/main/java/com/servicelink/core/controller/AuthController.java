@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -50,13 +51,35 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
+//    @GetMapping("/me")
+//    public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
+//
+//        System.out.println(">>> auth.getName() = " + auth.getName());
+//        if (auth == null || !auth.isAuthenticated()) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//        }
+//        User user = userRepository.findByEmail(auth.getName())
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//        UserProfile profile = user.getProfile();
+//        return ResponseEntity.ok(
+//                UserResponseDTO.builder()
+//                        .email(user.getEmail())
+//                        .fullName(profile != null ? profile.getFullName() : null)
+//                        .profileImage(profile != null ? profile.getProfileImage() : null)
+//                        .build()
+//        );
+//    }
+
+
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
+
         if (auth == null || !auth.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        User user = userRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        User user = (User) auth.getPrincipal();
+
         UserProfile profile = user.getProfile();
         return ResponseEntity.ok(
                 UserResponseDTO.builder()

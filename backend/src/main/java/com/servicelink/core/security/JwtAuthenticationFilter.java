@@ -50,36 +50,66 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
+//                if (jwtService.isTokenValid(token, email)) {
+//
+//                    String roleStr = jwtService.extractClaim(token, claims -> claims.get("role", String.class));
+//                    if (roleStr == null || roleStr.isBlank()) {
+//                        roleStr = userRepository.findByEmail(email)
+//                                .map(user -> user.getRole())
+//                                .map(Role::name)
+//                                .orElse(null);
+//                    }
+//
+//                    List<GrantedAuthority> authorities = new ArrayList<>();
+//                    if (roleStr != null && !roleStr.isBlank()) {
+//                        String normalizedRole = roleStr.startsWith("ROLE_")
+//                                ? roleStr.substring("ROLE_".length())
+//                                : roleStr;
+//
+//                        authorities.add(new SimpleGrantedAuthority(normalizedRole));
+//                        authorities.add(new SimpleGrantedAuthority("ROLE_" + normalizedRole));
+//                    }
+//
+//                    UsernamePasswordAuthenticationToken auth =
+//                            new UsernamePasswordAuthenticationToken(
+//                                    email,
+//                                    null,
+//                                    authorities
+//                            );
+//
+//                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+//
+//                    SecurityContextHolder.getContext().setAuthentication(auth);
+//                }
+
                 if (jwtService.isTokenValid(token, email)) {
 
-                    String roleStr = jwtService.extractClaim(token, claims -> claims.get("role", String.class));
-                    if (roleStr == null || roleStr.isBlank()) {
-                        roleStr = userRepository.findByEmail(email)
-                                .map(user -> user.getRole())
-                                .map(Role::name)
-                                .orElse(null);
-                    }
+                    var user = userRepository.findByEmail(email)
+                            .orElseThrow(() ->
+                                    new RuntimeException("User not found: " + email));
 
                     List<GrantedAuthority> authorities = new ArrayList<>();
-                    if (roleStr != null && !roleStr.isBlank()) {
-                        String normalizedRole = roleStr.startsWith("ROLE_")
-                                ? roleStr.substring("ROLE_".length())
-                                : roleStr;
 
-                        authorities.add(new SimpleGrantedAuthority(normalizedRole));
-                        authorities.add(new SimpleGrantedAuthority("ROLE_" + normalizedRole));
-                    }
+                    String roleStr = user.getRole().name();
+
+                    authorities.add(
+                            new SimpleGrantedAuthority("ROLE_" + roleStr)
+                    );
 
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(
-                                    email,
+                                    user,
                                     null,
                                     authorities
                             );
 
-                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    auth.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
 
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(auth);
                 }
             }
 

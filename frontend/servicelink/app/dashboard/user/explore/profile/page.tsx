@@ -23,6 +23,7 @@ interface SelectedService {
   name: string;
   priceMin: number;
   priceMax: number;
+  catalogId?: number; // Added
 }
 
 function getInitials(name: string): string {
@@ -83,6 +84,7 @@ function mapBackendToProviderData(data: any): ProviderData {
           priceMin: s.customPrice,
           priceMax: s.customPrice,
           duration: s.effectiveDuration ?? "1 hr",
+          catalogId: s.catalogId, // Confirmed mapped here
         })) ?? [],
     providerReviews:
         data.recentReviews?.map((r: any) => ({
@@ -113,7 +115,6 @@ export default function ProviderPage() {
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [issueDescription, setIssueDescription] = useState("");
 
-  // ── Now Date-typed instead of number ──────────────────────────────────────
   const [selectedDate, setSelectedDate]     = useState<Date>(new Date());
   const [selectedPeriod, setSelectedPeriod] = useState<
       "morning" | "afternoon" | "evening" | null
@@ -136,7 +137,7 @@ export default function ProviderPage() {
     fetchProvider();
   }, [providerId]);
 
-  // Toggle service add/remove — used by both ServicesPricing and BookingSidebar
+  // Updated to pass catalogId down to state arrays
   const handleToggleService = (serviceName: string) => {
     if (!provider) return;
     const service = provider.services.find((s) => s.name === serviceName);
@@ -148,6 +149,7 @@ export default function ProviderPage() {
         name: service.name,
         priceMin: service.priceMin,
         priceMax: service.priceMax,
+        catalogId: service.catalogId, // Added
       }];
     });
   };
@@ -175,14 +177,12 @@ export default function ProviderPage() {
           <ProfileHero provider={provider} />
           <ProviderCredentials provider={provider} />
 
-          {/* Pass selectedServices so Add/Remove button state is reflected */}
           <ServicesPricing
               provider={provider}
               onBookService={handleToggleService}
               selectedServices={selectedServices}
           />
 
-          {/* Calendar now fires a full Date object up */}
           <AvailabilityCalendar
               onDateChange={setSelectedDate}
               onPeriodChange={setSelectedPeriod}

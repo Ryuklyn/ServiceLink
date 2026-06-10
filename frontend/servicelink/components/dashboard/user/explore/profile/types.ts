@@ -5,6 +5,7 @@ export interface ProviderService {
   priceMax: number;
   category: string; // <-- ADDED: Crucial for separating Electrician, Carpentry, Painting, etc.
   priceNote?: string; // <-- ADDED: For sub-labels like "(Minimum 1 hour)" or "(Includes first visit)"
+  catalogId?: number; // ADD THIS
 }
 
 export interface ProviderReview {
