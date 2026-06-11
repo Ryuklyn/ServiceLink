@@ -247,6 +247,10 @@ public class SupabaseStorageService {
                 "image/jpeg",
                 "image/jpg",
                 "image/png",
+                "video/mp4",
+                "video/mpeg4",
+                "video/quicktime",
+                "video/webm",
                 "application/pdf"
         );
 
