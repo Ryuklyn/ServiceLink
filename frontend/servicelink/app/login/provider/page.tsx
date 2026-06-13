@@ -67,7 +67,7 @@ export default function LoginPage() {
       sessionStorage.setItem("verified_contact", verifiedContact);
       sessionStorage.setItem("contact_mode", contactMode);
 
-      router.push("/dashboard");
+      router.push("/dashboard/provider");
     },
     [verifiedContact, contactMode, router],
   );
