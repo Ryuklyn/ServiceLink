@@ -295,6 +295,9 @@ interface OtpStepProps {
   whatsappLink?: string;
   onVerified: (providerToken: string) => void;
   onChangeContact: () => void;
+  heading?: string;        // ✅ Add these
+  subheading?: string;     // ✅
+  resendLabel?: string;    // ✅
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

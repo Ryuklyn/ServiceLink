@@ -111,9 +111,12 @@ public class AuthController {
         PhoneOtpService.SendResult result = phoneOtpService.sendOtp(phone, otp);
 
         return ResponseEntity.ok(OtpSendResponseDTO.builder()
-                .message(result.isWhatsApp()
-                        ? "OTP ready — tap the WhatsApp link to view it"
-                        : "OTP sent via SMS")
+//                .message(result.isWhatsApp()
+//                        ? "OTP ready — tap the WhatsApp link to view it"
+//                        : "OTP sent via SMS")
+                .message(result.isAutomated()
+                        ? "OTP sent — check your phone"
+                        : "OTP ready — tap the WhatsApp link to view it")
                 .deliveryMethod(result.method().name())
                 .whatsappLink(result.whatsappLink())
                 .build());

@@ -228,49 +228,45 @@ export default function BookingSidebar({
     //         return;
     //     }
     //
+    //     const firstService = services.find((svc) => svc.catalogId);
+    //     if (!firstService?.catalogId) {
+    //         toast.warning("Selected service is missing catalog ID.");
+    //         return;
+    //     }
+    //
     //     setIsBooking(true);
-    //     const results: AppointmentResponse[] = [];
     //
     //     try {
-    //         // Book each selected service as a separate appointment
-    //         for (const svc of services) {
-    //             if (!svc.catalogId) {
-    //                 toast.warning(`Service "${svc.name}" is missing catalog ID. Skipping.`);
-    //                 continue;
-    //             }
+    //         const payload = {
+    //             providerId:       Number(provider.id),
+    //             serviceCatalogId: firstService.catalogId,
+    //             appointmentDate:  formatDateForBackend(localDate),
+    //             timeSlot:         mapPeriodToTimeSlot(localPeriod!),
+    //             address:          address.trim(),
+    //             notes:            taskSummary.trim() || null,
+    //             attachedImgUrl:   null,
+    //             attachedVideoUrl: null,
+    //             itemCount: 1,
+    //         };
     //
-    //             const payload = {
-    //                 providerId:       Number(provider.id),
-    //                 serviceCatalogId: svc.catalogId,
-    //                 appointmentDate:  formatDateForBackend(localDate),
-    //                 timeSlot:         mapPeriodToTimeSlot(localPeriod!),
-    //                 address:          address.trim(),
-    //                 notes:            taskSummary.trim() || null,
-    //                 attachedImgUrl:   null,
-    //                 attachedVideoUrl: null,
-    //                 // For PER_ITEM services default to 1 — user can adjust later
-    //                 itemCount: 1,
-    //             };
+    //         console.log("BOOKING PAYLOAD:", payload);
     //
-    //             console.log("BOOKING PAYLOAD:", payload);
+    //         const { data } = await api.post<AppointmentResponse>("/appointments", payload);
     //
-    //             const { data } = await api.post<AppointmentResponse>("/appointments", payload);
-    //             results.push(data);
-    //         }
-    //
-    //         setBookedAppointments(results);
-    //         toast.success(
-    //             `${results.length} appointment${results.length > 1 ? "s" : ""} booked successfully!`,
-    //             { position: "top-right" }
-    //         );
+    //         setBookedAppointments([data]);
+    //         toast.success("Appointment booked successfully!", { position: "top-right" });
     //         setIsModalOpen(true);
     //
     //     } catch (err: any) {
+    //         const status  = err?.status ?? 0;
     //         const message = err?.message ?? "Booking failed. Please try again.";
-    //         if (message.includes("APPOINTMENT_SLOT_TAKEN")) {
+    //
+    //         if (status === 401) {
+    //             toast.error("Please log in as a customer to book.", { position: "top-right" });
+    //         } else if (message.includes("APPOINTMENT_SLOT_TAKEN") || status === 409) {
     //             toast.error("That time slot is already booked. Please choose a different time.", { position: "top-right" });
-    //         } else if (message.includes("401") || err?.status === 401) {
-    //             toast.error("Please log in to book an appointment.", { position: "top-right" });
+    //         } else if (message.includes("SERVICE_UNAVAILABLE")) {
+    //             toast.error("This service is currently unavailable.", { position: "top-right" });
     //         } else {
     //             toast.error(message, { position: "top-right" });
     //         }
@@ -278,6 +274,7 @@ export default function BookingSidebar({
     //         setIsBooking(false);
     //     }
     // };
+
 
     const handleBookNow = async () => {
         console.log("handleBookNow fired");
@@ -296,6 +293,28 @@ export default function BookingSidebar({
         setIsBooking(true);
 
         try {
+            // 1. Upload media to Supabase first if present
+            let attachedImgUrl: string | null = null;
+            let attachedVideoUrl: string | null = null;
+
+            if (media) {
+                const formData = new FormData();
+                formData.append("file", media.file);
+
+                const { data: uploadData } = await api.post<{ url: string }>(
+                    "/media/upload",
+                    formData,
+                    { headers: { "Content-Type": "multipart/form-data" } }
+                );
+
+                if (media.type === "image") {
+                    attachedImgUrl = uploadData.url;
+                } else {
+                    attachedVideoUrl = uploadData.url;
+                }
+            }
+
+            // 2. Book appointment with real URLs
             const payload = {
                 providerId:       Number(provider.id),
                 serviceCatalogId: firstService.catalogId,
@@ -303,8 +322,8 @@ export default function BookingSidebar({
                 timeSlot:         mapPeriodToTimeSlot(localPeriod!),
                 address:          address.trim(),
                 notes:            taskSummary.trim() || null,
-                attachedImgUrl:   null,
-                attachedVideoUrl: null,
+                attachedImgUrl,
+                attachedVideoUrl,
                 itemCount: 1,
             };
 
@@ -317,15 +336,17 @@ export default function BookingSidebar({
             setIsModalOpen(true);
 
         } catch (err: any) {
-            const status  = err?.status ?? 0;
-            const message = err?.message ?? "Booking failed. Please try again.";
+            const status  = err?.response?.status ?? err?.status ?? 0;
+            const message = err?.response?.data?.message ?? err?.message ?? "Booking failed. Please try again.";
 
             if (status === 401) {
                 toast.error("Please log in as a customer to book.", { position: "top-right" });
-            } else if (message.includes("APPOINTMENT_SLOT_TAKEN") || status === 409) {
+            } else if (status === 409 || message.includes("APPOINTMENT_SLOT_TAKEN")) {
                 toast.error("That time slot is already booked. Please choose a different time.", { position: "top-right" });
             } else if (message.includes("SERVICE_UNAVAILABLE")) {
                 toast.error("This service is currently unavailable.", { position: "top-right" });
+            } else if (message.includes("upload") || message.includes("Supabase")) {
+                toast.error("Failed to upload media. Please try again or remove the file.", { position: "top-right" });
             } else {
                 toast.error(message, { position: "top-right" });
             }
