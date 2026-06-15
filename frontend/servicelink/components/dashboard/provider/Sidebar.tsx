@@ -21,7 +21,7 @@ const navItems = [
     { label: "Bookings", href: "/dashboard/provider/bookings", icon: CalendarDays },
     { label: "Earnings", href: "/dashboard/provider/earnings", icon: Wallet },
     { label: "Analytics", href: "/dashboard/provider/analytics", icon: BarChart2 },
-    { label: "Referrals", href: "/dashboard/provider/referrals", icon: Users },
+    { label: "Referrals", href: "/dashboard/provider/referral", icon: Users },
     { label: "Subscription", href: "/dashboard/provider/subscription", icon: CreditCard },
     { label: "Settings", href: "/dashboard/provider/settings", icon: Settings },
     { label: "Profile / KYC", href: "/dashboard/provider/profile", icon: UserCheck },
@@ -85,7 +85,7 @@ export default function Sidebar() {
                     </div>
                     <div className="min-w-0">
                         <p className="text-white font-semibold text-sm truncate">
-                            Bhumika Maharjan
+                            Rukesh Maharjan
                         </p>
                         <div className="flex items-center gap-1 mt-0.5">
                             <BadgeCheck size={12} className="text-[#E8683F] flex-shrink-0" />

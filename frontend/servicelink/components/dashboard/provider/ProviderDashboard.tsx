@@ -52,7 +52,7 @@ const todayJobs: Job[] = [
     {
         time: "2:00 PM",
         title: "Electrical Repair",
-        customer: "Rukesh Shrestha",
+        customer: "Rukesh Maharjan",
         location: "Baneshwor, Kathmandu",
         amount: "Rs. 600",
         status: "IN PROGRESS",
@@ -120,7 +120,7 @@ function ActiveJobBanner() {
                         Electrical Repair
                     </h2>
                     <p className="text-gray-500 text-sm mt-0.5">
-                        Rukesh Shrestha &bull; Baneshwor, Kathmandu (1.2 km away)
+                        Rukesh Maharjan &bull; Baneshwor, Kathmandu (1.2 km away)
                     </p>
                     <div className="flex items-center gap-1.5 mt-1.5">
                         <Clock size={13} className="text-[#E8683F]" />
@@ -422,7 +422,7 @@ function RecentBookings() {
 /** Referrals Panel */
 function ReferralsPanel() {
     const [copied, setCopied] = useState(false);
-    const referralCode = "SL-BHUMIKA-2026";
+    const referralCode = "SL-RUKESH-2026";
     const totalSteps = 5;
     const completed = 3;
 

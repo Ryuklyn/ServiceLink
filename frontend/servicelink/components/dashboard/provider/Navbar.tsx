@@ -47,7 +47,7 @@ export default function Navbar() {
 
                 {/* Avatar */}
                 <div className="w-9 h-9 bg-[#1E3A8A] text-white rounded-full flex items-center justify-center font-bold text-xs border-2 border-white shadow-md cursor-pointer hover:opacity-90 transition">
-                    BM
+                    RM
                 </div>
             </div>
         </header>
