@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import {
     Search,
     SlidersHorizontal,
@@ -19,7 +19,7 @@ import {
     Truck,
     Wrench,
     ChevronRight,
-    Car,
+    Car, Pause,
 } from "lucide-react";
 
 type StatusType = "PENDING" | "ACCEPTED" | "ON_THE_WAY" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
@@ -29,6 +29,11 @@ interface Booking {
     bookingId: string;
     name: string;
     avatar: string;
+    photo: string;
+    images?: string[];
+    video?: string;
+    voiceNote?: string;
+    services: string[];
     service: string;
     date: string;
     time: string;
@@ -55,6 +60,8 @@ const initialBookings: Booking[] = [
         bookingId: "BK-1256",
         name: "Sita Devi Sharma",
         avatar: "SD",
+        photo: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop",
+        services: ["Pipe Leak Repair"],
         service: "Pipe Leak Repair",
         date: "June 13, 2026",
         dateLabel: "Saturday",
@@ -79,7 +86,9 @@ const initialBookings: Booking[] = [
         bookingId: "BK-1255",
         name: "Dinesh Karki",
         avatar: "DK",
-        service: "Inverter Setup",
+        photo: "https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=150&auto=format&fit=crop",
+        services: ["Pipe Leak Repair", "Tank Cleaning"],
+        service: "Pipe Leak Repair, Tank Cleaning",
         date: "June 14, 2026",
         dateLabel: "Sunday",
         time: "11:00 AM",
@@ -103,6 +112,8 @@ const initialBookings: Booking[] = [
         bookingId: "BK-1254",
         name: "Sunita Pradhan",
         avatar: "SP",
+        photo: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=150&auto=format&fit=crop",
+        services: ["Wiring & Rewiring"],
         service: "Wiring & Rewiring",
         date: "June 15, 2026",
         dateLabel: "Monday",
@@ -127,6 +138,8 @@ const initialBookings: Booking[] = [
         bookingId: "BK-1253",
         name: "Babatunde Okonkwo",
         avatar: "BO",
+        photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
+        services: ["Wiring & Rewiring"],
         service: "Wiring & Rewiring",
         date: "June 16, 2026",
         dateLabel: "Tuesday",
@@ -151,6 +164,8 @@ const initialBookings: Booking[] = [
         bookingId: "BK-1252",
         name: "Priya Thapa",
         avatar: "PT",
+        photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop",
+        services: ["Lighting Installation"],
         service: "Lighting Installation",
         date: "June 12, 2026",
         dateLabel: "Friday",
@@ -175,6 +190,8 @@ const initialBookings: Booking[] = [
         bookingId: "BK-1251",
         name: "Rukesh Shrestha",
         avatar: "RS",
+        photo: "https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=150&auto=format&fit=crop",
+        services: ["Electrical Repair"],
         service: "Electrical Repair",
         date: "June 12, 2026",
         dateLabel: "Friday",
@@ -199,6 +216,8 @@ const initialBookings: Booking[] = [
         bookingId: "BK-1248",
         name: "Ram Prasad Magar",
         avatar: "RM",
+        photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop",
+        services: ["Circuit Breaker Repair"],
         service: "Circuit Breaker Repair",
         date: "June 9, 2026",
         dateLabel: "Tuesday",
@@ -223,6 +242,8 @@ const initialBookings: Booking[] = [
         bookingId: "BK-1247",
         name: "Anita Gurung",
         avatar: "AG",
+        photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
+        services: ["Lighting Installation"],
         service: "Lighting Installation",
         date: "June 7, 2026",
         dateLabel: "Sunday",
@@ -247,6 +268,8 @@ const initialBookings: Booking[] = [
         bookingId: "BK-1246",
         name: "Bikash Tamang",
         avatar: "BT",
+        photo: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150&auto=format&fit=crop",
+        services: ["Fan Installation"],
         service: "Fan Installation",
         date: "June 5, 2026",
         dateLabel: "Friday",
@@ -306,6 +329,17 @@ const TAB_FILTERS = [
     { label: "Cancelled", key: "CANCELLED" },
 ];
 
+const groupLabelColor = (groupLabel: string): string => {
+    switch (groupLabel) {
+        case "PENDING": return "#e8683f";
+        case "ACCEPTED": return "#1e40af";
+        case "ON THE WAY / IN PROGRESS": return "#4f46e5";
+        case "COMPLETED": return "#16a34a";
+        case "CANCELLED": return "#dc2626";
+        default: return "#6b7280";
+    }
+};
+
 const WhatsAppIcon = () => (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="white">
         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
@@ -341,6 +375,31 @@ export default function BookingsPage() {
     const [selectedId, setSelectedId] = useState<string>("1");
     const [activeFilter, setActiveFilter] = useState("ALL");
     const [search, setSearch] = useState("");
+
+    const [lightbox, setLightbox] = useState<{ type: "image" | "video"; src?: string } | null>(null);
+    const [playingAudio, setPlayingAudio] = useState(false);
+    const [audioProgress, setAudioProgress] = useState(0);
+    const audioRef = useRef<HTMLAudioElement>(null);
+
+    const toggleAudio = () => {
+        if (!audioRef.current) return;
+        if (playingAudio) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play();
+        }
+        setPlayingAudio(!playingAudio);
+    };
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        const update = () => setAudioProgress((audio.currentTime / audio.duration) * 100 || 0);
+        audio.addEventListener("timeupdate", update);
+        return () => audio.removeEventListener("timeupdate", update);
+    }, []);
+
+    const b_services = (b: Booking) => b.services?.length ? b.services : [b.description];
 
     const selected = bookings.find((b) => b.id === selectedId) ?? bookings[0];
 
@@ -389,437 +448,502 @@ export default function BookingsPage() {
     const waLink = `https://wa.me/977${selected.phone}?text=Hello%20${encodeURIComponent(selected.name)}%2C%20regarding%20your%20booking%20${selected.bookingId}.`;
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            {/* Navbar */}
-            <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-20">
-                <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900">Bookings</h1>
-                        <p className="text-xs text-gray-400">Manage your service requests and track job progress</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 w-56">
-                            <Search size={14} className="text-gray-400" />
-                            <input
-                                className="bg-transparent text-sm outline-none w-full text-gray-700 placeholder-gray-400"
-                                placeholder="Search booking, customer..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
+        <div className="flex flex-col gap-5 max-w-[1200px] mx-auto">
+                {/* Navbar */}
+                <div className=" py-3 top-0 z-20 flex items-center justify-between gap-4">
+                    {/*<div className="max-w-5xl mx-auto flex items-center justify-between gap-4">*/}
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-900">Bookings</h1>
+                            <p className="text-xs text-gray-400">Manage your service requests and track job progress</p>
                         </div>
-                        <button className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            <SlidersHorizontal size={14} /> Filter
-                        </button>
-                        <div className="relative">
-                            <button className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg bg-white hover:bg-gray-50">
-                                <Bell size={16} className="text-gray-600" />
-                            </button>
-                            <span
-                                className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white"
-                                style={{ backgroundColor: "#1e3a8a" }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="max-w-5xl mx-auto px-4 py-5 space-y-4">
-                {/* Filter tabs */}
-                <div className="flex gap-2 flex-wrap">
-                    {TAB_FILTERS.map(({ label, key }) => (
-                        <button
-                            key={key}
-                            onClick={() => setActiveFilter(key)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                                activeFilter === key
-                                    ? "text-white"
-                                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
-                            }`}
-                            style={activeFilter === key ? { backgroundColor: "#1e3a8a" } : {}}
-                        >
-                            {label}
-                            <span
-                                className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
-                                    activeFilter === key ? "bg-white" : "bg-gray-100 text-gray-500"
-                                }`}
-                                style={activeFilter === key ? { color: "#1e3a8a" } : {}}
-                            >
-                {counts[key]}
-              </span>
-                        </button>
-                    ))}
-                </div>
-
-                {/* Split layout */}
-                <div className="flex gap-4 items-start">
-                    {/* LEFT: List */}
-                    <div className="w-72 flex-shrink-0 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
-                        {groups.length === 0 && (
-                            <div className="text-center text-gray-400 text-sm py-12">No bookings found.</div>
-                        )}
-                        {groups.map(({ groupLabel, items }) => (
-                            <div key={groupLabel}>
-                                <p className="text-xs font-bold mb-2 tracking-wide" style={{ color: "#e8683f" }}>
-                                    {groupLabel} ({items.length})
-                                </p>
-                                <div className="space-y-2">
-                                    {items.map((b) => (
-                                        <div
-                                            key={b.id}
-                                            onClick={() => setSelectedId(b.id)}
-                                            className={`bg-white rounded-xl border p-3 cursor-pointer transition-all ${
-                                                selectedId === b.id
-                                                    ? "border-blue-400 shadow-md"
-                                                    : "border-gray-200 hover:border-gray-300"
-                                            }`}
-                                        >
-                                            <div className="flex items-start gap-2.5">
-                                                <div
-                                                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                                                    style={{ backgroundColor: avatarColors[b.avatar] ?? "#1e3a8a" }}
-                                                >
-                                                    {b.avatar}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between gap-1">
-                                                        <p className="text-sm font-semibold text-gray-800 truncate">{b.name}</p>
-                                                        <p className="text-xs font-bold flex-shrink-0" style={{ color: "#e8683f" }}>
-                                                            Rs. {b.amount.toLocaleString()}
-                                                        </p>
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 mt-0.5">{b.service}</p>
-                                                    <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                                                        <Calendar size={10} />
-                                                        {b.date} • {b.time}
-                                                    </div>
-                                                    <div className="flex items-center justify-between mt-1">
-                                                        <div className="flex items-center gap-1 text-xs text-gray-400">
-                                                            <MapPin size={10} /> {b.location}
-                                                        </div>
-                                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusBadgeStyle(b.status)}`}>
-                              {statusLabel(b.status)}
-                            </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 w-56">
+                                <Search size={14} className="text-gray-400" />
+                                <input
+                                    className="bg-transparent text-sm outline-none w-full text-gray-700 placeholder-gray-400"
+                                    placeholder="Search booking, customer..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
                             </div>
+                            <button className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <SlidersHorizontal size={14} /> Filter
+                            </button>
+                            <div className="relative">
+                                <button className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg bg-white hover:bg-gray-50">
+                                    <Bell size={16} className="text-gray-600" />
+                                </button>
+                                <span
+                                    className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white"
+                                    style={{ backgroundColor: "#1e3a8a" }}
+                                />
+                            </div>
+                        </div>
+                    {/*</div>*/}
+                </div>
+
+                {/*<div className="max-w-5xl mx-auto px-4 py-5 space-y-4">*/}
+                    {/* Filter tabs */}
+                    <div className="flex gap-2 flex-wrap">
+                        {TAB_FILTERS.map(({ label, key }) => (
+                            <button
+                                key={key}
+                                onClick={() => setActiveFilter(key)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                    activeFilter === key
+                                        ? "text-white"
+                                        : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+                                }`}
+                                style={activeFilter === key ? { backgroundColor: "#1e3a8a" } : {}}
+                            >
+                                {label}
+                                <span
+                                    className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
+                                        activeFilter === key ? "bg-white" : "bg-gray-100 text-gray-500"
+                                    }`}
+                                    style={activeFilter === key ? { color: "#1e3a8a" } : {}}
+                                >
+                                {counts[key]}
+                              </span>
+                            </button>
                         ))}
                     </div>
 
-                    {/* RIGHT: Detail */}
-                    <div className="flex-1 min-w-0 space-y-4">
-                        {/* Progress stepper */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-5">
-                            <div className="flex items-center justify-between">
-                                {steps.map((step, i) => {
-                                    const isActive = i === currentStepIndex;
-                                    const isDone = i < currentStepIndex;
-                                    return (
-                                        <div key={step.label} className="flex items-center flex-1">
-                                            <div className="flex flex-col items-center flex-1">
-                                                <div
-                                                    className={`w-10 h-10 rounded-full flex items-center justify-center mb-1.5 border-2 ${
-                                                        isDone
-                                                            ? "border-blue-700 bg-blue-700"
-                                                            : isActive
-                                                                ? "border-orange-400 bg-orange-50"
-                                                                : "border-gray-200 bg-gray-50"
-                                                    }`}
-                                                >
-                          <span
-                              className={
-                                  isDone ? "text-white" : isActive ? "text-orange-500" : "text-gray-400"
-                              }
-                          >
-                            {step.icon}
-                          </span>
-                                                </div>
-                                                <p
-                                                    className={`text-xs font-semibold text-center leading-tight ${
-                                                        isActive ? "text-orange-500" : isDone ? "text-blue-700" : "text-gray-400"
-                                                    }`}
-                                                >
-                                                    {step.label}
-                                                </p>
-                                                <p className="text-xs text-gray-400 text-center">{step.sub}</p>
-                                            </div>
-                                            {i < steps.length - 1 && (
-                                                <div
-                                                    className={`h-0.5 w-8 mx-1 mb-6 rounded ${isDone ? "bg-blue-400" : "bg-gray-200"}`}
-                                                />
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Customer card */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-start gap-4">
-                                    <div
-                                        className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
-                                        style={{ backgroundColor: avatarColors[selected.avatar] ?? "#1e3a8a" }}
-                                    >
-                                        {selected.avatar}
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h2 className="text-lg font-bold text-gray-900">{selected.name}</h2>
-                                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusBadgeStyle(selected.status)}`}>
-                        {statusLabel(selected.status)}
-                      </span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-1">
-                                            <Mail size={13} /> {selected.email}
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-sm text-gray-500">
-                                            <Phone size={13} /> {selected.phone}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="text-right flex-shrink-0">
-                                    <p className="text-xs text-gray-400">Booking ID</p>
-                                    <div className="flex items-center gap-1 justify-end">
-                                        <p className="text-sm font-bold text-gray-800">{selected.bookingId}</p>
-                                        <button className="text-gray-400 hover:text-gray-600">
-                                            <Copy size={12} />
-                                        </button>
-                                    </div>
-                                    <p className="text-xs text-gray-400 mt-2">Service Amount</p>
-                                    <p className="text-xl font-bold" style={{ color: "#e8683f" }}>
-                                        Rs. {selected.amount.toLocaleString()}
-                                    </p>
-                                    <p className="text-xs text-gray-400">Pay after service</p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-gray-100">
-                                <div className="flex items-start gap-2">
-                                    <Calendar size={16} className="mt-0.5" style={{ color: "#1e3a8a" }} />
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-800">{selected.date}</p>
-                                        <p className="text-xs text-gray-400">{selected.dateLabel}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-2">
-                                    <Clock size={16} className="mt-0.5" style={{ color: "#1e3a8a" }} />
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-800">{selected.timeSlot}</p>
-                                        <p className="text-xs text-gray-400">{selected.timeLabel}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-2">
-                                    <MapPin size={16} className="mt-0.5" style={{ color: "#1e3a8a" }} />
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-800">{selected.location}</p>
-                                        <p className="text-xs text-gray-400">{selected.distance}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Services + Address */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                                <h3 className="text-sm font-semibold text-gray-800 mb-3">Services Requested</h3>
-                                <span
-                                    className="inline-block px-3 py-1 rounded-full text-xs font-semibold border mb-3"
-                                    style={{ borderColor: "#e8683f", color: "#e8683f", backgroundColor: "#fff7f4" }}
+                    {/* Split layout */}
+                    <div className="flex gap-4 items-start">
+                        {/* LEFT: List */}
+                        {/* LEFT: List */}
+                        <div className="w-72 flex-shrink-0 space-y-5 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
+                            {groups.length === 0 && (
+                                <div className="text-center text-gray-400 text-sm py-12">No bookings found.</div>
+                            )}
+                            {groups.map(({ groupLabel, items }) => (
+                                <div
+                                    key={groupLabel}
+                                    className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
                                 >
-                  {selected.description}
-                </span>
-                                <p className="text-sm text-gray-600 leading-relaxed">{selected.note}</p>
-
-                                <div className="mt-4">
-                                    <p className="text-xs font-semibold text-gray-600 mb-2">Attachments</p>
-                                    <div className="flex gap-2">
-                                        <div className="w-16 h-14 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs">
-                                            IMG
-                                        </div>
-                                        <div className="w-16 h-14 bg-gray-800 rounded-lg flex items-center justify-center">
-                                            <Play size={16} className="text-white" />
-                                        </div>
-                                        <div className="w-16 h-14 bg-gray-300 rounded-lg flex items-center justify-center text-gray-600 text-xs font-bold">
-                                            +2
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="mt-4">
-                                    <p className="text-xs font-semibold text-gray-600 mb-2">Customer Note (Voice)</p>
-                                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                                        <button
-                                            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                            style={{ backgroundColor: "#1e3a8a" }}
+                                    {/* Group label + divider line */}
+                                    <div className="px-4 pt-4 pb-2 border-b border-gray-100">
+                                        <p
+                                            className="text-xs font-bold tracking-wide uppercase"
+                                            style={{ color: groupLabelColor(groupLabel) }}
                                         >
-                                            <Play size={10} className="text-white" />
-                                        </button>
-                                        <div className="flex-1 h-1.5 bg-gray-300 rounded-full">
-                                            <div className="h-1.5 w-1/3 rounded-full" style={{ backgroundColor: "#1e3a8a" }} />
-                                        </div>
-                                        <span className="text-xs text-gray-400">0:18</span>
+                                            {groupLabel} ({items.length})
+                                        </p>
+                                    </div>
+
+                                    <div className="p-2 space-y-2">
+                                        {items.map((b) => (
+                                            <div
+                                                key={b.id}
+                                                onClick={() => setSelectedId(b.id)}
+                                                className={`rounded-lg p-2.5 cursor-pointer transition-colors border ${
+                                                    selectedId === b.id
+                                                        ? "bg-orange-100 border-orange-200"
+                                                        : "border-transparent hover:bg-gray-50"
+                                                }`}
+                                            >
+                                                <div className="flex items-start gap-2.5">
+                                                    {/* Photo avatar */}
+                                                    <img
+                                                        src={b.photo}
+                                                        alt={b.name}
+                                                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-1">
+                                                            <p className="text-sm font-semibold text-gray-800 truncate">{b.name}</p>
+                                                            <p className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: "#e8683f" }}>
+                                                                Rs. {b.amount.toLocaleString()}
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Services - supports multiple */}
+                                                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                                            {b.services.join(", ")}
+                                                        </p>
+
+                                                        <div className="flex items-center gap-1 mt-1.5 text-xs text-gray-400">
+                                                            <Calendar size={10} />
+                                                            {b.date} • {b.time}
+                                                        </div>
+                                                        <div className="flex items-center justify-between mt-1.5">
+                                                            <div className="flex items-center gap-1 text-xs text-gray-400 truncate">
+                                                                <MapPin size={10} className="flex-shrink-0" /> {b.location}
+                                                            </div>
+                                                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ml-2 flex-shrink-0 ${statusBadgeStyle(b.status)}`}>
+                                        {statusLabel(b.status)}
+                                    </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                            </div>
+                            ))}
+                        </div>
 
-                            <div className="space-y-4">
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                                    <h3 className="text-sm font-semibold text-gray-800 mb-3">Service Address</h3>
-                                    <div className="flex items-start gap-2 mb-1">
-                                        <MapPin size={14} className="mt-0.5 flex-shrink-0" style={{ color: "#1e3a8a" }} />
+                        {/* RIGHT: Detail */}
+                        <div className="flex-1 min-w-0">
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+
+                                {/* Progress stepper */}
+                                <div className="px-6 py-5">
+                                    <div className="flex items-center justify-between">
+                                        {steps.map((step, i) => {
+                                            const isActive = i === currentStepIndex;
+                                            const isDone = i < currentStepIndex;
+                                            return (
+                                                <div key={step.label} className="flex items-center flex-1">
+                                                    <div className="flex flex-col items-center flex-1">
+                                                        <div
+                                                            className={`w-10 h-10 rounded-full flex items-center justify-center mb-1.5 border-2 ${
+                                                                isDone
+                                                                    ? "border-blue-700 bg-blue-700"
+                                                                    : isActive
+                                                                        ? "border-orange-400 bg-orange-50"
+                                                                        : "border-gray-200 bg-gray-50"
+                                                            }`}
+                                                        >
+                                    <span className={isDone ? "text-white" : isActive ? "text-orange-500" : "text-gray-400"}>
+                                        {step.icon}
+                                    </span>
+                                                        </div>
+                                                        <p className={`text-xs font-semibold text-center leading-tight ${
+                                                            isActive ? "text-orange-500" : isDone ? "text-blue-700" : "text-gray-400"
+                                                        }`}>
+                                                            {step.label}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400 text-center">{step.sub}</p>
+                                                    </div>
+                                                    {i < steps.length - 1 && (
+                                                        <div className={`h-0.5 w-8 mx-1 mb-6 rounded ${isDone ? "bg-blue-400" : "bg-gray-200"}`} />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Customer info */}
+                                <div className="px-6 py-5 border-t border-gray-100">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex items-start gap-4">
+                                            <img
+                                                src={selected.photo}
+                                                alt={selected.name}
+                                                className="w-16 h-16 rounded-full object-cover flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+                                                onClick={() => setLightbox({ type: "image", src: selected.photo })}
+                                            />
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h2 className="text-lg font-bold text-gray-900">{selected.name}</h2>
+                                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusBadgeStyle(selected.status)}`}>
+                                {statusLabel(selected.status)}
+                            </span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-1">
+                                                    <Mail size={13} /> {selected.email}
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                                                    <Phone size={13} /> {selected.phone}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right flex-shrink-0">
+                                            <p className="text-xs text-gray-400">Booking ID</p>
+                                            <div className="flex items-center gap-1 justify-end">
+                                                <p className="text-sm font-bold text-gray-800">{selected.bookingId}</p>
+                                                <button className="text-gray-400 hover:text-gray-600">
+                                                    <Copy size={12} />
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-2">Service Amount</p>
+                                            <p className="text-xl font-bold" style={{ color: "#e8683f" }}>
+                                                Rs. {selected.amount.toLocaleString()}
+                                            </p>
+                                            <p className="text-xs text-gray-400">Pay after service</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Schedule bar */}
+                                <div className="px-6 pb-5">
+                                    <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-lg p-4">
+                                        <div className="flex items-start gap-2.5">
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#fff7f4" }}>
+                                                <Calendar size={15} style={{ color: "#e8683f" }} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-800">{selected.date}</p>
+                                                <p className="text-xs text-gray-400">{selected.dateLabel}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-2.5">
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-green-50">
+                                                <Clock size={15} className="text-green-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-800">{selected.timeSlot}</p>
+                                                <p className="text-xs text-gray-400">{selected.timeLabel}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-2.5">
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#eef2ff" }}>
+                                                <MapPin size={15} style={{ color: "#1e3a8a" }} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-800">{selected.location}</p>
+                                                <p className="text-xs text-gray-400">{selected.distance}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Services + Address */}
+                                <div className="grid grid-cols-2 gap-0 border-t border-gray-100">
+                                    {/* Services Requested */}
+                                    <div className="p-6 border-r border-gray-100">
+                                        <h3 className="text-sm font-semibold text-gray-800 mb-3">Services Requested</h3>
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                            {b_services(selected).map((svc) => (
+                                                <span
+                                                    key={svc}
+                                                    className="inline-block px-3 py-1 rounded-full text-xs font-semibold border"
+                                                    style={{ borderColor: "#bbf7d0", color: "#16a34a", backgroundColor: "#f0fdf4" }}
+                                                >
+                            {svc}
+                        </span>
+                                            ))}
+                                        </div>
+                                        <p className="text-sm text-gray-600 leading-relaxed">{selected.note}</p>
+
+                                        <div className="mt-4">
+                                            <p className="text-xs font-semibold text-gray-600 mb-2">Attachments</p>
+                                            <div className="flex gap-2">
+                                                <img
+                                                    src={selected.images?.[0]}
+                                                    alt="attachment"
+                                                    onClick={() => setLightbox({ type: "image", src: selected.images?.[0] })}
+                                                    className="w-16 h-14 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                                />
+                                                <div
+                                                    onClick={() => setLightbox({ type: "video", src: selected.video })}
+                                                    className="w-16 h-14 bg-gray-800 rounded-lg flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                                                >
+                                                    <Play size={16} className="text-white" />
+                                                </div>
+                                                {selected.images && selected.images.length > 1 && (
+                                                    <div
+                                                        onClick={() => setLightbox({ type: "image", src: selected.images?.[1] })}
+                                                        className="w-16 h-14 bg-gray-300 rounded-lg flex items-center justify-center text-gray-600 text-xs font-bold cursor-pointer hover:opacity-80 transition-opacity"
+                                                    >
+                                                        +{selected.images.length - 1}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <p className="text-xs font-semibold text-gray-600 mb-2">Customer Note (Voice)</p>
+                                            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                                                <audio ref={audioRef} src={selected.voiceNote} onEnded={() => setPlayingAudio(false)} />
+                                                <button
+                                                    onClick={toggleAudio}
+                                                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                                    style={{ backgroundColor: "#16a34a" }}
+                                                >
+                                                    {playingAudio ? <Pause size={10} className="text-white" /> : <Play size={10} className="text-white" />}
+                                                </button>
+                                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-1.5 rounded-full bg-green-500 transition-all" style={{ width: `${audioProgress}%` }} />
+                                                </div>
+                                                <span className="text-xs text-gray-400">0:18</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Service Address + Customer Details */}
+                                    <div className="p-6 space-y-5">
                                         <div>
-                                            <p className="text-sm text-gray-700 font-medium">{selected.address}</p>
-                                            <p className="text-xs text-gray-400 mt-0.5">Landmark: {selected.landmark}</p>
+                                            <h3 className="text-sm font-semibold text-gray-800 mb-3">Service Address</h3>
+                                            <div className="flex items-start gap-2 mb-3">
+                                                <MapPin size={14} className="mt-0.5 flex-shrink-0" style={{ color: "#1e3a8a" }} />
+                                                <div>
+                                                    <p className="text-sm text-gray-700 font-medium">{selected.address}</p>
+                                                    <p className="text-xs text-gray-400 mt-0.5">Landmark: {selected.landmark}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                className="w-full border rounded-lg py-1.5 text-xs font-semibold transition-colors"
+                                                style={{ borderColor: "#bbf7d0", color: "#16a34a" }}
+                                            >
+                                                View on Map
+                                            </button>
+                                        </div>
+
+                                        <div className="pt-5 border-t border-gray-100">
+                                            <h3 className="text-sm font-semibold text-gray-800 mb-3">Customer Details</h3>
+                                            <div className="space-y-2 text-xs">
+                                                {[
+                                                    { label: "Email", value: selected.email },
+                                                    { label: "Phone", value: selected.phone },
+                                                    { label: "Member Since", value: selected.memberSince },
+                                                    { label: "Total Bookings", value: String(selected.totalBookings) },
+                                                ].map(({ label, value }) => (
+                                                    <div key={label} className="flex justify-between">
+                                                        <span className="text-gray-400">{label}</span>
+                                                        <span className="text-gray-700 font-medium">{value}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                    <button className="mt-3 w-full border border-gray-300 rounded-lg py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-                                        View on Map
-                                    </button>
                                 </div>
 
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                                    <h3 className="text-sm font-semibold text-gray-800 mb-3">Customer Details</h3>
-                                    <div className="space-y-2 text-xs">
+                                {/* Action buttons */}
+                                <div className="px-6 py-5 border-t border-gray-100">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        {selected.status === "PENDING" && (
+                                            <>
+                                                <button
+                                                    onClick={() => updateStatus(selected.id, "ACCEPTED")}
+                                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border-2 transition-colors"
+                                                    style={{ borderColor: "#16a34a", color: "#16a34a" }}
+                                                >
+                                                    <CheckCircle size={15} /> Accept Job
+                                                </button>
+                                                <button
+                                                    onClick={() => updateStatus(selected.id, "CANCELLED")}
+                                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 transition-colors"
+                                                >
+                                                    <XCircle size={15} /> Decline
+                                                </button>
+                                                <div className="ml-auto">
+                                                    <WaButton href={waLink} />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {selected.status === "ACCEPTED" && (
+                                            <>
+                                                <button
+                                                    onClick={() => updateStatus(selected.id, "ON_THE_WAY")}
+                                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                                                    style={{ backgroundColor: "#1e3a8a" }}
+                                                >
+                                                    <Car size={15} /> On the Way
+                                                </button>
+                                                <button
+                                                    onClick={() => updateStatus(selected.id, "CANCELLED")}
+                                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 transition-colors"
+                                                >
+                                                    <XCircle size={15} /> Cancel
+                                                </button>
+                                                <div className="ml-auto">
+                                                    <WaButton href={waLink} />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {selected.status === "ON_THE_WAY" && (
+                                            <>
+                                                <button
+                                                    onClick={() => updateStatus(selected.id, "IN_PROGRESS")}
+                                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                                                    style={{ backgroundColor: "#1e3a8a" }}
+                                                >
+                                                    <Wrench size={15} /> Start Job
+                                                </button>
+                                                <div className="ml-auto">
+                                                    <WaButton href={waLink} />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {selected.status === "IN_PROGRESS" && (
+                                            <>
+                                                <button
+                                                    onClick={() => updateStatus(selected.id, "COMPLETED")}
+                                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                                                    style={{ backgroundColor: "#1e3a8a" }}
+                                                >
+                                                    <CheckCircle size={15} /> Mark Complete
+                                                </button>
+                                                <div className="ml-auto">
+                                                    <WaButton href={waLink} />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {selected.status === "COMPLETED" && (
+                                            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-green-700 bg-green-50 border border-green-200">
+                                                <CheckCircle size={15} /> Job Completed Successfully
+                                            </div>
+                                        )}
+
+                                        {selected.status === "CANCELLED" && (
+                                            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 bg-red-50 border border-red-200">
+                                                <XCircle size={15} /> Booking Cancelled
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* How it works - green footer */}
+                                <div className="px-6 py-4 border-t border-gray-100" style={{ backgroundColor: "#f0fdf4" }}>
+                                    <p className="text-sm font-semibold mb-3" style={{ color: "#16a34a" }}>
+                                        How it works?
+                                    </p>
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         {[
-                                            { label: "Email", value: selected.email },
-                                            { label: "Phone", value: selected.phone },
-                                            { label: "Member Since", value: selected.memberSince },
-                                            { label: "Total Bookings", value: String(selected.totalBookings) },
-                                        ].map(({ label, value }) => (
-                                            <div key={label} className="flex justify-between">
-                                                <span className="text-gray-400">{label}</span>
-                                                <span className="text-gray-700 font-medium">{value}</span>
+                                            { icon: <CheckCircle size={18} style={{ color: "#16a34a" }} />, title: "1. Accept the job", sub: "Confirm the booking" },
+                                            { icon: <Car size={18} style={{ color: "#1e3a8a" }} />, title: "2. Start / On the way", sub: "Let customer know you're coming" },
+                                            { icon: <Wrench size={18} style={{ color: "#e8683f" }} />, title: "3. In progress", sub: "Work on the service" },
+                                            { icon: <CheckCircle size={18} className="text-green-600" />, title: "4. Complete & Earn", sub: "Mark complete after payment" },
+                                        ].map((step, i, arr) => (
+                                            <div key={step.title} className="flex items-center gap-2">
+                                                <div className="flex items-start gap-2">
+                                                    {step.icon}
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-gray-800">{step.title}</p>
+                                                        <p className="text-xs text-gray-400">{step.sub}</p>
+                                                    </div>
+                                                </div>
+                                                {i < arr.length - 1 && (
+                                                    <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
+                                                )}
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Action buttons */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                            <div className="flex flex-wrap gap-3">
-                                {selected.status === "PENDING" && (
-                                    <>
-                                        <button
-                                            onClick={() => updateStatus(selected.id, "ACCEPTED")}
-                                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-                                            style={{ backgroundColor: "#1e3a8a" }}
-                                        >
-                                            <CheckCircle size={15} /> Accept Job
-                                        </button>
-                                        <button
-                                            onClick={() => updateStatus(selected.id, "CANCELLED")}
-                                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 transition-colors"
-                                        >
-                                            <XCircle size={15} /> Decline
-                                        </button>
-                                        <WaButton href={waLink} />
-                                        <MsgButton />
-                                        <CallButton />
-                                    </>
-                                )}
-
-                                {selected.status === "ACCEPTED" && (
-                                    <>
-                                        <button
-                                            onClick={() => updateStatus(selected.id, "ON_THE_WAY")}
-                                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-                                            style={{ backgroundColor: "#1e3a8a" }}
-                                        >
-                                            <Car size={15} /> On the Way
-                                        </button>
-                                        <button
-                                            onClick={() => updateStatus(selected.id, "CANCELLED")}
-                                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 transition-colors"
-                                        >
-                                            <XCircle size={15} /> Cancel
-                                        </button>
-                                        <WaButton href={waLink} />
-                                        <MsgButton />
-                                        <CallButton />
-                                    </>
-                                )}
-
-                                {selected.status === "ON_THE_WAY" && (
-                                    <>
-                                        <button
-                                            onClick={() => updateStatus(selected.id, "IN_PROGRESS")}
-                                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-                                            style={{ backgroundColor: "#1e3a8a" }}
-                                        >
-                                            <Wrench size={15} /> Start Job
-                                        </button>
-                                        <WaButton href={waLink} />
-                                        <MsgButton />
-                                        <CallButton />
-                                    </>
-                                )}
-
-                                {selected.status === "IN_PROGRESS" && (
-                                    <>
-                                        <button
-                                            onClick={() => updateStatus(selected.id, "COMPLETED")}
-                                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-                                            style={{ backgroundColor: "#1e3a8a" }}
-                                        >
-                                            <CheckCircle size={15} /> Mark Complete
-                                        </button>
-                                        <WaButton href={waLink} />
-                                        <MsgButton />
-                                        <CallButton />
-                                    </>
-                                )}
-
-                                {selected.status === "COMPLETED" && (
-                                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-green-700 bg-green-50 border border-green-200">
-                                        <CheckCircle size={15} /> Job Completed Successfully
-                                    </div>
-                                )}
-
-                                {selected.status === "CANCELLED" && (
-                                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 bg-red-50 border border-red-200">
-                                        <XCircle size={15} /> Booking Cancelled
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* How it works */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                            <p className="text-sm font-semibold mb-4" style={{ color: "#e8683f" }}>
-                                How it works?
-                            </p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                {[
-                                    { icon: <CheckCircle size={18} style={{ color: "#1e3a8a" }} />, title: "1. Accept the job", sub: "Confirm the booking" },
-                                    { icon: <Car size={18} style={{ color: "#1e3a8a" }} />, title: "2. On the way", sub: "Let customer know you're coming" },
-                                    { icon: <Wrench size={18} style={{ color: "#e8683f" }} />, title: "3. In progress", sub: "Work on the service" },
-                                    { icon: <CheckCircle size={18} className="text-green-600" />, title: "4. Complete & Earn", sub: "Mark complete after payment" },
-                                ].map((step, i, arr) => (
-                                    <div key={step.title} className="flex items-center gap-2">
-                                        <div className="flex items-start gap-2">
-                                            {step.icon}
-                                            <div>
-                                                <p className="text-xs font-semibold text-gray-800">{step.title}</p>
-                                                <p className="text-xs text-gray-400">{step.sub}</p>
-                                            </div>
-                                        </div>
-                                        {i < arr.length - 1 && (
-                                            <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
+                            {/* Lightbox modal */}
+                            {lightbox && (
+                                <div
+                                    className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+                                    onClick={() => setLightbox(null)}
+                                >
+                                    <div className="max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+                                        {lightbox.type === "image" ? (
+                                            <img src={lightbox.src} alt="preview" className="w-full h-auto rounded-xl" />
+                                        ) : (
+                                            <video src={lightbox.src} controls autoPlay className="w-full h-auto rounded-xl" />
                                         )}
+                                        <button
+                                            onClick={() => setLightbox(null)}
+                                            className="mt-3 mx-auto block px-4 py-2 rounded-lg text-sm font-semibold bg-white text-gray-700"
+                                        >
+                                            Close
+                                        </button>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     </div>
-                </div>
-            </div>
+                {/*</div>*/}
         </div>
     );
 }
