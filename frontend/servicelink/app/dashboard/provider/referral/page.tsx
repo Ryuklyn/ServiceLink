@@ -9,6 +9,7 @@ import {
     Circle,
     CheckCheck,
 } from "lucide-react";
+import {FaWhatsapp} from "react-icons/fa";
 
 const referralData = {
     code: "SL-RUKESH-2026",
@@ -100,10 +101,10 @@ export default function ReferralPage() {
     const progressPercent = (referralData.progress / referralData.total) * 100;
 
     return (
-        <div className="min-h-screen">
+        <div className="flex flex-col gap-5 max-w-[1200px] mx-auto">
             {/* Hero Banner */}
             <div
-                className="relative overflow-hidden px-6 py-10 md:px-12 md:py-12 max-w-5xl mx-auto space-y-5 rounded-2xl mt-5"
+                className="relative overflow-hidden px-6 py-10 md:px-12 md:py-12 space-y-5 rounded-2xl mt-5"
                 style={{ backgroundColor: "#1e3a8a" }}
             >
                 {/* Decorative circles */}
@@ -167,7 +168,7 @@ export default function ReferralPage() {
             </div>
 
             {/* Main Content */}
-            <div className="max-w-5xl mx-auto mt-6 space-y-5">
+            <div className="space-y-5">
                 {/* Share Link + How it Works */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {/* Share Your Link */}
@@ -230,7 +231,7 @@ export default function ReferralPage() {
                                 className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
                                 style={{ backgroundColor: "#25D366" }}
                             >
-                                <Share2 size={15} />
+                                <FaWhatsapp size={15} />
                                 Share on WhatsApp
                             </button>
                             <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">

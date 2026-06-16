@@ -76,8 +76,8 @@ export default function EarningsPage() {
     const [activeTab, setActiveTab] = useState("This Month");
 
     return (
-        <div className="min-h-screen">
-            <div className="max-w-5xl mx-auto space-y-5">
+        <div className="flex flex-col gap-5 max-w-[1200px] mx-auto">
+            <div className="space-y-5">
 
                 {/* Header */}
                 <div className="flex items-center justify-between">
