@@ -19,7 +19,7 @@ import {
     Truck,
     Wrench,
     ChevronRight,
-    Car, Pause,
+    Car, Pause, ChevronDown, ArrowRight,
 } from "lucide-react";
 
 type StatusType = "PENDING" | "ACCEPTED" | "ON_THE_WAY" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
@@ -456,33 +456,26 @@ export default function BookingsPage() {
                             <h1 className="text-xl font-bold text-gray-900">Bookings</h1>
                             <p className="text-xs text-gray-400">Manage your service requests and track job progress</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 w-56">
-                                <Search size={14} className="text-gray-400" />
-                                <input
-                                    className="bg-transparent text-sm outline-none w-full text-gray-700 placeholder-gray-400"
-                                    placeholder="Search booking, customer..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
-                            </div>
-                            <button className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                <SlidersHorizontal size={14} /> Filter
-                            </button>
                             <div className="relative">
-                                <button className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg bg-white hover:bg-gray-50">
-                                    <Bell size={16} className="text-gray-600" />
-                                </button>
-                                <span
-                                    className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white"
-                                    style={{ backgroundColor: "#1e3a8a" }}
+                                <SlidersHorizontal
+                                    size={14}
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+                                />
+
+                                <select className="appearance-none bg-white border border-gray-200 rounded-xl pl-9 pr-10 py-2.5 text-sm font-medium text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-100 cursor-pointer">
+                                    <option>Newest First</option>
+                                    <option>Oldest First</option>
+                                    <option>Highest Earnings</option>
+                                </select>
+
+                                <ChevronDown
+                                    size={16}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
                                 />
                             </div>
-                        </div>
                     {/*</div>*/}
                 </div>
 
-                {/*<div className="max-w-5xl mx-auto px-4 py-5 space-y-4">*/}
                     {/* Filter tabs */}
                     <div className="flex gap-2 flex-wrap">
                         {TAB_FILTERS.map(({ label, key }) => (
@@ -511,7 +504,6 @@ export default function BookingsPage() {
 
                     {/* Split layout */}
                     <div className="flex gap-4 items-start">
-                        {/* LEFT: List */}
                         {/* LEFT: List */}
                         <div className="w-72 flex-shrink-0 space-y-5 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
                             {groups.length === 0 && (
@@ -572,8 +564,8 @@ export default function BookingsPage() {
                                                                 <MapPin size={10} className="flex-shrink-0" /> {b.location}
                                                             </div>
                                                             <span className={`text-xs font-semibold px-2 py-0.5 rounded ml-2 flex-shrink-0 ${statusBadgeStyle(b.status)}`}>
-                                        {statusLabel(b.status)}
-                                    </span>
+                                                                {statusLabel(b.status)}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -606,9 +598,9 @@ export default function BookingsPage() {
                                                                         : "border-gray-200 bg-gray-50"
                                                             }`}
                                                         >
-                                    <span className={isDone ? "text-white" : isActive ? "text-orange-500" : "text-gray-400"}>
-                                        {step.icon}
-                                    </span>
+                                                        <span className={isDone ? "text-white" : isActive ? "text-orange-500" : "text-gray-400"}>
+                                                            {step.icon}
+                                                        </span>
                                                         </div>
                                                         <p className={`text-xs font-semibold text-center leading-tight ${
                                                             isActive ? "text-orange-500" : isDone ? "text-blue-700" : "text-gray-400"
@@ -617,8 +609,17 @@ export default function BookingsPage() {
                                                         </p>
                                                         <p className="text-xs text-gray-400 text-center">{step.sub}</p>
                                                     </div>
+
                                                     {i < steps.length - 1 && (
-                                                        <div className={`h-0.5 w-8 mx-1 mb-6 rounded ${isDone ? "bg-blue-400" : "bg-gray-200"}`} />
+                                                        <div className="flex items-center justify-center mb-8 px-2">
+                                                            <span
+                                                                className={`flex items-center ${
+                                                                    isDone ? "text-blue-500" : "text-gray-300"
+                                                                }`}
+                                                            >
+                                                                <ArrowRight size={16} />
+                                                            </span>
+                                                        </div>
                                                     )}
                                                 </div>
                                             );
@@ -670,9 +671,9 @@ export default function BookingsPage() {
 
                                 {/* Schedule bar */}
                                 <div className="px-6 pb-5">
-                                    <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-lg p-4">
+                                    <div className="grid grid-cols-3 gap-3 bg-gray-100 border border-gray-200 rounded-lg p-4">
                                         <div className="flex items-start gap-2.5">
-                                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#fff7f4" }}>
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0" style={{ backgroundColor: "#fff7f4" }}>
                                                 <Calendar size={15} style={{ color: "#e8683f" }} />
                                             </div>
                                             <div>
@@ -681,8 +682,8 @@ export default function BookingsPage() {
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-2.5">
-                                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-green-50">
-                                                <Clock size={15} className="text-green-600" />
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0" style={{ backgroundColor: "#fff7f4" }}>
+                                                <Clock size={15} style={{ color: "#e8683f" }} />
                                             </div>
                                             <div>
                                                 <p className="text-sm font-semibold text-gray-800">{selected.timeSlot}</p>
@@ -690,8 +691,8 @@ export default function BookingsPage() {
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-2.5">
-                                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#eef2ff" }}>
-                                                <MapPin size={15} style={{ color: "#1e3a8a" }} />
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0" style={{ backgroundColor: "#fff7f4" }}>
+                                                <MapPin size={15} style={{ color: "#e8683f" }} />
                                             </div>
                                             <div>
                                                 <p className="text-sm font-semibold text-gray-800">{selected.location}</p>
