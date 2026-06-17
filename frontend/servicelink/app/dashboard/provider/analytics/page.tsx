@@ -12,6 +12,7 @@ import {
     Pie,
     Cell,
 } from "recharts";
+import MapComponent from "@/components/dashboard/user/map/MapComponent";
 import { MapPin, ChevronDown, Star } from "lucide-react";
 
 const tabs = ["This Week", "This Month", "Last 3 Months", "This Year"];
@@ -279,15 +280,23 @@ export default function AnalyticsPage() {
                     </div>
                 </div>
 
-                {/* Map Coming Soon */}
-                <div className="bg-white rounded-xl border border-dashed border-gray-300 shadow-sm p-12 flex flex-col items-center justify-center text-center">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "#fff3ef" }}>
-                        <MapPin size={22} style={{ color: "#e8683f" }} />
+                {/* Interactive Customer Map */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+                    {/* Optional Map Header */}
+                    <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-base font-semibold text-gray-800">Customer Coverage Map</h3>
+                            <p className="text-xs text-gray-400">Optimizing your service area and travel time.</p>
+                        </div>
+                        <span className="bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                          Live View
+                        </span>
                     </div>
-                    <h3 className="text-base font-semibold text-gray-800 mb-2">Interactive map coming soon</h3>
-                    <p className="text-sm text-gray-400 max-w-xs leading-relaxed">
-                        Soon you'll be able to visualize where your customers are located to optimize your service area and travel time.
-                    </p>
+
+                    {/* Leaflet Map Wrapper */}
+                    <div className="w-full h-[350px] relative z-0">
+                        <MapComponent />
+                    </div>
                 </div>
 
             </div>
