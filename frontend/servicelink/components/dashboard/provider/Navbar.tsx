@@ -7,9 +7,6 @@ export default function Navbar() {
         <header className="h-16 flex-shrink-0 bg-gradient-to-r from-[#FFF5F2] to-[#FFE8DC] border-b border-orange-100 flex items-center justify-between px-6 gap-4">
             {/* Left */}
             <div className="flex items-center gap-4">
-                <button className="text-[#1E3A8A] hover:bg-white/60 p-1.5 rounded-lg transition">
-                    <Menu size={20} />
-                </button>
 
                 <div className="relative hidden sm:block">
                     <Search
