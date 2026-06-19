@@ -96,6 +96,8 @@ export default function SettingsPage() {
   );
   const [language, setLanguage] = useState<"ENG" | "NEP">("ENG");
 
+  const [is2FAEnabled, setIs2FAEnabled] = useState(true);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12 font-sans text-gray-800">
       {/* ── CARD 1: PROFILE INFORMATION ── */}
@@ -385,7 +387,7 @@ export default function SettingsPage() {
             <span className="text-gray-700">Booking Updates</span>
             <button
               onClick={() => setBookingUpdates(!bookingUpdates)}
-              className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${bookingUpdates ? "bg-[#25d366]" : "bg-gray-200"}`}
+              className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${bookingUpdates ? "bg-[#1e3a8a]" : "bg-gray-200"}`}
             >
               <div
                 className={`bg-white w-4.5 h-4.5 rounded-full shadow-xs transform duration-200 ${bookingUpdates ? "translate-x-4.5" : "translate-x-0"}`}
@@ -398,7 +400,7 @@ export default function SettingsPage() {
             <span className="text-gray-700">Promotions & Offers</span>
             <button
               onClick={() => setPromotions(!promotions)}
-              className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${promotions ? "bg-[#25d366]" : "bg-gray-200"}`}
+              className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${promotions ? "bg-[#1e3a8a]" : "bg-gray-200"}`}
             >
               <div
                 className={`bg-white w-4.5 h-4.5 rounded-full shadow-xs transform duration-200 ${promotions ? "translate-x-4.5" : "translate-x-0"}`}
@@ -411,7 +413,7 @@ export default function SettingsPage() {
             <span className="text-gray-700">Provider Arrival Alerts</span>
             <button
               onClick={() => setArrivalAlerts(!arrivalAlerts)}
-              className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${arrivalAlerts ? "bg-[#25d366]" : "bg-gray-200"}`}
+              className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${arrivalAlerts ? "bg-[#1e3a8a]" : "bg-gray-200"}`}
             >
               <div
                 className={`bg-white w-4.5 h-4.5 rounded-full shadow-xs transform duration-200 ${arrivalAlerts ? "translate-x-4.5" : "translate-x-0"}`}
@@ -563,17 +565,20 @@ export default function SettingsPage() {
             </div>
 
             {/* Quick-action state toggle element */}
-            <label className="relative inline-flex items-center cursor-pointer select-none">
-              <input
-                type="checkbox"
-                defaultChecked={true}
-                className="sr-only peer"
-                onChange={() => {
-                  /* Handler to toggle 2FA configuration state */
-                }}
+              <button
+                type="button"
+                onClick={() => setIs2FAEnabled(!is2FAEnabled)}
+              className={`relative inline-flex h-[22px] w-10 flex-shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${
+                  is2FAEnabled ? "bg-[#1e3a8a]" : "bg-gray-200"
+              }`}
+              >
+              {/* Moving Thumb Indicator */}
+              <div
+                  className={`pointer-events-none inline-block h-[18px] w-[18px] transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                      is2FAEnabled ? "translate-x-[18px]" : "translate-x-0"
+                  }`}
               />
-              <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#e8683f]"></div>
-            </label>
+            </button>
           </div>
 
           {/* ITEM 4: Report an Issue */}
