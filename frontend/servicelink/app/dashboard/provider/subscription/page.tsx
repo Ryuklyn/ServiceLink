@@ -2,40 +2,36 @@
 
 import { useState } from "react";
 import { Calendar, RefreshCw, Star, Check, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 const billingHistory = [
     { invoice: "INV-2026-#6", date: "June 1, 2026", plan: "Monthly", amount: "Rs. 500", method: "eSewa", status: "Paid" },
     { invoice: "INV-2026-#5", date: "May 1, 2026", plan: "Monthly", amount: "Rs. 500", method: "Khalti", status: "Paid" },
     { invoice: "INV-2026-#4", date: "April 1, 2026", plan: "Monthly", amount: "Rs. 500", method: "eSewa", status: "Paid" },
-    { invoice: "INV-2026-#3", date: "March 1, 2026", plan: "Monthly", amount: "Rs. 500", method: "IME Pay", status: "Paid" },
+    { invoice: "INV-2026-#3", date: "March 1, 2026", plan: "Monthly", amount: "Rs. 500", method: "Khalti", status: "Paid" },
     { invoice: "INV-2026-#2", date: "February 1, 2026", plan: "Monthly", amount: "Rs. 500", method: "eSewa", status: "Paid" },
 ];
 
-const ESewaIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="6" fill="#60BB46"/>
-        <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial">eSewa</text>
-    </svg>
-);
-
-const KhaltiIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="6" fill="#5C2D91"/>
-        <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="Arial">K</text>
-    </svg>
-);
-
-const IMEPayIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="6" fill="#E31837"/>
-        <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial">IME</text>
-    </svg>
-);
-
 const methodIcon = (method: string) => {
-    if (method === "eSewa") return <ESewaIcon />;
-    if (method === "Khalti") return <KhaltiIcon />;
-    return <IMEPayIcon />;
+    switch (method) {
+        case "eSewa":
+            return (
+                <img
+                    src="/images/esewa.png"
+                    alt="eSewa"
+                    className="h-10 w-full object-contain"
+                />
+            );
+
+        case "Khalti":
+            return (
+                <img
+                    src="/images/khalti.png"
+                    alt="Khalti"
+                    className="h-10 w-full object-contain"
+                />
+            );
+    }
 };
 
 const methodBadgeColor = (method: string) => {
@@ -171,32 +167,37 @@ export default function SubscriptionPage() {
                     <div className="flex items-center gap-2 mb-3">
                         <h2 className="text-sm font-semibold text-gray-800">Payment Method</h2>
                     </div>
-                    <div className="flex gap-2 mb-3">
+                    <div className="flex gap-3 mb-3">
                         {/* eSewa */}
                         <button
                             onClick={() => setSelectedPayment("esewa")}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${selectedPayment === "esewa" ? "border-green-500 bg-green-50 text-green-700" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
+                            className={`w-28 h-16 flex items-center justify-center rounded-xl border-2 transition-all ${
+                                selectedPayment === "esewa"
+                                    ? "border-green-500 bg-green-50"
+                                    : "border-gray-200 hover:border-gray-300"
+                            }`}
                         >
-                            <svg width="16" height="16" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="40" height="40" rx="5" fill="#60BB46"/>
-                                <path d="M8 20C8 13.37 13.37 8 20 8C24.2 8 27.9 10.1 30.1 13.3L26.4 15.5C24.9 13.4 22.6 12 20 12C15.58 12 12 15.58 12 20C12 24.42 15.58 28 20 28C22.6 28 24.9 26.6 26.4 24.5L30.1 26.7C27.9 29.9 24.2 32 20 32C13.37 32 8 26.63 8 20Z" fill="white"/>
-                                <path d="M22 17H30V20H22V17Z" fill="white"/>
-                                <path d="M22 20H30V23H22V20Z" fill="white"/>
-                            </svg>
-                            eSewa
+                            <img
+                                src="/images/esewa.png"
+                                alt="eSewa"
+                                className="max-h-20 max-w-[100%] object-contain"
+                            />
                         </button>
 
                         {/* Khalti */}
                         <button
                             onClick={() => setSelectedPayment("khalti")}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${selectedPayment === "khalti" ? "border-purple-500 bg-purple-50 text-purple-700" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
+                            className={`w-28 h-16 flex items-center justify-center rounded-xl border-2 transition-all ${
+                                selectedPayment === "khalti"
+                                    ? "border-purple-500 bg-purple-50"
+                                    : "border-gray-200 hover:border-gray-300"
+                            }`}
                         >
-                            <svg width="16" height="16" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="40" height="40" rx="5" fill="#5C2D91"/>
-                                <circle cx="20" cy="14" r="5" fill="#F7941D"/>
-                                <path d="M10 32C10 26.48 14.48 22 20 22C25.52 22 30 26.48 30 32H10Z" fill="white"/>
-                            </svg>
-                            Khalti
+                            <img
+                                src="/images/khalti.png"
+                                alt="Khalti"
+                                className="max-h-20 max-w-[100%] object-contain"
+                            />
                         </button>
                     </div>
                     <p className="text-xs text-gray-400">Payments are processed securely. ServiceLink does not store your payment credentials.</p>
@@ -244,10 +245,17 @@ export default function SubscriptionPage() {
                                     <td className="px-5 py-3 text-xs text-gray-600">{row.plan}</td>
                                     <td className="px-5 py-3 text-xs font-semibold text-gray-800">{row.amount}</td>
                                     <td className="px-5 py-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs font-semibold ${methodBadgeColor(row.method)}`}>
-                        {methodIcon(row.method)}
-                          {row.method}
-                      </span>
+                      {/*<span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs font-semibold ${methodBadgeColor(row.method)}`}>*/}
+                      {/*  {methodIcon(row.method)}*/}
+                      {/*    {row.method}*/}
+                      {/*</span>*/}
+                                        <span
+                                            className={`inline-flex items-center justify-center min-w-[70px] h-6 rounded border ${methodBadgeColor(
+                                                row.method
+                                            )}`}
+                                        >
+                                      {methodIcon(row.method)}
+                                    </span>
                                     </td>
                                     <td className="px-5 py-3">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 text-xs font-semibold">
