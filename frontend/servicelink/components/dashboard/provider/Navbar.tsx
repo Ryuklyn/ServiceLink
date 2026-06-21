@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu, Bell, Search } from "lucide-react";
+import Link from "next/link";
 
 export default function Navbar() {
     return (
@@ -33,14 +34,14 @@ export default function Navbar() {
                 </div>
 
                 {/* Notification Bell */}
-                <div className="relative">
-                    <button className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-orange-200 text-[#1E3A8A] hover:bg-orange-50 transition shadow-sm">
+                <Link href="/dashboard/provider/notifications" className="relative inline-block">
+                    <button className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-orange-200 text-[#E8683F] hover:bg-orange-50 transition shadow-sm">
                         <Bell size={17} />
                     </button>
-                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#E8683F] text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
-            2
-          </span>
-                </div>
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#1E3A8A] text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                        2
+                      </span>
+                </Link>
 
                 {/* Avatar */}
                 <div className="w-9 h-9 bg-[#1E3A8A] text-white rounded-full flex items-center justify-center font-bold text-xs border-2 border-white shadow-md cursor-pointer hover:opacity-90 transition">
