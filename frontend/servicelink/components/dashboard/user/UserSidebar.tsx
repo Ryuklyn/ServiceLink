@@ -65,14 +65,24 @@ export default function Sidebar({ userProfile }: SidebarProps) {
       className="w-56 text-white h-screen flex flex-col shrink-0"
       style={{ background: "#1e3a8a" }}
     >
+
       {/* Logo */}
       <div className="px-5 pt-6 pb-6">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-[#e8683f] rounded-xl flex items-center justify-center font-bold text-base shrink-0">
-            S
-          </div>
+          <Image
+              src="/images/logo.png"
+              alt="ServiceLink Logo"
+              width={30}
+              height={30}
+              className="h-12 w-12 object-contain shrink-0"
+              priority
+          />
+
           <div>
-            <p className="text-base font-bold leading-tight">ServiceLink</p>
+            <p className="text-base font-bold leading-tight">
+              <span className="text-[#1e3a8a]">Service</span>
+              <span className="text-[#e8683f]">Link</span>
+            </p>
             <p className="text-xs text-blue-200 leading-tight">
               Trusted Local Services
             </p>
