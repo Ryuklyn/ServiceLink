@@ -16,7 +16,7 @@ import {
 
 const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard/business" },
-    { label: "Provider Pool", icon: Users, href: "/dashboard/business/providers" },
+    { label: "Provider Pool", icon: Users, href: "/dashboard/business/providerpool" },
     { label: "Job Tickets", icon: Ticket, href: "/dashboard/business/jobs" },
     { label: "SLA Dashboard", icon: BarChart2, href: "/dashboard/business/sla" },
     { label: "Billing", icon: CreditCard, href: "/dashboard/business/billing" },
