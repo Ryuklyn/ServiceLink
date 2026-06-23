@@ -10,7 +10,7 @@ export default function SLAPerformance() {
     const dashOffset = circumference * (1 - onTimePct / 100);
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-xl h-[400px] w-sm border border-gray-100 p-5">
             <h2 className="text-base font-bold text-gray-800 mb-4">SLA Performance</h2>
             <div className="flex justify-center mb-6">
                 <div className="relative w-36 h-36">
