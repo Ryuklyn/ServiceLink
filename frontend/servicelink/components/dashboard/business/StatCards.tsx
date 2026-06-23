@@ -6,16 +6,18 @@ const stats = [
         value: "9",
         sub: "3 pending approval",
         icon: Users,
-        iconBg: "bg-blue-50",
-        iconColor: "text-blue-500",
+        // Using #1e3a8a (Deep Blue) with 10% opacity for the background
+        iconBg: "bg-[#1e3a8a]/10",
+        iconColor: "text-[#1e3a8a]",
     },
     {
         label: "Jobs This Month",
         value: "14",
         sub: "3 in progress",
         icon: ClipboardList,
-        iconBg: "bg-orange-50",
-        iconColor: "text-orange-500",
+        // Using #e8683f (Brand Orange) with 10% opacity for the background
+        iconBg: "bg-[#e8683f]/10",
+        iconColor: "text-[#e8683f]",
     },
     {
         label: "SLA Compliance",
@@ -23,6 +25,7 @@ const stats = [
         sub: "+2.1% vs last month",
         badge: "+2.1%",
         icon: TrendingUp,
+        // Kept green for success/growth context, or switch to your brand colors if preferred
         iconBg: "bg-green-50",
         iconColor: "text-green-500",
     },
@@ -44,7 +47,7 @@ export default function StatCards() {
                     <div>
                         <p className="text-sm text-gray-500 font-medium">{s.label}</p>
                         <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
-                        <p className="text-xs text-gray-500 mt-1">{s.sub}</p>
+                        <p className="text-xs text-gray-400 mt-1">{s.sub}</p>
                         {s.badge && (
                             <div className="flex items-center gap-1 mt-1">
                                 <span className="text-green-500 text-xs font-semibold">↗ {s.badge}</span>
