@@ -1,87 +1,104 @@
-# ServiceLink
+# ServiceLink 🔗
 
-ServiceLink is a comprehensive platform designed to connect service providers with customers seamlessly. It streamlines the process of finding, booking, and managing services, making it an essential tool for modern businesses and consumers.
+ServiceLink is a hybrid **C2C and B2B on-demand service marketplace** built for Nepal.
 
-## Features
+Individual users can discover and book verified local service providers by time slot. **ServiceLink Pro** provides an enterprise tier for hotels, hospitals, and businesses to source and manage service providers in bulk — making it a complete solution for both everyday consumers and organizations.
 
-- **User Authentication**: Secure login and registration system.
-- **Service Marketplace**: Browse and search for various services.
-- **Booking Management**: Schedule and track service appointments.
-- **User Profiles**: Dedicated profiles for both service providers and customers.
-- **Responsive Design**: Optimized for both desktop and mobile devices.
+---
 
-## Tech Stack
+## 🚀 Key Features
+
+### Core Platform (C2C)
+- **WhatsApp OTP Verification** — Twilio Sandbox integration for secure user authentication via WhatsApp
+- **Dual Payment Gateway** — eSewa and Khalti integration for seamless Nepal-local transactions
+- **Time-Slot Booking** — Providers operate as freelancers, accepting bookings based on availability
+- **Role-Based Access Control** — Separate flows and permissions for customers, providers, and admins
+- **JWT Authentication** — Secure stateless authentication across all endpoints
+- **Media Upload Pipeline** — Supabase Storage for provider profile images/videos, stored as URLs in MySQL
+- **SMTP Email Notifications** — Booking confirmations, status updates, and alerts
+- **WhatsApp Deep-Link (wa.me)** — Direct communication between users and providers
+
+### ServiceLink Pro (B2B)
+- **Enterprise Tier** — Dedicated portal for hotels, hospitals, and businesses
+- **Bulk Service Sourcing** — Organizations can request and manage multiple providers simultaneously
+- **Business Dashboard** — Manage provider relationships, bookings, and service history at scale
+
+---
+
+## 🛠 Tech Stack
 
 ### Backend
-
 - **Java 21**
-- **Spring Boot 4.0.4**
-- **Spring Data JPA**
+- **Spring Boot**
+- **Spring Security + JWT**
+- **Spring Data JPA / Hibernate**
 - **MySQL**
-- **Spring Security**
+- **Twilio (WhatsApp OTP)**
+- **JavaMail (SMTP)**
 
 ### Frontend
-
 - **Next.js**
 - **React**
 - **Tailwind CSS**
+- **TypeScript**
 
-## Getting Started
+### Infrastructure & Integrations
+- **Supabase** — Media storage
+- **eSewa & Khalti** — Payment gateways
+- **Git / GitHub** — Version control
+
+---
+
+## 📦 Getting Started
 
 ### Prerequisites
-
 - Java 21 or higher
 - Node.js 18 or higher
 - MySQL Server
+- Supabase account
+- Twilio account (Sandbox)
 
 ### Installation
 
 1. **Clone the repository**
-
-   ```bash
-   git clone <repository-url>
+```bash
+   git clone https://github.com/Ryuklyn/ServiceLink.git
    cd ServiceLink
-   ```
+```
 
 2. **Backend Setup**
-   - Navigate to the backend directory:
-     ```bash
-     cd backend
-     ```
-   - Configure your MySQL database in `src/main/resources/application.properties`:
-     ```properties
-     spring.datasource.url=jdbc:mysql://localhost:3306/servicelink
-     spring.datasource.username=your_username
-     spring.datasource.password=your_password
-     ```
-   - Run the backend:
-     ```bash
-     mvn spring-boot:run
-     ```
+```bash
+   cd backend
+```
+Configure `src/main/resources/application.properties`:
+```properties
+   spring.datasource.url=jdbc:mysql://localhost:3306/servicelink
+   spring.datasource.username=your_username
+   spring.datasource.password=your_password
+```
+Run:
+```bash
+   mvn spring-boot:run
+```
 
 3. **Frontend Setup**
-   - Navigate to the frontend directory:
-     ```bash
-     cd frontend
-     ```
-   - Install dependencies:
-     ```bash
-     npm install
-     ```
-   - Run the frontend:
-     ```bash
-     npm run dev
-     ```
+```bash
+   cd frontend/servicelink
+   npm install
+   npm run dev
+```
 
-## Usage
+4. Open `http://localhost:3000`
 
-Once both the backend and frontend are running:
+---
 
-- Open your browser and navigate to `http://localhost:3000`
-- Register a new account or log in with existing credentials
-- Explore the marketplace and find services
-- Book appointments and manage your schedule
+## 👤 Author
 
-## License
+**Rukesh Maharjan**
+[LinkedIn](https://linkedin.com/in/rukesh-maharjan) • [GitHub](https://github.com/Ryuklyn)
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.

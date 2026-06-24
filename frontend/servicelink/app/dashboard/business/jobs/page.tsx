@@ -809,7 +809,7 @@ export default function JobTicketPage() {
                                     <select
                                         value={formData.category}
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                        className="w-full text-slate-800 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
                                     >
                                         <option value="HVAC">HVAC</option>
                                         <option value="Electrical">Electrical</option>
@@ -824,7 +824,7 @@ export default function JobTicketPage() {
                                     <select
                                         value={formData.priority}
                                         onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                                        className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                        className="w-full text-slate-800 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
                                     >
                                         <option value="LOW">LOW</option>
                                         <option value="MEDIUM">MEDIUM</option>
@@ -841,7 +841,7 @@ export default function JobTicketPage() {
                                     placeholder="e.g. Floor 3, Room 302"
                                     value={formData.location}
                                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                    className="w-full text-slate-800 placeholder-slate-400 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
                                 />
                             </div>
 
@@ -852,12 +852,12 @@ export default function JobTicketPage() {
                                     placeholder="Describe the job requirements, scope, and any special instructions..."
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] resize-none"
+                                    className="w-full text-slate-800 placeholer-slate-400 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] resize-none"
                                 />
                             </div>
 
                             {/* Recruitment Type block */}
-                            <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-100 space-y-4">
+                            <div className="bg-white rounded-xl p-4 border border-slate-100 space-y-4">
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-2.5">Recruitment Type</label>
                                     <div className="grid grid-cols-2 gap-3">
@@ -865,8 +865,8 @@ export default function JobTicketPage() {
                                             onClick={() => setFormData({ ...formData, recruitment: "Direct" })}
                                             className={`flex items-center justify-center gap-2 rounded-xl border-2 py-2.5 text-sm font-bold transition-colors ${
                                                 formData.recruitment === "Direct"
-                                                    ? "border-[#1e3a8a] text-[#1e3a8a] bg-white"
-                                                    : "border-transparent bg-white text-slate-600"
+                                                    ? "border-[#1e3a8a] text-white bg-[#1e3a8a] font-semibold"
+                                                    : "border border-slate-200 bg-white text-slate-600"
                                             }`}
                                         >
                                             <User size={15} />
@@ -876,8 +876,8 @@ export default function JobTicketPage() {
                                             onClick={() => setFormData({ ...formData, recruitment: "Pool" })}
                                             className={`flex items-center justify-center gap-2 rounded-xl border-2 py-2.5 text-sm font-bold transition-colors ${
                                                 formData.recruitment === "Pool"
-                                                    ? "border-[#1e3a8a] text-[#1e3a8a] bg-blue-50/40"
-                                                    : "border-transparent bg-white text-slate-600"
+                                                    ? "border-[#1e3a8a] text-white bg-[#1e3a8a] font-semibold"
+                                                    : " border border-slate-200 bg-white text-slate-600"
                                             }`}
                                         >
                                             <Users size={15} />
@@ -904,8 +904,8 @@ export default function JobTicketPage() {
                                                     onClick={() => setFormData({ ...formData, assignmentMode: "Single" })}
                                                     className={`rounded-xl border-2 py-2.5 text-sm font-bold transition-colors ${
                                                         formData.assignmentMode === "Single"
-                                                            ? "border-[#1e3a8a] text-[#1e3a8a] bg-blue-50/40"
-                                                            : "border-transparent bg-white text-slate-600"
+                                                            ? "border-[#1e3a8a] text-white bg-[#1e3a8a] font-semibold"
+                                                            : "border border-slate-200 bg-white text-slate-600"
                                                     }`}
                                                 >
                                                     Single Provider
@@ -914,8 +914,8 @@ export default function JobTicketPage() {
                                                     onClick={() => setFormData({ ...formData, assignmentMode: "Team" })}
                                                     className={`rounded-xl border-2 py-2.5 text-sm font-bold transition-colors ${
                                                         formData.assignmentMode === "Team"
-                                                            ? "border-[#1e3a8a] text-[#1e3a8a] bg-white"
-                                                            : "border-transparent bg-white text-slate-600"
+                                                            ? "border-[#1e3a8a] text-white bg-[#1e3a8a] font-semibold"
+                                                            : "border border-slate-200 bg-white text-slate-600"
                                                     }`}
                                                 >
                                                     Team Assignment
@@ -960,12 +960,12 @@ export default function JobTicketPage() {
                                                                 onClick={() => toggleTeamMember(p.id)}
                                                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-colors ${
                                                                     selected
-                                                                        ? "border-[#1e3a8a] bg-[#1e3a8a]/5 text-[#1e3a8a]"
+                                                                        ? "border-[#1e3a8a] bg-[#1e3a8a] text-white font-semibold"
                                                                         : "border-gray-200 text-slate-600 hover:border-slate-300"
                                                                 }`}
                                                             >
                                                                 <span
-                                                                    className={`w-2 h-2 rounded-full ${selected ? "bg-[#1e3a8a]" : "bg-slate-300"}`}
+                                                                    className={`w-2 h-2 rounded-full ${selected ? "bg-white" : "bg-slate-300"}`}
                                                                 />
                                                                 {p.name}
                                                                 <span className="text-slate-400 font-normal">{p.role}</span>
@@ -993,7 +993,7 @@ export default function JobTicketPage() {
                                     <select
                                         value={formData.duration}
                                         onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                                        className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                        className="w-full text-slate-800 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
                                     >
                                         {DURATION_OPTIONS.map((d) => (
                                             <option key={d} value={d}>
@@ -1009,7 +1009,7 @@ export default function JobTicketPage() {
                                         placeholder="Rs. 5,000"
                                         value={formData.budget}
                                         onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                                        className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                        className="w-full text-slate-800 placeholder-text-slate-400 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
                                     />
                                 </div>
                             </div>
@@ -1038,7 +1038,7 @@ export default function JobTicketPage() {
                                         type="datetime-local"
                                         value={formData.slaDeadline}
                                         onChange={(e) => setFormData({ ...formData, slaDeadline: e.target.value })}
-                                        className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                        className="w-full text-slate-800 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
                                     />
                                 </div>
                                 <div>
@@ -1047,7 +1047,7 @@ export default function JobTicketPage() {
                                         type="text"
                                         value={formData.requestedBy}
                                         onChange={(e) => setFormData({ ...formData, requestedBy: e.target.value })}
-                                        className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                        className="w-full text-slate-800 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
                                     />
                                 </div>
                             </div>

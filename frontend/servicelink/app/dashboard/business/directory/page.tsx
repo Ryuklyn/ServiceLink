@@ -164,7 +164,7 @@ export default function DirectoryPage() {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search by provider name, category, or specialization..."
-                        className="w-full rounded-xl border border-gray-200 pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                        className="w-full text-slate-800 placeholder-text-slate-400 rounded-xl border border-gray-200 pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
                     />
                 </div>
 
