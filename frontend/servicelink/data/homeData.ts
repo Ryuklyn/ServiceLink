@@ -9,7 +9,13 @@ import {
   Monitor,
 } from "lucide-react";
 
-export const NAV_LINKS = ["Home", "Services", "Track", "Calculator"];
+export const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Services", href: "/services" },
+  { label: "Become a Provider", href: "/become-a-provider" },
+  { label: "ServiceLink Pro", href: "/servicelink-pro" },
+  { label: "About Us", href: "/about" },
+];
 
 export const HERO_STATS = [
   { value: "10K+", label: "Happy Customers" },
@@ -129,8 +135,8 @@ export const WHY_FEATURES = [
     icon: "BadgeCheck",
   },
   {
-    title: "Escrow Payments",
-    desc: "Your money is safe — payment released only after service is complete.",
+    title: "Secure Payments",
+    desc: "Your money is safe — Pay safely via eSewa and Khalti.",
     icon: "Wallet",
   },
   {
@@ -171,7 +177,7 @@ export const HOW_IT_WORKS = [
   {
     num: "03",
     title: "Secure Payment",
-    desc: "Pay via Khalti/eSewa with escrow protection.",
+    desc: "Pay securely via Khalti/eSewa.",
     icon: "CreditCard",
   },
   {

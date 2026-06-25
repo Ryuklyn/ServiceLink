@@ -7,6 +7,7 @@ import FeaturedServices from "@/components/home/FeaturedServices";
 import WhyServiceLink from "@/components/home/WhyServiceLink";
 import Testimonials from "@/components/home/Testimonials";
 import CTA from "@/components/home/CTA";
+import ServPro from "@/components/home/ServPro";
 
 export default function Home() {
 
@@ -18,6 +19,7 @@ export default function Home() {
         <Hero />
         <HowItWorks />
         <Categories />
+          <ServPro />
         <FeaturedServices />
         <WhyServiceLink />
         <Testimonials />

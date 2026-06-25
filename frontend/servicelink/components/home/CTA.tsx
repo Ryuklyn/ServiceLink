@@ -2,7 +2,7 @@ export default function CTA() {
   return (
     <section className="py-12 md:py-16 bg-white relative">
       <div className="max-w-full mx-auto px-4 lg:px-8">
-        <div className="bg-gradient-to-br from-[#1e40af] to-[#1e3a8a] rounded-[2.5rem] p-8 md:p-12 lg:p-16 text-center relative overflow-hidden shadow-2xl">
+        <div className="bg-gradient-to-br from-[#1e40af] to-[#1e3a8a] rounded-2xl p-8 md:p-12 lg:p-16 text-center relative overflow-hidden shadow-2xl">
           {/* Decorative shapes */}
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-500 opacity-20 blur-3xl mix-blend-screen"></div>
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-blue-400 opacity-20 blur-3xl mix-blend-screen"></div>
