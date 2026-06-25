@@ -12,7 +12,7 @@ import {
 export const NAV_LINKS = [
   { label: "Home", href: "/" },
   { label: "Services", href: "/services" },
-  { label: "Become a Provider", href: "/become-a-provider" },
+  { label: "Become a Provider", href: "/becomeprovider" },
   { label: "ServiceLink Pro", href: "/servicelink-pro" },
   { label: "About Us", href: "/about" },
 ];

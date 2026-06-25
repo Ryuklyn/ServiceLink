@@ -13,7 +13,7 @@ export default function Home() {
 
   return (
     <div className="font-sans antialiased text-gray-900 bg-white min-h-screen flex flex-col">
-      <Navbar />
+      {/*<Navbar />*/}
 
       <main className="flex-grow">
         <Hero />
@@ -26,7 +26,7 @@ export default function Home() {
         <CTA />
       </main>
 
-      <Footer />
+      {/*<Footer />*/}
     </div>
   );
 }

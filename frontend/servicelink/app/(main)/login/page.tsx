@@ -62,7 +62,7 @@ const ROLE_CARDS: RoleCard[] = [
 export default function SignInPage() {
   return (
     <div className="min-h-screen bg-[#e8edf5] flex flex-col">
-      <Navbar />
+      {/*<Navbar />*/}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-16">
