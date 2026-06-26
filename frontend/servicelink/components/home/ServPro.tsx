@@ -9,7 +9,7 @@ export default function ServPro() {
 
     return (
         <section className="bg-white py-20">
-            <div className="max-w-7xl mx-auto px-4 lg:px-8">
+            <div className="max-w-full mx-auto px-4 lg:px-8">
                 {/* Section Heading */}
                 <div className="text-center mb-12">
           <span className="text-sm font-bold uppercase tracking-wider text-[#e8683f]">

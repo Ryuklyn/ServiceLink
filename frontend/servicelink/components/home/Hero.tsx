@@ -1,5 +1,6 @@
 import { HERO_STATS, FEATURED_SERVICES } from "@/data/homeData";
 import { MoveRight } from "lucide-react";
+import Link from 'next/link';
 
 export default function Hero() {
   // Take 4 featured services for the hero right-side widget
@@ -38,12 +39,29 @@ export default function Hero() {
                 Book a Service
                 <MoveRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
-              <button className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap">
+              {/*<button*/}
+              {/*    href="/servicelinkpro"*/}
+              {/*    className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap">*/}
+              {/*  For Businesses*/}
+              {/*</button>*/}
+              {/*<button*/}
+              {/*    href={"/becomeprovider"}*/}
+              {/*    className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap">*/}
+              {/*  Become a Provider*/}
+              {/*</button>*/}
+              <Link
+                  href="/servicelinkpro"
+                  className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap"
+              >
                 For Businesses
-              </button>
-              <button className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap">
+              </Link>
+
+              <Link
+                  href="/becomeprovider"
+                  className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap"
+              >
                 Become a Provider
-              </button>
+              </Link>
             </div>
 
             {/* Stats */}

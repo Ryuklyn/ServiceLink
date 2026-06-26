@@ -218,83 +218,100 @@ export default function BecomeAProviderPage() {
     return (
         <div className="bg-white">
             {/* Hero Section */}
-            <section className="bg-[#1e3a8a] py-16">
-                <div className="max-w-7xl mx-auto px-4 lg:px-8 grid lg:grid-cols-2 gap-12 items-center">
+            <section className="bg-[#1e3a8a] py-20 min-h-[calc(100vh-80px)] flex items-center">
+                <div className="max-w-7xl mx-auto px-4 lg:px-8 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center w-full">
                     {/* Left: Text */}
-                    <div>
-                        <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight">
-                            <span className="text-white">Turn Your Skills Into</span>
+                    <div className="flex flex-col justify-center">
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
+                            <span className="text-white">Turn Your</span>
                             <br />
-                            <span className="text-[#e8683f]">Steady</span>{" "}
-                            <span className="text-white">Income.</span>
+                            <span className="text-[#e8683f]"> Skills Into</span>{" "}
+                            <br/>
+                            <span className="text-white"> Steady Income.</span>
                         </h1>
-                        <p className="mt-5 text-white leading-relaxed max-w-md">
+                        <p className="mt-6 text-white text-base lg:text-lg leading-relaxed max-w-lg">
                             Join 500+ verified professionals already earning through
                             ServiceLink Nepal. Customers come to you — you just show up and
                             deliver.
                         </p>
 
-                        <div className="mt-7 flex flex-col sm:flex-row gap-3">
-                            <button className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group">
+                        <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                            <button className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-7 py-4 rounded-xl shadow-lg transition-all group">
                                 Register as a Provider
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </button>
-                            <button className="text-[#1e3a8a] bg-white font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl hover:bg-white transition-all">
+                            <button className="text-[#1e3a8a] bg-white font-semibold flex items-center justify-center px-7 py-4 rounded-xl hover:bg-gray-50 transition-all shadow-md">
                                 See Pricing Plans
                             </button>
                         </div>
 
-                        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-500">
-              <span className="flex items-center gap-1.5 text-white">
-                <ShieldCheck className="w-4 h-4 text-[#e8683f] font-semibold" />
-                Verified Badge
-              </span>
+                        <hr className="border-white/20 mt-10" />
+                        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-gray-500">
+                <span className="flex items-center gap-1.5 text-white">
+                    <ShieldCheck className="w-4 h-4 text-[#e8683f] font-semibold" />
+                    Verified Badge
+                </span>
                             <span className="flex items-center gap-1.5 text-white">
-                <CalendarClock className="w-4 h-4 text-[#e8683f] font-semibold" />
-                Flexible Schedule
-              </span>
+                    <CalendarClock className="w-4 h-4 text-[#e8683f] font-semibold" />
+                    Flexible Schedule
+                </span>
                             <span className="flex items-center gap-1.5 text-white">
-                <FaLeaf className="w-3.5 h-3.5 text-[#e8683f] font-semibold" />
-                Fast Payments
-              </span>
+                    <FaLeaf size="14" color="#e8683f" />
+                    Fast Payment
+                </span>
                             <span className="flex items-center gap-1.5 text-white">
-                <MapPin className="w-4 h-4 text-[#e8683f] font-semibold" />
-                Nepal-Built
-              </span>
+                    {/* The Flag Mask Icon */}
+                                <span
+                                    className="w-4 h-4 bg-[#e8683f] inline-block"
+                                    style={{
+                                        maskImage: 'url(/images/Nepal.png)',
+                                        WebkitMaskImage: 'url(/images/Nepal.png)',
+                                        maskSize: 'contain',
+                                        WebkitMaskSize: 'contain',
+                                        maskRepeat: 'no-repeat',
+                                        WebkitMaskRepeat: 'no-repeat',
+                                        maskPosition: 'center',
+                                        WebkitMaskPosition: 'center'
+                                    }}
+                                />
+                    <span className="font-semibold text-white">Nepal-Built</span>
+                </span>
                         </div>
                     </div>
 
                     {/* Right: Image + Floating Stats Card */}
-                    <div className="relative flex justify-center lg:justify-end">
-                        <img
-                            src="https://images.unsplash.com/photo-1621905251918-48416bd8575a?q=80&w=1000&auto=format&fit=crop"
-                            alt="Verified ServiceLink provider"
-                            className="w-full max-w-sm rounded-2xl object-cover h-[420px]"
-                        />
+                    <div className="relative flex justify-center lg:justify-end w-full">
+                        <div className="relative w-full max-w-sm lg:max-w-md">
+                            <img
+                                src="https://images.unsplash.com/photo-1621905251918-48416bd8575a?q=80&w=1000&auto=format&fit=crop"
+                                alt="Verified ServiceLink provider"
+                                className="w-full rounded-2xl object-cover h-[460px] lg:h-[500px] shadow-2xl"
+                            />
 
-                        <div className="absolute -right-2 sm:right-4 bottom-6 bg-white rounded-2xl shadow-xl p-5 w-48 space-y-3">
-                            <div>
-                                <p className="text-xs text-gray-500">Total Earnings</p>
-                                <p className="font-bold text-gray-900">Rs. 45,680</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500">Completed Jobs</p>
-                                <p className="font-bold text-gray-900">
-                                    128{" "}
-                                    <span className="text-green-600 text-xs font-semibold">
-                    ↑ 18%
-                  </span>
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500">Rating</p>
-                                <p className="font-bold text-gray-900 flex items-center gap-1">
-                                    4.8 <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-green-600 text-xs font-semibold pt-1 border-t border-gray-100">
-                                <Check className="w-3.5 h-3.5" />
-                                Verified Provider
+                            <div className="absolute -right-2 sm:-right-4 bottom-8 bg-white rounded-2xl shadow-2xl p-5 w-52 space-y-3 border border-gray-100 transition-all">
+                                <div>
+                                    <p className="text-xs text-gray-400 font-medium">Total Earnings</p>
+                                    <p className="font-bold text-gray-900 text-lg">Rs. 45,680</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 font-medium">Completed Jobs</p>
+                                    <p className="font-bold text-gray-900 text-lg">
+                                        128{" "}
+                                        <span className="text-green-600 text-xs font-semibold bg-green-50 px-1.5 py-0.5 rounded ml-1">
+                                ↑ 18%
+                            </span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 font-medium">Rating</p>
+                                    <p className="font-bold text-gray-900 text-lg flex items-center gap-1">
+                                        4.8 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-green-600 text-xs font-semibold pt-2 border-t border-gray-100">
+                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                    Verified Provider
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -72,10 +72,10 @@ export default function Footer() {
   <div>
     <h3 className="text-white font-semibold mb-6">Quick Links</h3>
     <ul className="space-y-4 text-sm text-gray-400">
-      <li><a href="/(main)/services" className="hover:text-white transition">Browse Service</a></li>
-      <li><a href="/(main)/becomeprovider" className="hover:text-white transition">Become a Provider</a></li>
-      <li><a href="/frontend/servicelink/app/(main)/servicelinkpro" className="hover:text-white transition">ServiceLink Pro</a></li>
-      <li><a href="/frontend/servicelink/app/(main)/aboutus" className="hover:text-white transition">About Us</a></li>
+      <li><a href="/services" className="hover:text-white transition">Browse Service</a></li>
+      <li><a href="/becomeprovider" className="hover:text-white transition">Become a Provider</a></li>
+      <li><a href="/servicelinkpro" className="hover:text-white transition">ServiceLink Pro</a></li>
+      <li><a href="/aboutus" className="hover:text-white transition">About Us</a></li>
     </ul>
   </div>
 

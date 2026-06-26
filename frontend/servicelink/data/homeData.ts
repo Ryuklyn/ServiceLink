@@ -13,8 +13,8 @@ export const NAV_LINKS = [
   { label: "Home", href: "/" },
   { label: "Services", href: "/services" },
   { label: "Become a Provider", href: "/becomeprovider" },
-  { label: "ServiceLink Pro", href: "/servicelink-pro" },
-  { label: "About Us", href: "/about" },
+  { label: "ServiceLink Pro", href: "/servicelinkpro" },
+  { label: "About Us", href: "/aboutus" },
 ];
 
 export const HERO_STATS = [
