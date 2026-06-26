@@ -23,9 +23,10 @@ import {
     UserCog,
     CreditCard,
     Clock,
-    XCircle,
+    XCircle, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { FaUsers } from "react-icons/fa";
+import {useState} from "react";
 
 const FEATURES = [
     {
@@ -146,6 +147,54 @@ const TRUSTED_ACROSS = [
         img: "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=800&auto=format&fit=crop",
     },
 ];
+const PRO_FAQS = [
+    {
+        q: "Is there a free trial?",
+        a: "Yes — all new providers get 30 days free with full access to all features before choosing a plan.",
+    },
+    {
+        q: "When do I receive payment after completing a job?",
+        a: "Payment is released to your eSewa or Khalti account automatically once the job is marked complete by the customer.",
+    },
+    {
+        q: "Can I pause my subscription?",
+        a: "Yes, you can pause or cancel your plan anytime from your provider dashboard under Subscription settings.",
+    },
+    {
+        q: "Do I need a certification to join?",
+        a: "Certifications are encouraged but not mandatory for all service types. Basic services require ID verification only. Specialized services (electrical, plumbing) require relevant credentials.",
+    },
+    {
+        q: "What if a customer cancels a booking?",
+        a: "You'll be notified immediately and the time slot reopens for new bookings. Cancellation policies protect your time.",
+    },
+];
+
+function ProFaqItem({ faq }: { faq: { q: string; a: string } }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="border border-gray-200 rounded-xl px-5 py-4 bg-white">
+            <button
+                onClick={() => setOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between text-left"
+            >
+        <span className="font-semibold text-gray-900 text-sm">
+          Q: {faq.q}
+        </span>
+                {open ? (
+                    <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                )}
+            </button>
+            {open && (
+                <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+                    A: {faq.a}
+                </p>
+            )}
+        </div>
+    );
+}
 
 const STATS = [
     { icon: Building, value: "100+", label: "Businesses" },
@@ -167,7 +216,8 @@ export default function ServiceLinkProPage() {
     return (
         <div className="bg-white">
             {/* Hero Section with dotted pattern */}
-            <section className="relative bg-gradient-to-br from-[#1e3a8a] to-[#1e40af] overflow-hidden">
+            {/* Hero Section with dotted pattern */}
+            <section className="relative bg-gradient-to-br from-[#1e3a8a] to-[#1e40af] overflow-hidden min-h-[88vh] flex items-center">
                 {/* Dotted pattern background */}
                 <div
                     className="absolute inset-0 opacity-20"
@@ -178,26 +228,24 @@ export default function ServiceLinkProPage() {
                     }}
                 />
 
-                <div className="relative max-w-7xl mx-auto px-4 lg:px-8 py-16 grid lg:grid-cols-2 gap-10 items-center">
+                <div className="relative max-w-7xl mx-auto px-4 lg:px-8 py-16 grid lg:grid-cols-2 gap-10 items-center w-full">
                     {/* Left: Text */}
                     <div>
-                        <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
-                            ServiceLink <span className="text-[#e8683f]">Pro</span>
-                            <br />
-                            Built for Hotels,
-                            <br />
-                            Hospitals &amp; Businesses
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
+                            Nepal's Trusted<br />
+                            <span className="text-[#e8683f]">Business Service</span><br />
+                            Platform.
                         </h1>
 
                         <p className="mt-5 text-white/80 text-sm sm:text-base leading-relaxed max-w-md">
-                            Stop managing service providers one by one. ServiceLink Pro
-                            gives your organization a single dashboard to source, schedule,
-                            and manage verified local professionals — in bulk, on demand.
+                            Join 500+ organizations already streamlining their service operations
+                            through ServiceLink Pro. Verified providers come to you — you just
+                            approve and deliver results.
                         </p>
 
                         <div className="mt-7 flex flex-col sm:flex-row gap-3">
                             <button className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group">
-                                Get Started
+                                Get Enterprise Access
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </button>
                             <button className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-6 py-3.5 rounded-xl shadow-lg transition-all">
@@ -205,34 +253,38 @@ export default function ServiceLinkProPage() {
                             </button>
                         </div>
 
-                        <div className="mt-8 flex flex-wrap gap-3 text-xs">
-              <span className="flex items-center gap-1.5 bg-white/10 text-white rounded-lg px-3 py-2">
-                <Hotel className="w-3.5 h-3.5 text-[#e8683f]" />
-                Hotels
-              </span>
-                            <span className="flex items-center gap-1.5 bg-white/10 text-white rounded-lg px-3 py-2">
-                <Building2 className="w-3.5 h-3.5 text-[#e8683f]" />
-                Hospitals
-              </span>
-                            <span className="flex items-center gap-1.5 bg-white/10 text-white rounded-lg px-3 py-2">
-                <Briefcase className="w-3.5 h-3.5 text-[#e8683f]" />
-                Offices
-              </span>
-                            <span className="flex items-center gap-1.5 bg-white/10 text-white rounded-lg px-3 py-2">
-                <HardHat className="w-3.5 h-3.5 text-[#e8683f]" />
-                Contractors
-              </span>
+                        {/* Divider */}
+                        <hr className="mt-6 border-white/20" />
+
+                        {/* Trust badges */}
+                        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-white/80 text-sm">
+                            <span className="flex items-center gap-2">
+                              <Hotel className="w-4 h-4 text-[#e8683f]" />
+                              Hotels
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-[#e8683f]" />
+                              Hospitals
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <Briefcase className="w-4 h-4 text-[#e8683f]" />
+                              Offices
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <HardHat className="w-4 h-4 text-[#e8683f]" />
+                              Contractors
+                            </span>
                         </div>
                     </div>
 
-                    {/* Right: Laptop + Mobile mockup image */}
-                    <div className="relative flex justify-center lg:justify-end">
+                    {/* Right: Image */}
+                    <div className="hidden lg:flex relative justify-end">
                         <Image
                             src="/images/proimage.png"
                             alt="ServiceLink Pro dashboard on laptop and mobile"
-                            width={600}
-                            height={400}
-                            className="w-full max-w-lg object-contain"
+                            width={700}
+                            height={600}
+                            className="w-full max-w-xl object-contain h-[500px]"
                         />
                     </div>
                 </div>
@@ -290,74 +342,76 @@ export default function ServiceLinkProPage() {
             </section>
 
             {/* Pricing Section */}
-            <section className="bg-gradient-to-br from-[#1e3a8a] to-[#1e40af] py-20">
-                <div className="max-w-7xl mx-auto px-4 lg:px-8 text-center">
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-                        Simple, Transparent Pricing
-                    </h2>
-                    <p className="mt-2 text-white/70 text-sm">
-                        No hidden fees. Cancel anytime.
-                    </p>
+            <section className="py-20">
+                <div className="bg-gradient-to-br from-[#1e3a8a] to-[#1e40af] rounded-2xl mx-4 lg:mx-8 px-4 lg:px-8 py-16">
+                    <div className="max-w-7xl mx-auto text-center">
+                        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+                            Simple, Transparent Pricing
+                        </h2>
+                        <p className="mt-2 text-white/70 text-sm">
+                            No hidden fees. Cancel anytime.
+                        </p>
 
-                    <div className="mt-12 grid sm:grid-cols-3 gap-6 text-left items-stretch">
-                        {PLANS.map((plan) => (
-                            <div
-                                key={plan.name}
-                                className={`relative bg-white rounded-2xl p-6 flex flex-col ${
-                                    plan.highlighted
-                                        ? "border-2 border-[#e8683f] shadow-2xl"
-                                        : ""
-                                }`}
-                            >
-                                {plan.badge && (
-                                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e8683f] text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                    {plan.badge}
-                  </span>
-                                )}
-
-                                <h3 className="font-bold text-[#1e3a8a] mt-2">{plan.name}</h3>
-                                <p className="text-xs text-gray-500 mt-1">{plan.subtitle}</p>
-
-                                <p className="mt-3">
-                  <span className="text-2xl font-extrabold text-gray-900">
-                    {plan.price}
-                  </span>
-                                    {plan.period && (
-                                        <span className="text-gray-500 text-sm">
-                      {plan.period}
-                    </span>
-                                    )}
-                                </p>
-
-                                <ul className="mt-5 space-y-2.5 flex-grow">
-                                    {plan.features.map((feature) => (
-                                        <li
-                                            key={feature}
-                                            className="flex items-center gap-2 text-sm text-gray-600"
-                                        >
-                                            <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                            {feature}
-                                        </li>
-                                    ))}
-                                </ul>
-
-                                <button
-                                    className={`mt-6 w-full py-3 rounded-xl font-semibold transition-all ${
+                        <div className="mt-12 grid sm:grid-cols-3 gap-6 text-left items-stretch">
+                            {PLANS.map((plan) => (
+                                <div
+                                    key={plan.name}
+                                    className={`relative bg-white rounded-2xl p-6 flex flex-col ${
                                         plan.highlighted
-                                            ? "bg-[#e8683f] hover:bg-[#d95a2f] text-white shadow-lg"
-                                            : "border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-[#1e3a8a]/5"
+                                            ? "border-2 border-[#e8683f] shadow-2xl"
+                                            : ""
                                     }`}
                                 >
-                                    {plan.cta}
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                                    {plan.badge && (
+                                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e8683f] text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                {plan.badge}
+              </span>
+                                    )}
 
-                    <p className="mt-8 text-white/70 text-sm">
-                        All plans include secure payments, verified providers &amp;
-                        dedicated support.
-                    </p>
+                                    <h3 className="font-bold text-[#1e3a8a] mt-2">{plan.name}</h3>
+                                    <p className="text-xs text-gray-500 mt-1">{plan.subtitle}</p>
+
+                                    <p className="mt-3">
+              <span className="text-2xl font-extrabold text-gray-900">
+                {plan.price}
+              </span>
+                                        {plan.period && (
+                                            <span className="text-gray-500 text-sm">
+                  {plan.period}
+                </span>
+                                        )}
+                                    </p>
+
+                                    <ul className="mt-5 space-y-2.5 flex-grow">
+                                        {plan.features.map((feature) => (
+                                            <li
+                                                key={feature}
+                                                className="flex items-center gap-2 text-sm text-gray-600"
+                                            >
+                                                <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                                {feature}
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    <button
+                                        className={`mt-6 w-full py-3 rounded-xl font-semibold transition-all ${
+                                            plan.highlighted
+                                                ? "bg-[#e8683f] hover:bg-[#d95a2f] text-white shadow-lg"
+                                                : "border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-[#1e3a8a]/5"
+                                        }`}
+                                    >
+                                        {plan.cta}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <p className="mt-8 text-white/70 text-sm">
+                            All plans include secure payments, verified providers &amp;
+                            dedicated support.
+                        </p>
+                    </div>
                 </div>
             </section>
 
@@ -481,6 +535,33 @@ export default function ServiceLinkProPage() {
                                 </li>
                             ))}
                         </ul>
+                    </div>
+                </div>
+            </section>
+
+            {/* FAQ Section */}
+            <section className="py-20">
+                <div className="max-w-5xl mx-auto px-4 lg:px-8">
+                    <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-[#1e3a8a] mb-10">
+                        Common Questions about ServiceLink Pro
+                    </h2>
+
+                    <div className="grid lg:grid-cols-2 gap-12 items-start">
+                        {/* Left: FAQs */}
+                        <div className="flex flex-col gap-4">
+                            {PRO_FAQS.map((faq) => (
+                                <ProFaqItem key={faq.q} faq={faq} />
+                            ))}
+                        </div>
+
+                        {/* Right: Image */}
+                        <div className="hidden lg:flex justify-center items-start sticky top-24">
+                            <img
+                                src="/images/servicelinkprofaq.png"
+                                alt="ServiceLink Pro FAQ"
+                                className="w-full max-w-sm object-contain rounded-2xl"
+                            />
+                        </div>
                     </div>
                 </div>
             </section>

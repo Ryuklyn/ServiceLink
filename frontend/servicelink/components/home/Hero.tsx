@@ -35,20 +35,12 @@ export default function Hero() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <button className="bg-accent-400 hover:bg-accent-500 text-white font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg shadow-[#e8683f]/30 transition-all group whitespace-nowrap">
-                Book a Service
-                <MoveRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-              {/*<button*/}
-              {/*    href="/servicelinkpro"*/}
-              {/*    className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap">*/}
-              {/*  For Businesses*/}
-              {/*</button>*/}
-              {/*<button*/}
-              {/*    href={"/becomeprovider"}*/}
-              {/*    className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap">*/}
-              {/*  Become a Provider*/}
-              {/*</button>*/}
+              <Link href="/login/user" passHref>
+                <button className="bg-accent-400 hover:bg-accent-500 text-white font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg shadow-[#e8683f]/30 transition-all group whitespace-nowrap">
+                  Book a Service
+                  <MoveRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </Link>
               <Link
                   href="/servicelinkpro"
                   className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap"

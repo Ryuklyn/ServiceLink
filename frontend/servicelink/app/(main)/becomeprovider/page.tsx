@@ -397,71 +397,82 @@ export default function BecomeAProviderPage() {
 
             {/* Pricing Section */}
             <section className="py-20">
-                <div className="max-w-7xl mx-auto px-4 lg:px-8 text-center">
-          <span className="text-sm font-bold uppercase tracking-wider text-[#e8683f]">
-            Provider Plans
-          </span>
-                    <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold text-[#1e3a8a]">
-                        Simple, Transparent Pricing
-                    </h2>
-                    <p className="mt-3 text-gray-600 max-w-2xl mx-auto">
-                        Start with a 30-day free trial. No hidden fees. Cancel anytime.
-                        All plans include unlimited booking requests, earnings dashboard,
-                        customer messaging, and priority search listing.
-                    </p>
+                <div className="bg-[#1e3a8a] rounded-2xl mx-4 lg:mx-8 px-4 lg:px-8 py-16">
+                    <div className="max-w-7xl mx-auto text-center">
+                      <span className="text-sm font-bold uppercase tracking-wider text-[#e8683f]">
+                        Provider Plans
+                      </span>
+                        <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold text-white">
+                            Simple, Transparent Pricing
+                        </h2>
+                        <p className="mt-3 text-white/70 max-w-2xl mx-auto text-sm">
+                            Start with a 30-day free trial. No hidden fees. Cancel anytime.
+                            All plans include unlimited booking requests, earnings dashboard,
+                            customer messaging, and priority search listing.
+                        </p>
 
-                    <div className="mt-12 grid sm:grid-cols-3 gap-6 text-left items-stretch">
-                        {PLANS.map((plan) => (
-                            <div
-                                key={plan.name}
-                                className={`relative rounded-2xl p-6 flex flex-col ${
-                                    plan.highlighted
-                                        ? "border-2 border-[#e8683f] shadow-xl"
-                                        : "border border-gray-200"
-                                }`}
-                            >
-                                {plan.badge && (
-                                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e8683f] text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                    {plan.badge}
-                  </span>
-                                )}
-
-                                <h3 className="font-bold text-[#1e3a8a] mt-2">{plan.name}</h3>
-                                <p className="mt-2">
-                  <span className="text-3xl font-extrabold text-gray-900">
-                    Rs. {plan.price}
-                  </span>
-                                    <span className="text-gray-500">{plan.period}</span>
-                                </p>
-                                {plan.save && (
-                                    <p className="text-xs font-semibold text-[#e8683f] mt-1">
-                                        {plan.save}
-                                    </p>
-                                )}
-
-                                <ul className="mt-5 space-y-2.5 flex-grow">
-                                    {plan.features.map((feature) => (
-                                        <li
-                                            key={feature}
-                                            className="flex items-center gap-2 text-sm text-gray-600"
-                                        >
-                                            <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                            {feature}
-                                        </li>
-                                    ))}
-                                </ul>
-
-                                <button
-                                    className={`mt-6 w-full py-3 rounded-xl font-semibold transition-all ${
+                        <div className="mt-12 grid sm:grid-cols-3 gap-6 text-left items-stretch">
+                            {PLANS.map((plan) => (
+                                <div
+                                    key={plan.name}
+                                    className={`relative rounded-2xl p-6 flex flex-col ${
                                         plan.highlighted
-                                            ? "bg-[#e8683f] hover:bg-[#d95a2f] text-white shadow-lg"
-                                            : "border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-[#1e3a8a]/5"
+                                            ? "bg-white border-2 border-[#e8683f] shadow-2xl"
+                                            : "bg-white border border-white/20"
                                     }`}
                                 >
-                                    {plan.cta}
-                                </button>
-                            </div>
-                        ))}
+                                    {plan.badge && (
+                                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e8683f] text-white text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap">
+                                        {plan.badge}
+                                      </span>
+                                    )}
+
+                                    <h3 className={`font-bold mt-2 text-lg ${plan.highlighted ? "text-[#1e3a8a]" : "text-[#1e3a8a]"}`}>
+                                        {plan.name}
+                                    </h3>
+
+                                    <p className="mt-4">
+                                          <span className={`text-4xl font-extrabold ${plan.highlighted ? "text-gray-900" : "text-grey-900"}`}>
+                                            Rs. {plan.price}
+                                          </span>
+                                            <span className={`text-sm ml-1 ${plan.highlighted ? "text-gray-500" : "text-grey-500"}`}>
+                                            {plan.period}
+                                          </span>
+                                    </p>
+
+                                    {plan.save && (
+                                        <p className="text-xs font-semibold text-[#e8683f] mt-1">
+                                            {plan.save}
+                                        </p>
+                                    )}
+
+                                    <ul className="mt-5 space-y-2.5 flex-grow">
+                                        {plan.features.map((feature) => (
+                                            <li key={feature} className="flex items-center gap-2 text-sm">
+                                                <Check className="w-4 h-4 flex-shrink-0 text-green-400" />
+                                                <span className={plan.highlighted ? "text-gray-600" : "text-grey-600"}>
+                                                {feature}
+                                              </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    <button
+                                        className={`mt-6 w-full py-3 rounded-xl font-semibold transition-all ${
+                                            plan.highlighted
+                                                ? "bg-[#e8683f] hover:bg-[#d95a2f] text-white shadow-lg"
+                                                : "border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-blue-50"
+                                        }`}
+                                    >
+                                        {plan.cta}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <p className="mt-10 text-white/50 text-sm">
+                            All plans include secure payments, verified providers &amp; dedicated support.
+                        </p>
                     </div>
                 </div>
             </section>
@@ -471,9 +482,9 @@ export default function BecomeAProviderPage() {
                 <div className="max-w-7xl mx-auto px-4 lg:px-8 grid lg:grid-cols-2 gap-8">
                     {/* What to Prepare */}
                     <div>
-            <span className="text-sm font-bold uppercase tracking-wider text-[#e8683f]">
-              Verification
-            </span>
+                        <span className="text-sm font-bold uppercase tracking-wider text-[#e8683f]">
+                          Verification
+                        </span>
                         <h2 className="mt-2 text-2xl sm:text-3xl font-extrabold text-[#1e3a8a]">
                             What to Prepare Before Registering
                         </h2>
@@ -598,10 +609,22 @@ export default function BecomeAProviderPage() {
                         Common Questions from Providers
                     </h2>
 
-                    <div className="grid sm:grid-cols-2 gap-4">
-                        {FAQS.map((faq) => (
-                            <FaqItem key={faq.q} faq={faq} />
-                        ))}
+                    <div className="grid lg:grid-cols-2 gap-12 items-start">
+                        {/* Left: FAQs */}
+                        <div className="flex flex-col gap-4">
+                            {FAQS.map((faq) => (
+                                <FaqItem key={faq.q} faq={faq} />
+                            ))}
+                        </div>
+
+                        {/* Right: Image */}
+                        <div className="hidden lg:flex justify-center items-start sticky top-24">
+                            <img
+                                src="/images/providerfaq.png"
+                                alt="Provider FAQ"
+                                className="w-full max-w-sm object-contain rounded-2xl"
+                            />
+                        </div>
                     </div>
                 </div>
             </section>
