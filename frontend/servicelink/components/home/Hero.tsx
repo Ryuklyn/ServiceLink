@@ -36,7 +36,7 @@ export default function Hero() {
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Link href="/login/user" passHref>
-                <button className="bg-accent-400 hover:bg-accent-500 text-white font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg shadow-[#e8683f]/30 transition-all group whitespace-nowrap">
+                <button className="w-full sm:w-auto bg-accent-400 hover:bg-accent-500 text-white font-semibold flex items-center justify-center px-6 py-3.5 rounded-xl shadow-lg shadow-[#e8683f]/30 transition-all group">
                   Book a Service
                   <MoveRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>

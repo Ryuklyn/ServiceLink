@@ -431,21 +431,20 @@ export default function ReschedulingModal({
                             Payment Options Available
                           </p>
                           <div className="flex gap-2">
-                            <div className="flex-1 flex items-center justify-center gap-1.5 p-2 border border-gray-200 rounded-lg bg-gray-50">
-                              <div className="w-4 h-4 rounded-full bg-emerald-600 text-white font-bold text-[7px] flex items-center justify-center">
-                                e
-                              </div>
-                              <span className="text-[10px] font-bold text-gray-600">
-                                eSewa
-                              </span>
+                            <div className="flex-1 flex items-center justify-center py-1.5 px-2 border border-gray-200 rounded-xl bg-gray-50 hover:bg-white hover:border-gray-300 transition-all duration-200 cursor-pointer">
+                              <img
+                                  src="/images/esewa.png"
+                                  alt="eSewa"
+                                  className="h-10 w-auto object-contain"
+                              />
                             </div>
-                            <div className="flex-1 flex items-center justify-center gap-1.5 p-2 border border-gray-200 rounded-lg bg-gray-50">
-                              <div className="w-4 h-4 rounded-full bg-purple-700 text-white font-bold text-[7px] flex items-center justify-center">
-                                K
-                              </div>
-                              <span className="text-[10px] font-bold text-gray-600">
-                                Khalti
-                              </span>
+
+                            <div className="flex-1 flex items-center justify-center py-1.5 px-2 border border-gray-200 rounded-xl bg-gray-50 hover:bg-white hover:border-gray-300 transition-all duration-200 cursor-pointer">
+                              <img
+                                  src="/images/khalti.png"
+                                  alt="Khalti"
+                                  className="h-10 w-auto object-contain"
+                              />
                             </div>
                           </div>
                         </div>
@@ -735,41 +734,61 @@ export default function ReschedulingModal({
                   {(["esewa", "khalti"] as DigitalWallet[]).map((wallet) => {
                     const isEsewa = wallet === "esewa";
                     const selected = selectedWallet === wallet;
+
                     return (
-                      <button
-                        key={wallet!}
-                        onClick={() => setSelectedWallet(wallet)}
-                        className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
-                          selected
-                            ? isEsewa
-                              ? "border-green-500 bg-green-50"
-                              : "border-purple-500 bg-purple-50"
-                            : "border-gray-200 bg-white hover:border-gray-300"
-                        }`}
-                      >
-                        <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-black text-white flex-shrink-0 ${isEsewa ? "bg-green-500" : "bg-purple-600"}`}
+                        <button
+                            key={wallet}
+                            onClick={() => setSelectedWallet(wallet)}
+                            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                                selected
+                                    ? isEsewa
+                                        ? "border-green-500 bg-green-50"
+                                        : "border-purple-500 bg-purple-50"
+                                    : "border-gray-200 bg-white hover:border-gray-300"
+                            }`}
                         >
-                          {isEsewa ? "e" : "K"}
-                        </div>
-                        <div className="flex-1">
-                          <p
-                            className={`font-bold text-sm ${selected ? (isEsewa ? "text-green-700" : "text-purple-700") : "text-gray-800"}`}
+                          {/* Wallet Logo */}
+                          <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
+                            <img
+                                src={isEsewa ? "/images/esewa.png" : "/images/khalti.png"}
+                                alt={isEsewa ? "eSewa" : "Khalti"}
+                                className="h-14 w-auto object-contain"
+                            />
+                          </div>
+
+                          {/* Wallet Info */}
+                          <div className="flex-1">
+                            <p
+                                className={`font-bold text-sm ${
+                                    selected
+                                        ? isEsewa
+                                            ? "text-green-700"
+                                            : "text-purple-700"
+                                        : "text-gray-800"
+                                }`}
+                            >
+                              {isEsewa ? "eSewa" : "Khalti"}
+                            </p>
+                            <p className="text-[11px] text-gray-400 font-medium">
+                              {isEsewa ? "Digital wallet" : "Mobile payment"}
+                            </p>
+                          </div>
+
+                          {/* Radio Indicator */}
+                          <div
+                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                                  selected
+                                      ? isEsewa
+                                          ? "border-green-500 bg-green-500"
+                                          : "border-purple-500 bg-purple-500"
+                                      : "border-gray-300"
+                              }`}
                           >
-                            {isEsewa ? "eSewa" : "Khalti"}
-                          </p>
-                          <p className="text-[11px] text-gray-400 font-medium">
-                            {isEsewa ? "Digital wallet" : "Mobile payment"}
-                          </p>
-                        </div>
-                        <div
-                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${selected ? (isEsewa ? "border-green-500 bg-green-500" : "border-purple-500 bg-purple-500") : "border-gray-300"}`}
-                        >
-                          {selected && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                          )}
-                        </div>
-                      </button>
+                            {selected && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            )}
+                          </div>
+                        </button>
                     );
                   })}
                 </div>

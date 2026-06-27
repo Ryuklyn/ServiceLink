@@ -438,26 +438,19 @@ function LateCancelStep({
               <span className="text-[10px] text-gray-400 font-medium">
                 Accepted:
               </span>
-                <div className="flex gap-1.5">
-                  {[
-                    { id: "esewa",  label: "e", bg: "bg-green-500",  text: "eSewa"  },
-                    { id: "khalti", label: "K", bg: "bg-purple-600", text: "Khalti" },
-                  ].map((w) => (
-                      <div
-                          key={w.id}
-                          className="flex items-center gap-1 bg-gray-100 rounded-full pl-0.5 pr-2 py-0.5"
-                      >
-                        <div
-                            className={`w-4 h-4 rounded-full ${w.bg} flex items-center justify-center text-[9px] font-black text-white`}
-                        >
-                          {w.label}
-                        </div>
-                        <span className="text-[10px] text-gray-600 font-semibold">
-                      {w.text}
-                    </span>
-                      </div>
-                  ))}
-                </div>
+                  <div className="flex items-center gap-3">
+                      {[
+                          { id: "esewa", src: "/images/esewa.png", alt: "eSewa" },
+                          { id: "khalti", src: "/images/khalti.png", alt: "Khalti" },
+                      ].map((wallet) => (
+                          <img
+                              key={wallet.id}
+                              src={wallet.src}
+                              alt={wallet.alt}
+                              className="h-10 w-auto object-contain"
+                          />
+                      ))}
+                  </div>
               </div>
             </div>
           </div>
@@ -616,13 +609,13 @@ function PaymentStep({
                                 : "border-gray-200 bg-white hover:border-gray-300"
                         }`}
                     >
-                      <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-black text-white flex-shrink-0 ${
-                              isEsewa ? "bg-green-500" : "bg-purple-600"
-                          }`}
-                      >
-                        {isEsewa ? "e" : "K"}
-                      </div>
+                        <div className="w-14 h-10 flex items-center justify-center flex-shrink-0">
+                            <img
+                                src={isEsewa ? "/images/esewa.png" : "/images/khalti.png"}
+                                alt={isEsewa ? "eSewa" : "Khalti"}
+                                className="h-10 w-auto object-contain"
+                            />
+                        </div>
                       <div className="flex-1">
                         <p
                             className={`font-bold text-sm ${
@@ -701,12 +694,20 @@ function ConfirmPaymentStep({
   onConfirm: () => void;
 }) {
   const isEsewa = selectedWallet === "esewa";
-  const walletName = isEsewa ? "eSewa" : "Khalti";
-  const walletColor = isEsewa ? "text-green-700" : "text-purple-700";
-  const walletBg = isEsewa ? "bg-green-500" : "bg-purple-600";
-  const walletBorder = isEsewa
-      ? "border-green-200 bg-green-50"
-      : "border-purple-200 bg-purple-50";
+  // const walletName = isEsewa ? "eSewa" : "Khalti";
+  // const walletColor = isEsewa ? "text-green-700" : "text-purple-700";
+  // const walletBorder = isEsewa
+  //     ? "border-green-200 bg-green-50"
+  //     : "border-purple-200 bg-purple-50";
+    const walletName = isEsewa ? "eSewa" : "Khalti";
+    const walletLogo = isEsewa
+        ? "/images/esewa.png"
+        : "/images/khalti.png";
+
+    const walletColor = isEsewa ? "text-green-700" : "text-purple-700";
+    const walletBorder = isEsewa
+        ? "border-green-200 bg-green-50"
+        : "border-purple-200 bg-purple-50";
 
   return (
       <>
@@ -729,16 +730,13 @@ function ConfirmPaymentStep({
             <span className="text-xs text-gray-500 font-medium">
               Payment method
             </span>
-              <div className="flex items-center gap-1.5">
-                <div
-                    className={`w-5 h-5 rounded-full ${walletBg} flex items-center justify-center text-[10px] font-black text-white`}
-                >
-                  {isEsewa ? "e" : "K"}
+                <div className="flex items-center gap-2">
+                    <img
+                        src={walletLogo}
+                        alt={walletName}
+                        className="h-10 w-auto object-contain"
+                    />
                 </div>
-                <span className={`text-xs font-bold ${walletColor}`}>
-                {walletName}
-              </span>
-              </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 font-medium">Amount</span>
