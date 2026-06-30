@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import com.servicelink.core.model.user.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Service
@@ -21,12 +23,57 @@ public class JwtService {
     private String secretKey;
 
     @Value("${application.security.jwt.expiration}")
-    private long jwtExpiration;
+    private long accessTokenExpiration;
 
-    // ─── Extraction Utilities ──────────────────────────────────────────────────
+    @Value("${application.security.jwt.refresh-expiration}")
+    private long refreshTokenExpiration;
+
+    // ─── Access Token ───────────────────────────────────────────────────────
+
+    public String generateAccessToken(String email, Role role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role.name());
+        claims.put("type", "ACCESS");
+        return buildToken(claims, email, accessTokenExpiration);
+    }
+
+    // ─── Refresh Token ──────────────────────────────────────────────────────
+
+    public String generateRefreshToken(String email) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "REFRESH");
+        claims.put("jti", UUID.randomUUID().toString());
+        return buildToken(claims, email, refreshTokenExpiration);
+    }
+
+    public long getRefreshTokenExpirationMillis() {
+        return refreshTokenExpiration;
+    }
+
+    // ─── Short-lived purpose tokens (OTP verification, etc.) ────────────────
+
+    public String generatePurposeToken(Map<String, Object> claims, String subject, long expirationMillis) {
+        return buildToken(claims, subject, expirationMillis);
+    }
+
+    // Overload: defaults to access-token expiration when no explicit duration is given
+// (used by OAuth2LoginSuccessHandler, where the token IS effectively an access token)
+    public String generatePurposeToken(Map<String, Object> claims, String subject) {
+        return buildToken(claims, subject, accessTokenExpiration);
+    }
+
+    // ─── Extraction Utilities ───────────────────────────────────────────────
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractTokenType(String token) {
+        return extractClaim(token, claims -> claims.get("type", String.class));
+    }
+
+    public String extractJti(String token) {
+        return extractClaim(token, claims -> claims.get("jti", String.class));
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
@@ -34,64 +81,9 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    // ─── Token Generation Methods ──────────────────────────────────────────────
-
-    /**
-     * Primary Token Generation Method for standard system users.
-     * Extracts the Role enum string dynamically to inject it as a claim.
-     */
-    public String generateToken(String email, com.servicelink.core.model.user.Role role) {
-        Map<String, Object> extraClaims = new HashMap<>();
-        if (role != null) {
-            extraClaims.put("role", role.name());
-        }
-        return buildToken(extraClaims, email, jwtExpiration);
-    }
-
-    /**
-     * Specialized Token Generation featuring arbitrary claims and explicit duration.
-     * Perfect for handling transient verification environments (like 15-minute OTP sessions).
-     */
-    public String generateToken(Map<String, Object> extraClaims, String subject, long expirationMillis) {
-        return buildToken(extraClaims, subject, expirationMillis);
-    }
-
-    /**
-     * Legacy Overload Support - Generates a token with an arbitrary claims layout
-     * utilizing the standard system expiration configuration window.
-     */
-    public String generateToken(Map<String, Object> extraClaims, String subject) {
-        return buildToken(extraClaims, subject, jwtExpiration);
-    }
-
-    /**
-     * Basic Fallback Token Generation - Generates an empty-claims payload
-     * targeting the subject identity string directly.
-     */
-    public String generateToken(String email) {
-        return buildToken(new HashMap<>(), email, jwtExpiration);
-    }
-
-    // ─── Private Infrastructure Mechanics ──────────────────────────────────────
-
-    private String buildToken(
-            Map<String, Object> extraClaims,
-            String subject,
-            long expiration
-    ) {
-        return Jwts
-                .builder()
-                .setClaims(extraClaims)
-                .setSubject(subject)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
-                .compact();
-    }
-
     public boolean isTokenValid(String token, String email) {
         final String username = extractUsername(token);
-        return (username.equals(email)) && !isTokenExpired(token);
+        return username.equals(email) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {
@@ -103,12 +95,21 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts
-                .parserBuilder()
+        return Jwts.parserBuilder()
                 .setSigningKey(getSignInKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    private String buildToken(Map<String, Object> extraClaims, String subject, long expiration) {
+        return Jwts.builder()
+                .setClaims(extraClaims)
+                .setSubject(subject)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 
     private Key getSignInKey() {

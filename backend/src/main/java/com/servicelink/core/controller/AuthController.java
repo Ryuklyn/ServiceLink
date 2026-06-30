@@ -12,10 +12,7 @@ import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.security.JwtService;
-import com.servicelink.core.service.AuthService;
-import com.servicelink.core.service.EmailService;
-import com.servicelink.core.service.OtpService;
-import com.servicelink.core.service.PhoneOtpService;
+import com.servicelink.core.service.*;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +35,7 @@ public class AuthController {
     private final EmailService   emailService;
     private final PhoneOtpService phoneOtpService;
     private final JwtService     jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     // ─── Standard registration / login ────────────────────────────────────────
 
@@ -51,25 +49,59 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-//    @GetMapping("/me")
-//    public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
-//
-//        System.out.println(">>> auth.getName() = " + auth.getName());
-//        if (auth == null || !auth.isAuthenticated()) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-//        }
-//        User user = userRepository.findByEmail(auth.getName())
-//                .orElseThrow(() -> new RuntimeException("User not found"));
-//        UserProfile profile = user.getProfile();
-//        return ResponseEntity.ok(
-//                UserResponseDTO.builder()
-//                        .email(user.getEmail())
-//                        .fullName(profile != null ? profile.getFullName() : null)
-//                        .profileImage(profile != null ? profile.getProfileImage() : null)
-//                        .build()
-//        );
-//    }
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthResponseDTO> refreshToken(@RequestBody Map<String, String> body) {
 
+        String refreshToken = body.get("refreshToken");
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        String email;
+        String jti;
+        try {
+            email = jwtService.extractUsername(refreshToken);
+            jti = jwtService.extractJti(refreshToken);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        if (!"REFRESH".equals(jwtService.extractTokenType(refreshToken))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        if (!jwtService.isTokenValid(refreshToken, email)
+                || !refreshTokenService.isValid(email, jti, refreshToken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Rotate: revoke old, issue new
+        refreshTokenService.revoke(email, jti);
+
+        String newAccessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
+        String newRefreshToken = jwtService.generateRefreshToken(user.getEmail());
+        String newJti = jwtService.extractJti(newRefreshToken);
+
+        refreshTokenService.store(email, newJti, newRefreshToken, jwtService.getRefreshTokenExpirationMillis());
+
+        return ResponseEntity.ok(AuthResponseDTO.builder()
+                .token(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .email(email)
+                .build());
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(Authentication auth) {
+        if (auth != null && auth.isAuthenticated()) {
+            User user = (User) auth.getPrincipal();
+            refreshTokenService.revokeAllForUser(user.getEmail());
+        }
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    }
 
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
@@ -111,9 +143,6 @@ public class AuthController {
         PhoneOtpService.SendResult result = phoneOtpService.sendOtp(phone, otp);
 
         return ResponseEntity.ok(OtpSendResponseDTO.builder()
-//                .message(result.isWhatsApp()
-//                        ? "OTP ready — tap the WhatsApp link to view it"
-//                        : "OTP sent via SMS")
                 .message(result.isAutomated()
                         ? "OTP sent — check your phone"
                         : "OTP ready — tap the WhatsApp link to view it")
@@ -143,7 +172,7 @@ public class AuthController {
         }
 
         // Issue a short-lived "provider applicant" token explicitly timed for 15 minutes (900_000 ms)
-        String providerToken = jwtService.generateToken(
+        String providerToken = jwtService.generatePurposeToken(
                 Map.of("type", "PHONE_VERIFIED", "role", "PROVIDER_APPLICANT"),
                 phone,
                 900000L
@@ -197,7 +226,7 @@ public class AuthController {
         }
 
         // Issue a short-lived "provider applicant" token explicitly timed for 15 minutes (900_000 ms)
-        String providerToken = jwtService.generateToken(
+        String providerToken = jwtService.generatePurposeToken(
                 Map.of("type", "EMAIL_VERIFIED", "role", "PROVIDER_APPLICANT"),
                 email,
                 900000L

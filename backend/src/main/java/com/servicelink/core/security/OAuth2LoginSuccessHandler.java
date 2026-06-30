@@ -1,66 +1,10 @@
-// package com.servicelink.core.security;
-
-// import com.servicelink.core.model.user.User;
-// import com.servicelink.core.repository.UserRepository;
-// import jakarta.servlet.ServletException;
-// import jakarta.servlet.http.HttpServletRequest;
-// import jakarta.servlet.http.HttpServletResponse;
-// import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.security.core.Authentication;
-// import org.springframework.security.oauth2.core.user.OAuth2User;
-// import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-// import org.springframework.stereotype.Component;
-
-// import java.io.IOException;
-// import java.util.HashMap;
-// import java.util.Map;
-// import java.util.Optional;
-
-// @Component
-// public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
-
-//     @Autowired
-//     private UserRepository userRepository;
-
-//     @Autowired
-//     private JwtService jwtService;
-
-//     @Override
-//     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-//         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        
-//         String email = oAuth2User.getAttribute("email");
-//         String name = oAuth2User.getAttribute("name");
-//         String picture = oAuth2User.getAttribute("picture"); // For Google
-
-//         Optional<User> optionalUser = userRepository.findByEmail(email);
-//         User user;
-//         if (optionalUser.isEmpty()) {
-//             user = new User();
-//             user.setEmail(email);
-//             user.setName(name);
-//             userRepository.save(user);
-//         } else {
-//             user = optionalUser.get();
-//         }
-
-//         Map<String, Object> extraClaims = new HashMap<>();
-//         extraClaims.put("name", name);
-//         extraClaims.put("picture", picture);
-
-//         String jwt = jwtService.generateToken(extraClaims, email);
-        
-//         // Redirect to Next.js frontend with the JWT
-//         response.sendRedirect("http://localhost:3000/dashboard?token=" + jwt);
-//     }
-// }
-
 package com.servicelink.core.security;
 
 import com.servicelink.core.model.auth.AuthProvider;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
+import com.servicelink.core.service.RefreshTokenService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -84,6 +28,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private RefreshTokenService refreshTokenService;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
@@ -100,12 +47,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         User user;
 
         if (optionalUser.isEmpty()) {
-            // ✅ Create new user
             user = new User();
             user.setEmail(email);
             user.setProvider(AuthProvider.GOOGLE);
 
-            // ✅ Create profile
             UserProfile profile = new UserProfile();
             profile.setFullName(name);
             profile.setProfileImage(picture);
@@ -120,7 +65,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
             UserProfile profile = user.getProfile();
 
-            if (profile == null){
+            if (profile == null) {
                 profile = new UserProfile();
                 profile.setUser(user);
                 profile.setFullName(name);
@@ -131,16 +76,21 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             userRepository.save(user);
         }
 
-        // ✅ JWT Claims
+        // ✅ JWT Claims for the access token
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("email", email);
         extraClaims.put("name", user.getProfile().getFullName());
         extraClaims.put("picture", user.getProfile().getProfileImage());
         extraClaims.put("role", user.getRole().name());
 
-        String jwt = jwtService.generateToken(extraClaims, email);
+        String accessToken = jwtService.generatePurposeToken(extraClaims, email);
 
-        // ✅ Redirect to frontend
-        response.sendRedirect("http://localhost:3000/dashboard?token=" + jwt);
+        // ✅ Issue + store refresh token, same pattern as AuthService.login()
+        String refreshToken = jwtService.generateRefreshToken(email);
+        String jti = jwtService.extractJti(refreshToken);
+        refreshTokenService.store(email, jti, refreshToken, jwtService.getRefreshTokenExpirationMillis());
+
+        // ✅ Redirect to frontend with both tokens
+        response.sendRedirect("http://localhost:3000/dashboard?token=" + accessToken + "&refreshToken=" + refreshToken);
     }
 }

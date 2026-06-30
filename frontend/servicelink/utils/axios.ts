@@ -133,22 +133,22 @@ api.interceptors.response.use(
 
     try {
       const { data } = await axios.post<{
-        accessToken: string;
+        token: string;
         refreshToken?: string;
       }>(
-        `${api.defaults.baseURL?.replace("/api", "")}/api/auth/refresh-token`,
-        { refreshToken },
-        { headers: { "Content-Type": "application/json" } },
+          `${api.defaults.baseURL?.replace("/api", "")}/api/auth/refresh-token`,
+          { refreshToken },
+          { headers: { "Content-Type": "application/json" } },
       );
 
-      storage.setAccess(data.accessToken);
+      storage.setAccess(data.token);
       if (data.refreshToken) storage.setRefresh(data.refreshToken);
 
       api.defaults.headers.common["Authorization"] =
-        `Bearer ${data.accessToken}`;
-      flushQueue(data.accessToken);
+          `Bearer ${data.token}`;
+      flushQueue(data.token);
 
-      original.headers["Authorization"] = `Bearer ${data.accessToken}`;
+      original.headers["Authorization"] = `Bearer ${data.token}`;
       return api(original);
     } catch (refreshError) {
       const normalized = normalizeError(refreshError);

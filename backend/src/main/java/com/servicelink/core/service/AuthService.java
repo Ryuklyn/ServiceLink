@@ -20,20 +20,19 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthResponseDTO register(RegisterRequestDTO request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already in use.");
         }
 
-        // ✅ Build user and explicitly set default role
         User user = new User();
         user.setEmail(request.getEmail().trim());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setProvider(AuthProvider.LOCAL);
-        user.setRole(Role.CUSTOMER); // Explicitly ensure standard signups start as CUSTOMER
+        user.setRole(Role.CUSTOMER);
 
-        // ✅ Build profile — fullName set, profileImage null until upload
         UserProfile profile = new UserProfile();
         profile.setFullName(request.getFullName());
         profile.setProfileImage(null);
@@ -56,13 +55,22 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid credentials");
         }
 
-        // ✅ Cleanly calls updated dual-argument signature packing the role claim
-        String token = jwtService.generateToken(user.getEmail(), user.getRole());
+        String accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+
+        String jti = jwtService.extractJti(refreshToken);
+        refreshTokenService.store(
+                user.getEmail(),
+                jti,
+                refreshToken,
+                jwtService.getRefreshTokenExpirationMillis()
+        );
 
         UserProfile profile = user.getProfile();
 
         return AuthResponseDTO.builder()
-                .token(token)
+                .token(accessToken)
+                .refreshToken(refreshToken)
                 .email(user.getEmail())
                 .fullName(profile != null ? profile.getFullName() : null)
                 .profileImage(profile != null ? profile.getProfileImage() : null)
@@ -74,8 +82,9 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        System.out.println("RESET EMAIL: [" + email + "]");
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+
+        refreshTokenService.revokeAllForUser(email);  // new: kills all sessions on password reset
     }
 }
