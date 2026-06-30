@@ -1,5 +1,8 @@
 package com.servicelink.core.controller;
 
+import com.servicelink.core.service.UserService;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.servicelink.core.dto.ResetPasswordDTO;
 import com.servicelink.core.dto.request.LoginRequestDTO;
 import com.servicelink.core.dto.request.OtpRequestDto;
@@ -38,6 +41,7 @@ public class AuthController {
     private final JwtService     jwtService;
     private final RefreshTokenService refreshTokenService;
     private final UserMapper userMapper;
+    private final UserService userService;
 
     // ─── Standard registration / login ────────────────────────────────────────
 
@@ -105,25 +109,6 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
-//    @GetMapping("/me")
-//    public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
-//
-//        if (auth == null || !auth.isAuthenticated()) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-//        }
-//
-//        User user = (User) auth.getPrincipal();
-//
-//        UserProfile profile = user.getProfile();
-//        return ResponseEntity.ok(
-//                UserResponseDTO.builder()
-//                        .email(user.getEmail())
-//                        .fullName(profile != null ? profile.getFullName() : null)
-//                        .profileImage(profile != null ? profile.getProfileImage() : null)
-//                        .build()
-//        );
-//    }
-
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
 
@@ -132,6 +117,83 @@ public class AuthController {
         }
 
         User user = (User) auth.getPrincipal();
+
+        return ResponseEntity.ok(userMapper.toResponseDTO(user));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserResponseDTO> updateMe(
+            Authentication auth,
+            @RequestBody Map<String, String> body) {
+
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        User user = (User) auth.getPrincipal();
+        String fullName = body.get("fullName");
+
+        if (fullName != null && !fullName.isBlank()) {
+            UserProfile profile = user.getProfile();
+            if (profile == null) {
+                profile = new UserProfile();
+                profile.setUser(user);
+            }
+            profile.setFullName(fullName.trim());
+            user.setProfile(profile);
+            userRepository.save(user);
+        }
+
+        return ResponseEntity.ok(userMapper.toResponseDTO(user));
+    }
+
+    @PostMapping("/me/photo")
+    public ResponseEntity<UserResponseDTO> updateMyPhoto(
+            Authentication auth,
+            @RequestParam("image") MultipartFile image) {
+
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        User user = (User) auth.getPrincipal();
+        User updated = userService.updateProfileImage(user.getId(), image);
+
+        return ResponseEntity.ok(userMapper.toResponseDTO(updated));
+    }
+
+    @PostMapping("/me/verify-phone-otp")
+    public ResponseEntity<UserResponseDTO> verifyPhoneOtpForCurrentUser(
+            Authentication auth,
+            @RequestBody Map<String, String> body) {
+
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String phone = body.get("phone");
+        String otp = body.get("otp");
+
+        if (phone == null || otp == null) {
+            throw new IllegalArgumentException("Phone and OTP are required");
+        }
+
+        boolean valid = otpService.verifyOtp(phone, otp);
+        if (!valid) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).build();
+        }
+
+        User user = (User) auth.getPrincipal();
+        UserProfile profile = user.getProfile();
+        if (profile == null) {
+            profile = new UserProfile();
+            profile.setUser(user);
+        }
+        profile.setPhoneNumber(phone);
+        profile.setPhoneVerified(true);
+        user.setProfile(profile);
+
+        userRepository.save(user);
 
         return ResponseEntity.ok(userMapper.toResponseDTO(user));
     }

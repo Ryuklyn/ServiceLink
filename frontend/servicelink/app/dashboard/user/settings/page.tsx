@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useEffect } from "react";
 import { getMe, MeResponse } from "@/lib/api/authApi";
+import AddPhoneModal from "@/components/dashboard/user/settings/AddPhoneModal";
+import EditProfileModal from "@/components/dashboard/user/settings/EditProfileModal";
+import AvatarMenu from "@/components/dashboard/user/settings/AvatarMenu";
 import {
-  Camera,
   MapPin,
   Plus,
   ChevronRight,
@@ -12,18 +15,14 @@ import {
   AlertCircle,
   HelpCircle,
   LogOut,
-  Edit2,
   Sun,
   Moon,
   Laptop,
-  MessageSquare,
   CheckCircle2,
   Mail,
   Phone,
   PencilLine,
-  Globe,
   ShieldCheck,
-  CalendarDays,
   Ticket,
   Info,
   Briefcase,
@@ -60,6 +59,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Modal visibility states ──
+  const [showAddPhoneModal, setShowAddPhoneModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -67,7 +70,6 @@ export default function SettingsPage() {
         setError(null);
 
         const data: MeResponse = await getMe();
-        console.log(data);
 
         setName(data.fullName || "");
         setEmail(data.email || "");
@@ -203,9 +205,10 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                <button className="absolute bottom-4 right-0 w-10 h-10 rounded-full bg-[#e8683f] hover:bg-[#d45b34] border-[3px] border-white shadow-lg flex items-center justify-center text-white transition-all duration-200">
-                  <Camera size={18} fill="currentColor" />
-                </button>
+                <AvatarMenu
+                    currentImage={profileImage}
+                    onUploadClick={() => setShowEditProfileModal(true)}
+                />
               </div>
 
               {/* User Information */}
@@ -236,7 +239,7 @@ export default function SettingsPage() {
                   </h4>
 
                   <div className="space-y-4 max-w-md">
-                    {/* EMAIL ROW */}
+                    {/* EMAIL ROW — read-only, not editable */}
                     <div className="flex items-center justify-between gap-6">
                       <div className="flex items-center gap-3 min-w-0">
                         <Mail size={16} className="text-slate-400 shrink-0" />
@@ -268,10 +271,7 @@ export default function SettingsPage() {
                             Not Available
                           </span>
                               <button
-                                  onClick={() => {
-                                    // TODO: open Add Phone Number modal
-                                    console.log("open add phone modal");
-                                  }}
+                                  onClick={() => setShowAddPhoneModal(true)}
                                   className="text-[#e8683f] text-sm font-semibold hover:underline"
                               >
                                 Add
@@ -291,10 +291,7 @@ export default function SettingsPage() {
                         </span>
                           ) : (
                               <button
-                                  onClick={() => {
-                                    // TODO: open Verify Phone OTP modal
-                                    console.log("open verify phone modal");
-                                  }}
+                                  onClick={() => setShowAddPhoneModal(true)}
                                   className="text-xs font-bold text-[#e8683f] shrink-0 select-none hover:underline"
                               >
                                 Verify Now
@@ -313,7 +310,10 @@ export default function SettingsPage() {
 
             {/* RIGHT SIDE ACTION */}
             <div className="lg:self-end shrink-0">
-              <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#e8683f] text-[#e8683f] hover:bg-[#fff7f4] font-medium text-sm transition-all duration-200">
+              <button
+                  onClick={() => setShowEditProfileModal(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#e8683f] text-[#e8683f] hover:bg-[#fff7f4] font-medium text-sm transition-all duration-200"
+              >
                 <PencilLine size={16} />
                 Edit Profile
               </button>
@@ -597,14 +597,17 @@ export default function SettingsPage() {
               />
             </button>
 
-            <button className="w-full flex items-center justify-between py-3.5 px-1 hover:bg-gray-50/70 text-left transition-colors group rounded-xl">
+            <button
+                onClick={() => setShowAddPhoneModal(true)}
+                className="w-full flex items-center justify-between py-3.5 px-1 hover:bg-gray-50/70 text-left transition-colors group rounded-xl"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 group-hover:bg-slate-100 transition-colors">
                   <Smartphone size={15} />
                 </div>
                 <div className="space-y-0.5">
                 <span className="text-gray-800 font-bold block">
-                  Update Contact Number
+                  {phone ? "Update Contact Number" : "Add Contact Number"}
                 </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
                   Modify linked phone for emergency token dynamic alerts
@@ -730,15 +733,38 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* ── MODALS ── */}
+        {showAddPhoneModal && (
+            <AddPhoneModal
+                onClose={() => setShowAddPhoneModal(false)}
+                onVerified={(verifiedPhone) => {
+                  setPhone(verifiedPhone);
+                  setPhoneVerified(true);
+                }}
+            />
+        )}
+
+        {showEditProfileModal && (
+            <EditProfileModal
+                currentName={name}
+                currentImage={profileImage}
+                onClose={() => setShowEditProfileModal(false)}
+                onSaved={(data) => {
+                  setName(data.fullName);
+                  setProfileImage(data.profileImage);
+                }}
+            />
+        )}
+
         <style jsx global>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
+          .no-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+          .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}</style>
       </div>
   );
 }
