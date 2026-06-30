@@ -159,7 +159,7 @@ export default function SignupPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={step === 2}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 placeholder:text-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 placeholder:text-slate-200 text-slate-800 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] outline-none disabled:bg-gray-50 disabled:text-gray-500"
                   placeholder="John Doe"
                 />
               </div>

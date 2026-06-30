@@ -10,9 +10,13 @@ export interface LoginResponse {
 }
 
 export interface MeResponse {
+  id: number;
   email: string;
   fullName: string | null;
   profileImage: string | null;
+  phoneNumber: string | null;
+  phoneVerified: boolean;
+  verified: boolean;
 }
 
 export async function login(

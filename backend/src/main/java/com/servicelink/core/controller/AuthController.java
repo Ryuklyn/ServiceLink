@@ -8,6 +8,7 @@ import com.servicelink.core.dto.response.AuthResponseDTO;
 import com.servicelink.core.dto.response.OtpSendResponseDTO;
 import com.servicelink.core.dto.response.OtpVerifyResponseDTO;
 import com.servicelink.core.dto.response.UserResponseDTO;
+import com.servicelink.core.mapper.UserMapper;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
@@ -36,6 +37,7 @@ public class AuthController {
     private final PhoneOtpService phoneOtpService;
     private final JwtService     jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final UserMapper userMapper;
 
     // ─── Standard registration / login ────────────────────────────────────────
 
@@ -103,6 +105,25 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
+//    @GetMapping("/me")
+//    public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
+//
+//        if (auth == null || !auth.isAuthenticated()) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//        }
+//
+//        User user = (User) auth.getPrincipal();
+//
+//        UserProfile profile = user.getProfile();
+//        return ResponseEntity.ok(
+//                UserResponseDTO.builder()
+//                        .email(user.getEmail())
+//                        .fullName(profile != null ? profile.getFullName() : null)
+//                        .profileImage(profile != null ? profile.getProfileImage() : null)
+//                        .build()
+//        );
+//    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
 
@@ -112,14 +133,7 @@ public class AuthController {
 
         User user = (User) auth.getPrincipal();
 
-        UserProfile profile = user.getProfile();
-        return ResponseEntity.ok(
-                UserResponseDTO.builder()
-                        .email(user.getEmail())
-                        .fullName(profile != null ? profile.getFullName() : null)
-                        .profileImage(profile != null ? profile.getProfileImage() : null)
-                        .build()
-        );
+        return ResponseEntity.ok(userMapper.toResponseDTO(user));
     }
 
     @PostMapping("/reset-password")

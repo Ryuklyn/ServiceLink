@@ -1,6 +1,7 @@
 package com.servicelink.core.security;
 
 import com.servicelink.core.model.auth.AuthProvider;
+import com.servicelink.core.model.user.Role;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
@@ -15,6 +16,8 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -43,13 +46,15 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String name = oAuth2User.getAttribute("name");
         String picture = oAuth2User.getAttribute("picture");
 
-        Optional<User> optionalUser = userRepository.findByEmail(email);
-        User user;
+        User user = userRepository.findByEmail(email).orElse(null);
 
-        if (optionalUser.isEmpty()) {
+        if (user == null) {
+
             user = new User();
             user.setEmail(email);
             user.setProvider(AuthProvider.GOOGLE);
+            user.setRole(Role.CUSTOMER);      // Default role
+            user.setVerified(true);
 
             UserProfile profile = new UserProfile();
             profile.setFullName(name);
@@ -58,39 +63,56 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
             user.setProfile(profile);
 
-            userRepository.save(user);
-
         } else {
-            user = optionalUser.get();
 
             UserProfile profile = user.getProfile();
 
             if (profile == null) {
                 profile = new UserProfile();
                 profile.setUser(user);
-                profile.setFullName(name);
             }
+
+            profile.setFullName(name);
             profile.setProfileImage(picture);
+
             user.setProfile(profile);
 
-            userRepository.save(user);
+            if (user.getRole() == null) {
+                user.setRole(Role.CUSTOMER);
+            }
         }
 
-        // ✅ JWT Claims for the access token
-        Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("email", email);
-        extraClaims.put("name", user.getProfile().getFullName());
-        extraClaims.put("picture", user.getProfile().getProfileImage());
-        extraClaims.put("role", user.getRole().name());
+        userRepository.save(user);
 
-        String accessToken = jwtService.generatePurposeToken(extraClaims, email);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("email", user.getEmail());
+        claims.put("name", user.getProfile().getFullName());
+        claims.put("picture", user.getProfile().getProfileImage());
+        claims.put("role", user.getRole().name());
+        claims.put("provider", user.getProvider().name());
 
-        // ✅ Issue + store refresh token, same pattern as AuthService.login()
-        String refreshToken = jwtService.generateRefreshToken(email);
+        String accessToken =
+                jwtService.generatePurposeToken(claims, user.getEmail());
+
+        String refreshToken =
+                jwtService.generateRefreshToken(user.getEmail());
+
         String jti = jwtService.extractJti(refreshToken);
-        refreshTokenService.store(email, jti, refreshToken, jwtService.getRefreshTokenExpirationMillis());
 
-        // ✅ Redirect to frontend with both tokens
-        response.sendRedirect("http://localhost:3000/dashboard?token=" + accessToken + "&refreshToken=" + refreshToken);
+        refreshTokenService.store(
+                user.getEmail(),
+                jti,
+                refreshToken,
+                jwtService.getRefreshTokenExpirationMillis()
+        );
+
+        String redirectUrl =
+                "http://localhost:3000/oauth/callback"
+                        + "?accessToken="
+                        + URLEncoder.encode(accessToken, StandardCharsets.UTF_8)
+                        + "&refreshToken="
+                        + URLEncoder.encode(refreshToken, StandardCharsets.UTF_8);
+
+        response.sendRedirect(redirectUrl);
     }
 }
