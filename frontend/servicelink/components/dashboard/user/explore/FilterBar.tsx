@@ -93,7 +93,7 @@ export default function FilterBar({
 }: FilterBarProps) {
   return (
     <div className="sticky top-0 z-30 pt-1 pb-4">
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm px-6 py-4">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm px-6 py-4">
         <div className="flex items-center gap-4 flex-wrap">
           {/* Category */}
           <div className="relative">

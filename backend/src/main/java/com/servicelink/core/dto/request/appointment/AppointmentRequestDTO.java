@@ -36,6 +36,9 @@ public class AppointmentRequestDTO {
     @Size(max = 1024)
     private String attachedVideoUrl;
 
+    @Size(max = 1024)
+    private String attachedAudioUrl;
+
     /** Required when pricingUnit = PER_SQFT (e.g. full room painting) */
     @Min(value = 1, message = "Area must be at least 1 sq ft")
     private Integer areaSqFt;

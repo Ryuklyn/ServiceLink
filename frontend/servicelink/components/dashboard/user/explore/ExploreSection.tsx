@@ -574,7 +574,7 @@ export default function ExploreSection() {
               {filtered.map((provider) => (
                   <div
                       key={provider.id}
-                      className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-md hover:border-gray-200 transition-all duration-200 flex flex-col gap-4"
+                      className="bg-white border border-gray-100 rounded-xl p-5 hover:shadow-md hover:border-gray-200 transition-all duration-200 flex flex-col gap-4"
                   >
                     <div className="flex items-start gap-4">
                       <div className="relative shrink-0">

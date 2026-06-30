@@ -8,13 +8,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-// @Data
-// @Builder
-// public class UserResponseDTO {
-//     private String email;
-//     private String fullName;
-//     private String profileImage;
-// }
 
 @Builder
 @Data
@@ -25,6 +18,8 @@ public class UserResponseDTO {
     private String email;
     private String fullName;
     private String profileImage;
+    private boolean phoneVerified;
+    private String phoneNumber;
     // private String provider;
     private AuthProvider provider;
     private boolean verified;

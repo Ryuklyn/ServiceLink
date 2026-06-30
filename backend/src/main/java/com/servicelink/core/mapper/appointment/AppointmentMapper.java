@@ -51,6 +51,7 @@ public class AppointmentMapper {
                 // Attachments
                 .attachedImgUrl(appt.getAttachedImgUrl())
                 .attachedVideoUrl(appt.getAttachedVideoUrl())
+                .attachedAudioUrl(appt.getAttachedAudioUrl())
                 // Logistics
                 .address(appt.getAddress())
                 .notes(appt.getNotes())

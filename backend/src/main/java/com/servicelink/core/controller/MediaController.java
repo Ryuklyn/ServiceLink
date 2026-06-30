@@ -23,12 +23,19 @@ public class MediaController {
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<Map<String, String>> upload(@RequestParam("file") MultipartFile file) throws Exception {
 
-        String folder = file.getContentType()!= null
-                && file.getContentType().startsWith("video/") ? "videos" : "images";
+        String contentType = file.getContentType();
+
+        String folder;
+        if (contentType != null && contentType.startsWith("video/")) {
+            folder = "videos";
+        } else if (contentType != null && contentType.startsWith("audio/")) {
+            folder = "voice-notes";
+        } else {
+            folder = "images";
+        }
 
         String url = supabaseStorageService.uploadFile(file, folder);
 
         return ResponseEntity.ok().body(Map.of("url", url));
-
     }
 }

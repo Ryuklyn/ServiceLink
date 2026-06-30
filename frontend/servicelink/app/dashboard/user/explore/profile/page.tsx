@@ -23,7 +23,7 @@ interface SelectedService {
   name: string;
   priceMin: number;
   priceMax: number;
-  catalogId?: number; // Added
+  catalogId?: number;
 }
 
 function getInitials(name: string): string {
@@ -84,7 +84,7 @@ function mapBackendToProviderData(data: any): ProviderData {
           priceMin: s.customPrice,
           priceMax: s.customPrice,
           duration: s.effectiveDuration ?? "1 hr",
-          catalogId: s.catalogId, // Confirmed mapped here
+          catalogId: s.catalogId,
         })) ?? [],
     providerReviews:
         data.recentReviews?.map((r: any) => ({
@@ -115,11 +115,25 @@ export default function ProviderPage() {
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [issueDescription, setIssueDescription] = useState("");
 
-  const [selectedDate, setSelectedDate]     = useState<Date>(new Date());
-  const [selectedPeriod, setSelectedPeriod] = useState<
-      "morning" | "afternoon" | "evening" | null
-  >(null);
+  // ── Voice note: single source of truth, shared with DescribeIssue + BookingSidebar ──
+  const [voiceNoteBlob, setVoiceNoteBlob] = useState<Blob | null>(null);
+  const [voiceNoteUrl, setVoiceNoteUrl]   = useState<string | null>(null);
 
+  const handleVoiceNoteChange = (blob: Blob | null) => {
+    if (voiceNoteUrl) URL.revokeObjectURL(voiceNoteUrl);
+    setVoiceNoteBlob(blob);
+    setVoiceNoteUrl(blob ? URL.createObjectURL(blob) : null);
+  };
+
+  useEffect(() => {
+    return () => { if (voiceNoteUrl) URL.revokeObjectURL(voiceNoteUrl); };
+  }, [voiceNoteUrl]);
+
+  const [selectedDate, setSelectedDate]     = useState<Date>(new Date());
+  const [selectedPeriod, setSelectedPeriod] = useState
+  <
+  "morning" | "afternoon" | "evening" | null
+  >(null);
   useEffect(() => {
     const fetchProvider = async () => {
       try {
@@ -137,7 +151,6 @@ export default function ProviderPage() {
     fetchProvider();
   }, [providerId]);
 
-  // Updated to pass catalogId down to state arrays
   const handleToggleService = (serviceName: string) => {
     if (!provider) return;
     const service = provider.services.find((s) => s.name === serviceName);
@@ -149,7 +162,7 @@ export default function ProviderPage() {
         name: service.name,
         priceMin: service.priceMin,
         priceMax: service.priceMax,
-        catalogId: service.catalogId, // Added
+        catalogId: service.catalogId,
       }];
     });
   };
@@ -188,7 +201,10 @@ export default function ProviderPage() {
               onPeriodChange={setSelectedPeriod}
           />
 
-          <DescribeIssue onIssueChange={setIssueDescription} />
+          <DescribeIssue
+              onIssueChange={setIssueDescription}
+              onVoiceNoteChange={handleVoiceNoteChange}
+          />
           <AboutSection provider={provider} />
           <RatingsBreakdown provider={provider} />
           <CoverageMap
@@ -207,6 +223,8 @@ export default function ProviderPage() {
               issueDescription={issueDescription}
               selectedDate={selectedDate}
               selectedPeriod={selectedPeriod}
+              voiceNoteBlob={voiceNoteBlob}
+              voiceNoteUrl={voiceNoteUrl}
           />
         </div>
       </div>

@@ -16,7 +16,7 @@ export default function UpcomingBooking({
   rescheduleInfo = "Free reschedule available — more than 24 hours away",
 }: UpcomingBookingProps) {
   return (
-    <div className="mb-8 flex items-center justify-between rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-slate-50 px-8 py-6 shadow-sm">
+    <div className="mb-8 flex items-center justify-between rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-slate-50 px-8 py-6 shadow-sm">
       {/* Left Content */}
       <div className="flex flex-col">
         <div className="flex items-center flex-wrap gap-2">

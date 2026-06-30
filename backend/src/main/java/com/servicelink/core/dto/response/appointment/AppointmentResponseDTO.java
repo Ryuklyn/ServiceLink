@@ -90,6 +90,7 @@ public class AppointmentResponseDTO {
     // ── Attachments ───────────────────────────────────────────────────────────
     private String attachedImgUrl;
     private String attachedVideoUrl;
+    private String attachedAudioUrl;
 
     // ── Logistics ─────────────────────────────────────────────────────────────
     private String address;

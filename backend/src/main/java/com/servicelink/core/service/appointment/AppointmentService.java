@@ -77,6 +77,7 @@ public class AppointmentService {
                 .notes(req.getNotes())
                 .attachedImgUrl(req.getAttachedImgUrl())
                 .attachedVideoUrl(req.getAttachedVideoUrl())
+                .attachedAudioUrl(req.getAttachedAudioUrl())
                 .areaSqFt(req.getAreaSqFt())
                 .wallCount(req.getWallCount())
                 .itemCount(req.getItemCount())

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "react-toastify";
 import {
-    MessageCircle, Phone, Mic, MicOff, Upload, CheckCircle2,
+    MessageCircle, Phone, Mic, Upload, CheckCircle2,
     MapPin, Sun, Sunset, Moon, X, Navigation, Loader2,
     Calendar, ShieldCheck, MousePointerClick, Video, Image,
 } from "lucide-react";
@@ -22,6 +22,8 @@ interface BookingSidebarProps {
     issueDescription?: string;
     selectedDate?: Date;
     selectedPeriod?: "morning" | "afternoon" | "evening" | null;
+    voiceNoteBlob?: Blob | null;
+    voiceNoteUrl?: string | null;
 }
 
 interface MediaFileWrapper {
@@ -30,7 +32,6 @@ interface MediaFileWrapper {
     type: "image" | "video";
 }
 
-// This is the shape returned from POST /api/appointments
 interface AppointmentResponse {
     id: number;
     providerId: number;
@@ -53,6 +54,7 @@ interface AppointmentResponse {
     status: string;
     attachedImgUrl: string | null;
     attachedVideoUrl: string | null;
+    attachedAudioUrl: string | null;
 }
 
 const PERIOD_LABELS: Record<string, { label: string; time: string; icon: React.ElementType }> = {
@@ -66,7 +68,6 @@ const DAYS_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const DEFAULT_LAT = 27.7172;
 const DEFAULT_LNG = 85.324;
 
-// Map frontend period to backend TimeSlot enum
 function mapPeriodToTimeSlot(period: string): string {
     const map: Record<string, string> = {
         morning: "MORNING",
@@ -81,7 +82,6 @@ function formatDateDisplay(date: Date | undefined): string {
     return `${DAYS_SHORT[date.getDay()]}, ${MONTH_NAMES_SHORT[date.getMonth()]} ${date.getDate()}`;
 }
 
-// Format Date to LocalDate string for backend (YYYY-MM-DD)
 function formatDateForBackend(date: Date | undefined): string {
     if (!date) return "";
     const year  = date.getFullYear();
@@ -96,10 +96,11 @@ export default function BookingSidebar({
                                            issueDescription: externalIssue,
                                            selectedDate: externalDate,
                                            selectedPeriod: externalPeriod,
+                                           voiceNoteBlob = null,
+                                           voiceNoteUrl  = null,
                                        }: BookingSidebarProps) {
     const [isModalOpen, setIsModalOpen]       = useState(false);
     const [taskSummary, setTaskSummary]       = useState(externalIssue ?? "");
-    const [isListening, setIsListening]       = useState(false);
     const [media, setMedia]                   = useState<MediaFileWrapper | null>(null);
     const [markerPos, setMarkerPos]           = useState<[number, number]>([DEFAULT_LAT, DEFAULT_LNG]);
     const [address, setAddress]               = useState("");
@@ -111,9 +112,19 @@ export default function BookingSidebar({
     const [localDate, setLocalDate]     = useState<Date | undefined>(externalDate);
     const [localPeriod, setLocalPeriod] = useState<"morning"|"afternoon"|"evening"|null>(externalPeriod ?? null);
 
-    const recognitionRef = useRef<any>(null);
-    const fileInputRef   = useRef<HTMLInputElement>(null);
-    const mapRef         = useRef<any>(null);
+    // ── Voice note: playback-only state (recording happens in DescribeIssue) ──
+    const [isPlayingNote, setIsPlayingNote] = useState(false);
+    const notePlayerRef = useRef<HTMLAudioElement | null>(null);
+
+    const toggleNotePlayback = () => {
+        if (!notePlayerRef.current) return;
+        if (isPlayingNote) notePlayerRef.current.pause();
+        else notePlayerRef.current.play();
+        setIsPlayingNote(!isPlayingNote);
+    };
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const mapRef       = useRef<any>(null);
 
     useEffect(() => { if (externalIssue  !== undefined) setTaskSummary(externalIssue); }, [externalIssue]);
     useEffect(() => { if (externalDate   !== undefined) setLocalDate(externalDate);    }, [externalDate]);
@@ -123,32 +134,7 @@ export default function BookingSidebar({
         return () => { if (media) URL.revokeObjectURL(media.previewUrl); };
     }, [media]);
 
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        const W  = window as any;
-        const SR = W.SpeechRecognition || W.webkitSpeechRecognition;
-        if (!SR) return;
-        const rec          = new SR();
-        rec.continuous     = true;
-        rec.interimResults = true;
-        rec.lang           = "en-US";
-        rec.onresult = (event: any) => {
-            let final = "";
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                if (event.results[i].isFinal) final += event.results[i][0].transcript;
-            }
-            if (final) setTaskSummary((prev) => (prev ? `${prev.trim()} ${final.trim()}` : final.trim()));
-        };
-        rec.onerror = () => setIsListening(false);
-        rec.onend   = () => setIsListening(false);
-        recognitionRef.current = rec;
-    }, []);
-
-    const toggleListening = () => {
-        if (!recognitionRef.current) { alert("Speech recognition not supported."); return; }
-        if (isListening) recognitionRef.current.stop();
-        else { setIsListening(true); recognitionRef.current.start(); }
-    };
+    // ── Media (image/video) upload ───────────────────────────────────────────
 
     const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -220,64 +206,7 @@ export default function BookingSidebar({
 
     // ── BOOK NOW HANDLER ──────────────────────────────────────────────────────
 
-    // const handleBookNow = async () => {
-    //     console.log("handleBookNow fired");
-    //     const validationError = validateBooking();
-    //     if (validationError) {
-    //         toast.warning(validationError, { position: "top-right" });
-    //         return;
-    //     }
-    //
-    //     const firstService = services.find((svc) => svc.catalogId);
-    //     if (!firstService?.catalogId) {
-    //         toast.warning("Selected service is missing catalog ID.");
-    //         return;
-    //     }
-    //
-    //     setIsBooking(true);
-    //
-    //     try {
-    //         const payload = {
-    //             providerId:       Number(provider.id),
-    //             serviceCatalogId: firstService.catalogId,
-    //             appointmentDate:  formatDateForBackend(localDate),
-    //             timeSlot:         mapPeriodToTimeSlot(localPeriod!),
-    //             address:          address.trim(),
-    //             notes:            taskSummary.trim() || null,
-    //             attachedImgUrl:   null,
-    //             attachedVideoUrl: null,
-    //             itemCount: 1,
-    //         };
-    //
-    //         console.log("BOOKING PAYLOAD:", payload);
-    //
-    //         const { data } = await api.post<AppointmentResponse>("/appointments", payload);
-    //
-    //         setBookedAppointments([data]);
-    //         toast.success("Appointment booked successfully!", { position: "top-right" });
-    //         setIsModalOpen(true);
-    //
-    //     } catch (err: any) {
-    //         const status  = err?.status ?? 0;
-    //         const message = err?.message ?? "Booking failed. Please try again.";
-    //
-    //         if (status === 401) {
-    //             toast.error("Please log in as a customer to book.", { position: "top-right" });
-    //         } else if (message.includes("APPOINTMENT_SLOT_TAKEN") || status === 409) {
-    //             toast.error("That time slot is already booked. Please choose a different time.", { position: "top-right" });
-    //         } else if (message.includes("SERVICE_UNAVAILABLE")) {
-    //             toast.error("This service is currently unavailable.", { position: "top-right" });
-    //         } else {
-    //             toast.error(message, { position: "top-right" });
-    //         }
-    //     } finally {
-    //         setIsBooking(false);
-    //     }
-    // };
-
-
     const handleBookNow = async () => {
-        console.log("handleBookNow fired");
         const validationError = validateBooking();
         if (validationError) {
             toast.warning(validationError, { position: "top-right" });
@@ -293,9 +222,9 @@ export default function BookingSidebar({
         setIsBooking(true);
 
         try {
-            // 1. Upload media to Supabase first if present
             let attachedImgUrl: string | null = null;
             let attachedVideoUrl: string | null = null;
+            let attachedAudioUrl: string | null = null;
 
             if (media) {
                 const formData = new FormData();
@@ -314,7 +243,20 @@ export default function BookingSidebar({
                 }
             }
 
-            // 2. Book appointment with real URLs
+            // Upload voice note (blob is owned by ProviderPage, received via props)
+            if (voiceNoteBlob) {
+                const audioFormData = new FormData();
+                audioFormData.append("file", voiceNoteBlob, "voice-note.webm");
+
+                const { data: audioUploadData } = await api.post<{ url: string }>(
+                    "/media/upload",
+                    audioFormData,
+                    { headers: { "Content-Type": "multipart/form-data" } }
+                );
+
+                attachedAudioUrl = audioUploadData.url;
+            }
+
             const payload = {
                 providerId:       Number(provider.id),
                 serviceCatalogId: firstService.catalogId,
@@ -324,10 +266,9 @@ export default function BookingSidebar({
                 notes:            taskSummary.trim() || null,
                 attachedImgUrl,
                 attachedVideoUrl,
+                attachedAudioUrl,
                 itemCount: 1,
             };
-
-            console.log("BOOKING PAYLOAD:", payload);
 
             const { data } = await api.post<AppointmentResponse>("/appointments", payload);
 
@@ -410,18 +351,45 @@ export default function BookingSidebar({
                 onChange={(e) => setTaskSummary(e.target.value)}
                 placeholder="Briefly explain what needs fixing..."
                 rows={3}
-                className="w-full bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none resize-none p-3 pr-12 rounded-xl"
+                className="w-full bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none resize-none p-3 rounded-xl"
             />
-                        <button
-                            onClick={toggleListening}
-                            type="button"
-                            className={`absolute bottom-3 right-3 w-8 h-8 flex items-center justify-center rounded-full shadow transition-all ${
-                                isListening ? "bg-red-100 text-red-500 animate-pulse" : "bg-[#1e3a8a] text-white hover:bg-blue-900"
-                            }`}
-                        >
-                            {isListening ? <MicOff size={15} /> : <Mic size={15} />}
-                        </button>
                     </div>
+                </div>
+
+                {/* Voice Note — shared from DescribeIssue via ProviderPage, read-only here */}
+                <div className="px-5 py-4">
+                    <p className="text-xs font-semibold text-gray-500 mb-2">
+                        Voice Note <span className="font-normal text-gray-400">(optional)</span>
+                    </p>
+
+                    {!voiceNoteBlob && (
+                        <div className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-3 text-xs text-gray-400 text-center px-3">
+                            <Mic size={13} className="shrink-0" />
+                            Record one in &ldquo;Describe Your Issue&rdquo; above
+                        </div>
+                    )}
+
+                    {voiceNoteBlob && voiceNoteUrl && (
+                        <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl px-4 py-2.5">
+                            <button
+                                onClick={toggleNotePlayback}
+                                type="button"
+                                className="w-7 h-7 flex items-center justify-center rounded-full bg-[#1e3a8a] text-white hover:bg-blue-800 active:scale-95 transition-all"
+                            >
+                                <Mic size={13} />
+                            </button>
+                            <audio
+                                ref={notePlayerRef}
+                                src={voiceNoteUrl}
+                                onEnded={() => setIsPlayingNote(false)}
+                                className="hidden"
+                            />
+                            <span className="text-xs font-semibold text-green-700 flex-1">
+                                Voice note attached
+                            </span>
+                            <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                        </div>
+                    )}
                 </div>
 
                 {/* Photo or Video */}
@@ -607,10 +575,12 @@ export default function BookingSidebar({
                     estimatedMax,
                     address,
                     photos: media ? [media.file] : [],
-                    // Pass real backend response data
                     appointmentIds: bookedAppointments.map((a) => a.id),
                     appointmentStatus: bookedAppointments[0]?.status ?? "PENDING",
                     totalPrice: bookedAppointments.reduce((sum, a) => sum + (a.totalPrice ?? 0), 0),
+                    attachedImgUrl: bookedAppointments[0]?.attachedImgUrl ?? null,
+                    attachedVideoUrl: bookedAppointments[0]?.attachedVideoUrl ?? null,
+                    attachedAudioUrl: bookedAppointments[0]?.attachedAudioUrl ?? null,
                 }}
             />
         </div>

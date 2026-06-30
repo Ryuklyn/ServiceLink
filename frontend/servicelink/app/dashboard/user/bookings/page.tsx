@@ -150,7 +150,7 @@ export default function BookingsPage() {
   };
 
   return (
-      <div className="space-y-6 max-w-6xl mx-auto p-4">
+      <div className="space-y-6 mx-auto p-4">
         {/* Tabs */}
         <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
           {(["Active", "Upcoming", "History"] as const).map((tab) => {

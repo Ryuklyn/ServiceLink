@@ -127,7 +127,14 @@ public class SupabaseStorageService {
                 "video/mpeg4",
                 "video/quicktime",
                 "video/webm",
-                "application/pdf"
+                "application/pdf",
+                "audio/webm",
+                "audio/mpeg",
+                "audio/mp3",
+                "audio/wav",
+                "audio/ogg",
+                "audio/mp4"
+
         );
 
         String contentType = file.getContentType();

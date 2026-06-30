@@ -1,14 +1,14 @@
 package com.servicelink.core.model.user;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Table(name = "user_profiles")
 public class UserProfile {
@@ -20,6 +20,10 @@ public class UserProfile {
 
     private String fullName;
     private String profileImage;
+    private String phoneNumber;
+
+    @Builder.Default
+    private boolean phoneVerified = false;
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)

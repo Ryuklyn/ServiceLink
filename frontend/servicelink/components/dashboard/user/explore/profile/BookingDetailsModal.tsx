@@ -32,6 +32,7 @@ interface BookingModalProps {
     totalPrice?: number;
     attachedImgUrl?: string | null;
     attachedVideoUrl?: string | null;
+    attachedAudioUrl?: string | null;
   };
 }
 
@@ -59,7 +60,6 @@ export default function BookingDetailsModal({
     };
   }, [isOpen]);
 
-  // Close lightbox on Escape
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -87,6 +87,7 @@ export default function BookingDetailsModal({
     totalPrice,
     attachedImgUrl,
     attachedVideoUrl,
+    attachedAudioUrl,
   } = bookingDetails;
 
   const serviceNames = services.map((s) => s.name).join(", ") || "General Service";
@@ -119,7 +120,6 @@ export default function BookingDetailsModal({
     return "bg-yellow-400";
   };
 
-  // Build media items from Supabase URLs (after booking) or local File objects (fallback)
   const mediaItems: { type: "image" | "video"; src: string; isLocal?: boolean }[] = [];
 
   if (attachedImgUrl) {
@@ -297,10 +297,14 @@ export default function BookingDetailsModal({
                     {taskSummary || "No detailed summary provided."}
                   </p>
 
-                  {taskSummary && (
-                      <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-lg mb-4 w-fit">
-                        <Mic size={14} className="text-amber-600" />
-                        <span className="text-xs font-semibold text-amber-700">Voice note attached</span>
+                  {/* Voice note player — only shown when actually recorded/uploaded */}
+                  {attachedAudioUrl && (
+                      <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-4">
+                        <Mic size={15} className="text-amber-600 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-amber-700 mb-1">Voice note attached</p>
+                          <audio controls src={attachedAudioUrl} className="w-full h-7" />
+                        </div>
                       </div>
                   )}
 
@@ -474,7 +478,6 @@ export default function BookingDetailsModal({
                 className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90"
                 onClick={() => setLightbox(null)}
             >
-              {/* Close button */}
               <button
                   onClick={() => setLightbox(null)}
                   className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-10"
@@ -482,7 +485,6 @@ export default function BookingDetailsModal({
                 <X size={20} />
               </button>
 
-              {/* Media */}
               <div
                   className="relative max-w-4xl max-h-[85vh] w-full mx-4"
                   onClick={(e) => e.stopPropagation()}

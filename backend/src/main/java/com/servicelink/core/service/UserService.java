@@ -34,6 +34,12 @@ public class UserService {
         return repo.findAll();
     }
 
+    // ✅ Get single user by id
+    public User getUserById(Long id) {
+        return repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
+    }
+
     // ✅ Save user (used internally)
     public User save(User user) {
         return repo.save(user);

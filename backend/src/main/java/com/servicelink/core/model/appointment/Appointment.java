@@ -118,6 +118,9 @@ public class Appointment {
     @Column(name = "attached_video_url", length = 1024)
     private String attachedVideoUrl;
 
+    @Column(name = "attached_audio_url", length = 1024)
+    private String attachedAudioUrl;
+
     // ── Optimistic Lock ───────────────────────────────────────────────────────
 
     @Version

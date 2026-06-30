@@ -16,7 +16,7 @@ export default function BookingAlert({
   eta = "~15 min",
 }: BookingAlertProps) {
   return (
-    <div className="bg-gradient-to-r from-[#ff9500] to-[#ff7b00] rounded-2xl px-6 py-4 mb-8 flex items-center gap-4">
+    <div className="bg-gradient-to-r from-[#ff9500] to-[#ff7b00] rounded-xl px-6 py-4 mb-8 flex items-center gap-4">
       {/* Pulse dot */}
       <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse shrink-0" />
 

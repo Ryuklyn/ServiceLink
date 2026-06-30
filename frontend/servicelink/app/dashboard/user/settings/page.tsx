@@ -99,7 +99,7 @@ export default function SettingsPage() {
   const [is2FAEnabled, setIs2FAEnabled] = useState(true);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12 font-sans text-gray-800">
+    <div className="mx-auto space-y-6 pb-12 font-sans text-gray-800">
       {/* ── CARD 1: PROFILE INFORMATION ── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 md:p-8">
         <h3 className="text-sm font-bold text-[#1e3a8a] tracking-tight mb-8">
