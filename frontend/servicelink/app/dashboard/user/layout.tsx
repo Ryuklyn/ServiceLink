@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/user/UserSidebar";
 import SearchBar from "@/components/dashboard/user/SearchBar";
+import OnboardingGate from "@/components/dashboard/user/onboarding/OnboardingGate";
 import { Provider } from "react-redux";
 import { store } from "@/store";
 
@@ -47,6 +48,7 @@ export default function UserDashboardLayout({
             </div>
           </div>
         </div>
+          <OnboardingGate />
       </Provider>
   );
 }

@@ -58,20 +58,7 @@ public class UserMapper {
         return user;
     }
 
-//    public UserResponseDTO toResponseDTO(User user) {
-//        UserProfile profile = user.getProfile();
-//        return UserResponseDTO.builder()
-//                .id(user.getId())
-//                .email(user.getEmail())
-//                .fullName(user.getFullName())
-//                .profileImage(user.getProfile() != null ? user.getProfile().getProfileImage() : null)
-//                .phoneNumber(user.getProfile() != null ? user.getProfile().getPhoneNumber() : null)
-//                .phoneVerified(user.getProfile() != null && user.getProfile().isPhoneVerified())
-//                .provider(user.getProvider())
-//                .verified(user.isVerified())
-//                .createdAt(user.getCreatedAt())
-//                .build();
-//    }
+
         public UserResponseDTO toResponseDTO(User user) {
             UserProfile profile = user.getProfile();
 
@@ -82,6 +69,7 @@ public class UserMapper {
                     .profileImage(profile == null ? null : profile.getProfileImage())
                     .phoneNumber(profile == null ? null : profile.getPhoneNumber())
                     .phoneVerified(profile != null && profile.isPhoneVerified())
+                    .hasSeenOnboarding(profile != null && profile.isHasSeenOnboarding())
                     .provider(user.getProvider())
                     .verified(user.isVerified())
                     .createdAt(user.getCreatedAt())

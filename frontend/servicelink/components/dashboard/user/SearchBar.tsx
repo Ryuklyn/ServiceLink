@@ -8,16 +8,6 @@ import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearUser } from "@/store/slices/userSlice";
 
-// interface SearchBarProps {
-//   userProfile?: {
-//     fullName: string;
-//     email: string;
-//     profileImage?: string;
-//   };
-// }
-
-
-
 const pageTitles: Record<string, string> = {
   "/dashboard/user": "Dashboard",
   "/dashboard/user/explore": "Explore Services",
@@ -109,19 +99,21 @@ export default function SearchBar() {
         {/* Avatar + Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
-            onClick={() => setShowDropdown((prev) => !prev)}
-            className="w-9 h-9 bg-[#e8683f] rounded-full flex items-center justify-center text-white text-sm font-bold hover:bg-[#d75930] transition-colors focus:outline-none focus:ring-2 focus:ring-white/40"
+              onClick={() => setShowDropdown((prev) => !prev)}
+              className="w-9 h-9 bg-[#e8683f] rounded-full flex items-center justify-center text-white text-sm font-bold hover:bg-[#d75930] transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 overflow-hidden relative" // यहाँ relative र overflow-hidden थपियो
           >
             {user?.profileImage ? (
-              <Image
-                src={user.profileImage}
-                alt="avatar"
-                width={36}
-                height={36}
-                className="rounded-full object-cover"
-              />
+                <div className="relative w-full h-full rounded-full overflow-hidden aspect-square">
+                  <Image
+                      src={user.profileImage}
+                      alt="avatar"
+                      fill // 'fill' ले container को exact 9x9 size लिन्छ
+                      sizes="36px"
+                      className="object-cover"
+                  />
+                </div>
             ) : (
-              initials
+                initials
             )}
           </button>
 

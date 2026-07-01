@@ -146,22 +146,26 @@ export default function Sidebar() {
             className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/10 transition-colors"
           >
             {/* Avatar */}
-            <div className="relative shrink-0">
+            {/* Avatar */}
+            <div className="relative shrink-0 w-9 h-9"> {/* यहाँ explicit aspect control थपियो */}
               {user?.profileImage ? (
-                <Image
-                  src={user.profileImage}
-                  alt="profile"
-                  width={36}
-                  height={36}
-                  className="rounded-full object-cover"
-                />
+                  <div className="relative w-full h-full rounded-full overflow-hidden aspect-square">
+                    <Image
+                        src={user.profileImage}
+                        alt="profile"
+                        fill // fixed width/height को साटो 'fill' प्रयोग गर्ने
+                        sizes="36px"
+                        className="object-cover" // यसले image लाई नतन्काई crop गरेर fit गराउँछ
+                        priority
+                    />
+                  </div>
               ) : (
-                <div className="w-9 h-9 bg-[#e8683f] rounded-full flex items-center justify-center text-sm font-bold">
-                  {initials}
-                </div>
+                  <div className="w-full h-full bg-[#e8683f] rounded-full flex items-center justify-center text-sm font-bold text-white">
+                    {initials}
+                  </div>
               )}
               {/* Online green dot */}
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-[#2a4499] rounded-full" />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-[#2a4499] rounded-full z-10" />
             </div>
 
             <div className="text-left overflow-hidden">

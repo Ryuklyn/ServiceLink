@@ -21,6 +21,7 @@ public class UserResponseDTO {
     private boolean phoneVerified;
     private String phoneNumber;
     // private String provider;
+    private boolean hasSeenOnboarding;
     private AuthProvider provider;
     private boolean verified;
     private LocalDateTime createdAt;

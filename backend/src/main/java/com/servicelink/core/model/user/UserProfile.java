@@ -25,6 +25,9 @@ public class UserProfile {
     @Builder.Default
     private boolean phoneVerified = false;
 
+    @Builder.Default
+    private boolean hasSeenOnboarding = false;
+
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
