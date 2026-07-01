@@ -12,14 +12,18 @@ import {
   CircleUser,
   LogOut,
 } from "lucide-react";
+// ✅ थप्ने - imports मा
+import { useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchUser, clearUser } from "@/store/slices/userSlice";
 
-interface SidebarProps {
-  userProfile?: {
-    fullName: string;
-    email: string;
-    profileImage?: string;
-  };
-}
+// interface SidebarProps {
+//   userProfile?: {
+//     fullName: string;
+//     email: string;
+//     profileImage?: string;
+//   };
+// }
 
 const menuItems = [
   { label: "Home", icon: Home, href: "/dashboard/user" },
@@ -33,14 +37,24 @@ const menuItems = [
   { label: "Account", icon: CircleUser, href: "/dashboard/user/settings" },
 ];
 
-export default function Sidebar({ userProfile }: SidebarProps) {
+export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const [showAccountMenu, setShowAccountMenu] = useState(false);
 
+  const dispatch = useAppDispatch();
+  const { data: user } = useAppSelector((state) => state.user);
+
+  useEffect(() => {
+    if (!user) {
+      dispatch(fetchUser());
+    }
+  }, [dispatch, user]);
+
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("token");
+    dispatch(clearUser());
     router.push("/login");
   };
 
@@ -51,14 +65,18 @@ export default function Sidebar({ userProfile }: SidebarProps) {
     return pathname.startsWith(href);
   };
 
-  const initials = userProfile?.fullName
-    ? userProfile.fullName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "U";
+  // const initials = userProfile?.fullName
+  //   ? userProfile.fullName
+  //       .split(" ")
+  //       .map((n) => n[0])
+  //       .join("")
+  //       .toUpperCase()
+  //       .slice(0, 2)
+  //   : "U";
+
+  const initials = user?.fullName
+      ? user.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+      : "U";
 
   return (
     <div
@@ -129,9 +147,9 @@ export default function Sidebar({ userProfile }: SidebarProps) {
           >
             {/* Avatar */}
             <div className="relative shrink-0">
-              {userProfile?.profileImage ? (
+              {user?.profileImage ? (
                 <Image
-                  src={userProfile.profileImage}
+                  src={user.profileImage}
                   alt="profile"
                   width={36}
                   height={36}
@@ -148,7 +166,7 @@ export default function Sidebar({ userProfile }: SidebarProps) {
 
             <div className="text-left overflow-hidden">
               <p className="text-sm font-semibold truncate leading-tight">
-                {userProfile?.fullName || "User"}
+                {user?.fullName || "User"}
               </p>
               <p className="text-xs text-blue-200 leading-tight">
                 Verified User

@@ -7,6 +7,7 @@ import { updateMyProfile, updateMyPhoto } from "@/lib/api/authApi";
 interface EditProfileModalProps {
     currentName: string;
     currentImage: string | null;
+    userId: number;
     onClose: () => void;
     onSaved: (data: { fullName: string; profileImage: string | null }) => void;
 }
@@ -14,6 +15,7 @@ interface EditProfileModalProps {
 export default function EditProfileModal({
                                              currentName,
                                              currentImage,
+                                             userId,
                                              onClose,
                                              onSaved,
                                          }: EditProfileModalProps) {

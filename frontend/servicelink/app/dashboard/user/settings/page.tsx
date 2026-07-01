@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useEffect } from "react";
-import { getMe, MeResponse } from "@/lib/api/authApi";
+import { MeResponse } from "@/lib/api/authApi";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchUser, updateUserLocally } from "@/store/slices/userSlice";
 import AddPhoneModal from "@/components/dashboard/user/settings/AddPhoneModal";
 import EditProfileModal from "@/components/dashboard/user/settings/EditProfileModal";
 import AvatarMenu from "@/components/dashboard/user/settings/AvatarMenu";
@@ -48,45 +50,19 @@ interface SavedProvider {
 }
 
 export default function SettingsPage() {
-  // ── Profile Information — sourced from backend (/auth/me) ──
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState<string | null>(null);
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [accountVerified, setAccountVerified] = useState(false);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const { data: user, loading, error } = useAppSelector((state) => state.user);
 
   // ── Modal visibility states ──
   const [showAddPhoneModal, setShowAddPhoneModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const data: MeResponse = await getMe();
-
-        setName(data.fullName || "");
-        setEmail(data.email || "");
-        setPhone(data.phoneNumber ?? null);
-        setPhoneVerified(data.phoneVerified ?? false);
-        setProfileImage(data.profileImage ?? null);
-        setAccountVerified(data.verified ?? false);
-      } catch (err) {
-        console.error("Failed to fetch user profile:", err);
-        setError("Could not load profile information");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
+    if (!user) {
+      dispatch(fetchUser());
+    }
+  }, [dispatch, user]);
 
   // ── Address Mock States ──
   const [addresses, setAddresses] = useState<SavedAddress[]>([
@@ -191,22 +167,22 @@ export default function SettingsPage() {
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
             {/* LEFT SIDE */}
             <div className="flex flex-col md:flex-row items-center gap-10 flex-1">
-              {/* AVATAR BLOCK — image if available, else initials */}
+              {/* AVATAR BLOCK */}
               <div className="relative shrink-0">
                 <div className="w-40 h-40 rounded-full bg-[#0a337a] flex items-center justify-center text-white text-6xl font-bold select-none overflow-hidden">
-                  {profileImage ? (
+                  {user?.profileImage ? (
                       <img
-                          src={profileImage}
-                          alt={name || "Profile"}
+                          src={user.profileImage}
+                          alt={user?.fullName || "Profile"}
                           className="w-full h-full object-cover"
                       />
                   ) : (
-                      <span>{getInitials(name)}</span>
+                      <span>{getInitials(user?.fullName || "")}</span>
                   )}
                 </div>
 
                 <AvatarMenu
-                    currentImage={profileImage}
+                    currentImage={user?.profileImage ?? null}
                     onUploadClick={() => setShowEditProfileModal(true)}
                 />
               </div>
@@ -215,11 +191,11 @@ export default function SettingsPage() {
               <div className="flex-1 min-w-0">
                 {/* Name */}
                 <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
-                  {name || "—"}
+                  {user?.fullName || "—"}
                 </h2>
 
-                {/* Verified Account Pill Badge Row */}
-                {accountVerified && (
+                {/* Verified Account Pill Badge */}
+                {user?.verified && (
                     <div className="flex items-center gap-1.5 mt-2">
                       <CheckCircle2
                           size={15}
@@ -227,8 +203,8 @@ export default function SettingsPage() {
                           className="text-white shrink-0"
                       />
                       <span className="text-xs font-semibold text-[#10b981]">
-                    Verified Account
-                  </span>
+              Verified Account
+            </span>
                     </div>
                 )}
 
@@ -239,37 +215,37 @@ export default function SettingsPage() {
                   </h4>
 
                   <div className="space-y-4 max-w-md">
-                    {/* EMAIL ROW — read-only, not editable */}
+                    {/* EMAIL ROW — read-only */}
                     <div className="flex items-center justify-between gap-6">
                       <div className="flex items-center gap-3 min-w-0">
                         <Mail size={16} className="text-slate-400 shrink-0" />
                         <span className="text-sm text-slate-700 truncate">
-                        {email}
-                      </span>
+                  {user?.email}
+                </span>
                       </div>
 
                       <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-xs font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
-                      <ShieldCheck
-                          className="w-3.5 h-3.5 fill-[#10b981]/10"
-                          strokeWidth={2.5}
-                      />
-                      Verified
-                    </span>
+                <ShieldCheck
+                    className="w-3.5 h-3.5 fill-[#10b981]/10"
+                    strokeWidth={2.5}
+                />
+                Verified
+              </span>
                     </div>
 
-                    {/* PHONE ROW — 3-state conditional logic */}
+                    {/* PHONE ROW — 3-state conditional */}
                     <div className="flex items-center justify-between gap-6">
                       <div className="flex items-center gap-3 min-w-0">
                         <Phone size={16} className="text-slate-400 shrink-0" />
-                        {phone ? (
+                        {user?.phoneNumber ? (
                             <span className="text-sm text-slate-700 truncate">
-                          {phone}
-                        </span>
+                    {user.phoneNumber}
+                  </span>
                         ) : (
                             <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-400">
-                            Not Available
-                          </span>
+                    <span className="text-sm text-slate-400">
+                      Not Available
+                    </span>
                               <button
                                   onClick={() => setShowAddPhoneModal(true)}
                                   className="text-[#e8683f] text-sm font-semibold hover:underline"
@@ -280,15 +256,15 @@ export default function SettingsPage() {
                         )}
                       </div>
 
-                      {phone ? (
-                          phoneVerified ? (
+                      {user?.phoneNumber ? (
+                          user?.phoneVerified ? (
                               <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-xs font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
-                          <ShieldCheck
-                              className="w-3.5 h-3.5 fill-[#10b981]/10"
-                              strokeWidth={2.5}
-                          />
-                          Verified
-                        </span>
+                    <ShieldCheck
+                        className="w-3.5 h-3.5 fill-[#10b981]/10"
+                        strokeWidth={2.5}
+                    />
+                    Verified
+                  </span>
                           ) : (
                               <button
                                   onClick={() => setShowAddPhoneModal(true)}
@@ -299,8 +275,8 @@ export default function SettingsPage() {
                           )
                       ) : (
                           <span className="text-xs font-bold text-red-500 shrink-0 select-none">
-                        Unverified
-                      </span>
+                  Unverified
+                </span>
                       )}
                     </div>
                   </div>
@@ -607,7 +583,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-0.5">
                 <span className="text-gray-800 font-bold block">
-                  {phone ? "Update Contact Number" : "Add Contact Number"}
+                  {user?.phoneNumber ? "Update Contact Number" : "Add Contact Number"}
                 </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
                   Modify linked phone for emergency token dynamic alerts
@@ -733,25 +709,26 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ── MODALS ── */}
-        {showAddPhoneModal && (
-            <AddPhoneModal
-                onClose={() => setShowAddPhoneModal(false)}
-                onVerified={(verifiedPhone) => {
-                  setPhone(verifiedPhone);
-                  setPhoneVerified(true);
+        {showEditProfileModal && (
+            <EditProfileModal
+                currentName={user?.fullName || ""}
+                currentImage={user?.profileImage || null}
+                userId={user?.id ?? 0}    // 👈 थप्ने
+                onClose={() => setShowEditProfileModal(false)}
+                onSaved={(data) => {
+                  dispatch(updateUserLocally(data));
                 }}
             />
         )}
 
-        {showEditProfileModal && (
-            <EditProfileModal
-                currentName={name}
-                currentImage={profileImage}
-                onClose={() => setShowEditProfileModal(false)}
-                onSaved={(data) => {
-                  setName(data.fullName);
-                  setProfileImage(data.profileImage);
+        {showAddPhoneModal && (
+            <AddPhoneModal
+                onClose={() => setShowAddPhoneModal(false)}
+                onVerified={(verifiedPhone) => {
+                  dispatch(updateUserLocally({         // ✅ Redux dispatch
+                    phoneNumber: verifiedPhone,
+                    phoneVerified: true,
+                  }));
                 }}
             />
         )}

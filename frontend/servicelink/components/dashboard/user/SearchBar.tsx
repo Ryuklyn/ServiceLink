@@ -5,14 +5,18 @@ import { useRouter, usePathname } from "next/navigation";
 import { Search, Bell, User, BellRing, LogOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { clearUser } from "@/store/slices/userSlice";
 
-interface SearchBarProps {
-  userProfile?: {
-    fullName: string;
-    email: string;
-    profileImage?: string;
-  };
-}
+// interface SearchBarProps {
+//   userProfile?: {
+//     fullName: string;
+//     email: string;
+//     profileImage?: string;
+//   };
+// }
+
+
 
 const pageTitles: Record<string, string> = {
   "/dashboard/user": "Dashboard",
@@ -22,26 +26,34 @@ const pageTitles: Record<string, string> = {
   "/dashboard/user/settings": "Account",
 };
 
-export default function SearchBar({ userProfile }: SearchBarProps) {
+export default function SearchBar() {
   const router = useRouter();
   const pathname = usePathname();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // ✅ Redux
+  const dispatch = useAppDispatch();
+  const { data: user } = useAppSelector((state) => state.user);
+
   const pageTitle = pageTitles[pathname] ?? "Dashboard";
 
-  const initials = userProfile?.fullName
-    ? userProfile.fullName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "U";
+  // const initials = userProfile?.fullName
+  //   ? userProfile.fullName
+  //       .split(" ")
+  //       .map((n) => n[0])
+  //       .join("")
+  //       .toUpperCase()
+  //       .slice(0, 2)
+  //   : "U";
+  const initials = user?.fullName
+      ? user.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+      : "U";
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("token");
+    dispatch(clearUser());
     router.push("/login");
   };
 
@@ -100,9 +112,9 @@ export default function SearchBar({ userProfile }: SearchBarProps) {
             onClick={() => setShowDropdown((prev) => !prev)}
             className="w-9 h-9 bg-[#e8683f] rounded-full flex items-center justify-center text-white text-sm font-bold hover:bg-[#d75930] transition-colors focus:outline-none focus:ring-2 focus:ring-white/40"
           >
-            {userProfile?.profileImage ? (
+            {user?.profileImage ? (
               <Image
-                src={userProfile.profileImage}
+                src={user.profileImage}
                 alt="avatar"
                 width={36}
                 height={36}
