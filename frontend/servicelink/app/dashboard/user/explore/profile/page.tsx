@@ -115,7 +115,6 @@ export default function ProviderPage() {
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [issueDescription, setIssueDescription] = useState("");
 
-  // ── Voice note: single source of truth, shared with DescribeIssue + BookingSidebar ──
   const [voiceNoteBlob, setVoiceNoteBlob] = useState<Blob | null>(null);
   const [voiceNoteUrl, setVoiceNoteUrl]   = useState<string | null>(null);
 
@@ -130,10 +129,8 @@ export default function ProviderPage() {
   }, [voiceNoteUrl]);
 
   const [selectedDate, setSelectedDate]     = useState<Date>(new Date());
-  const [selectedPeriod, setSelectedPeriod] = useState
-  <
-  "morning" | "afternoon" | "evening" | null
-  >(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<"morning" | "afternoon" | "evening" | null>(null);
+
   useEffect(() => {
     const fetchProvider = async () => {
       try {
@@ -184,9 +181,9 @@ export default function ProviderPage() {
   }
 
   return (
-      <div className="max-w-7xl mx-auto px-4 py-8 flex gap-6 items-start">
-        {/* ── Left column ── */}
-        <div className="flex-1 min-w-0 space-y-5">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8 flex flex-col lg:flex-row gap-6 items-start">
+        {/* ── Left Content Column (Full width on mobile, scales beautifully) ── */}
+        <div className="w-full flex-1 min-w-0 space-y-4 sm:space-y-5">
           <ProfileHero provider={provider} />
           <ProviderCredentials provider={provider} />
 
@@ -205,18 +202,24 @@ export default function ProviderPage() {
               onIssueChange={setIssueDescription}
               onVoiceNoteChange={handleVoiceNoteChange}
           />
+
           <AboutSection provider={provider} />
           <RatingsBreakdown provider={provider} />
-          <CoverageMap
-              center={provider.coverageCenter}
-              radiusKm={provider.coverageRadius}
-          />
+
+          {/* Wrapper layout for map injection safety handles overflow constraints */}
+          <div className="w-full overflow-hidden rounded-xl">
+            <CoverageMap
+                center={provider.coverageCenter}
+                radiusKm={provider.coverageRadius}
+            />
+          </div>
+
           <ReviewsSection provider={provider} />
           <PortfolioSection provider={provider} />
         </div>
 
-        {/* ── Sticky sidebar ── */}
-        <div className="w-80 shrink-0 sticky top-6 self-start">
+        {/* ── Sidebar Component (Appears below main feed on mobile, snaps side-by-side on desktop) ── */}
+        <div className="w-full lg:w-80 shrink-0 lg:sticky lg:top-6 lg:self-start mt-2 lg:mt-0">
           <BookingSidebar
               provider={provider}
               selectedServices={selectedServices}

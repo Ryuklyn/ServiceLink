@@ -54,40 +54,43 @@ export default function QuickActions({ actions }: QuickActionsProps) {
   const displayActions = actions || defaultActions;
 
   return (
-    <section className="mb-12">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
+      <section className="mb-8 sm:mb-12">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">
+          Quick Actions
+        </h2>
 
-      <div className="grid grid-cols-4 gap-5">
-        {displayActions.map((action) => (
-          <button
-            key={action.id}
-            className="
+        {/* 2 col mobile, 2 col tablet, 4 col desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+          {displayActions.map((action) => (
+              <button
+                  key={action.id}
+                  className="
               group text-left bg-white
               border border-gray-100
-              rounded-2xl p-5
+              rounded-2xl p-4 sm:p-5
               shadow-sm hover:shadow-md
               transition-all duration-200
               cursor-pointer
             "
-          >
-            {/* icon box */}
-            <div
-              className={`
-                w-10 h-10 rounded-xl
+              >
+                <div
+                    className={`
+                w-9 h-9 sm:w-10 sm:h-10 rounded-xl
                 flex items-center justify-center
-                mb-4
+                mb-3 sm:mb-4
                 ${action.bg}
               `}
-            >
-              <span className={action.color}>{action.icon}</span>
-            </div>
+                >
+                  <span className={action.color}>{action.icon}</span>
+                </div>
 
-            {/* text */}
-            <h3 className="font-semibold text-gray-900 mb-1">{action.title}</h3>
-            <p className="text-sm text-gray-500">{action.description}</p>
-          </button>
-        ))}
-      </div>
-    </section>
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base mb-1">
+                  {action.title}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500">{action.description}</p>
+              </button>
+          ))}
+        </div>
+      </section>
   );
 }

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { X, Phone, Ticket, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { goToTier2, closeOnboarding } from "@/store/slices/onboardingSlice";
+import { updateUserLocally } from "@/store/slices/userSlice";
+import api from "@/utils/axios";
 
 export default function OnboardingModal() {
     const dispatch = useAppDispatch();
@@ -12,6 +14,7 @@ export default function OnboardingModal() {
     const { isModalOpen, currentTier, pendingDestination } = useAppSelector(
         (state) => state.onboarding
     );
+    const { data: user } = useAppSelector((state) => state.user); // ✅ थप्ने
 
     if (!isModalOpen || !currentTier) return null;
 
@@ -19,7 +22,18 @@ export default function OnboardingModal() {
     const handleLater = () => dispatch(goToTier2({ destination: null }));
     const handleClose = () => dispatch(closeOnboarding());
 
-    const handleTier2Done = () => {
+    const handleTier2Done = async () => {
+        try {
+            if (user?.id) {
+                await api.patch(`/users/${user.id}/onboarding-seen`);
+                dispatch(updateUserLocally({ hasSeenOnboarding: true }));
+            } else {
+                console.warn("No user id found — cannot persist onboarding state");
+            }
+        } catch (err) {
+            console.error("Failed to mark onboarding as seen:", err);
+        }
+
         dispatch(closeOnboarding());
         if (pendingDestination === "profile") {
             router.push("/dashboard/user/settings");

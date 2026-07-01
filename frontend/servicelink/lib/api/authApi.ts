@@ -18,6 +18,7 @@ export interface MeResponse {
   profileImage: string | null;
   phoneNumber: string | null;
   phoneVerified: boolean;
+  hasSeenOnboarding: boolean;
   verified: boolean;
   provider: string;
   createdAt: string;

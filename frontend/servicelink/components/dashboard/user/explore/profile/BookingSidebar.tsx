@@ -112,7 +112,6 @@ export default function BookingSidebar({
     const [localDate, setLocalDate]     = useState<Date | undefined>(externalDate);
     const [localPeriod, setLocalPeriod] = useState<"morning"|"afternoon"|"evening"|null>(externalPeriod ?? null);
 
-    // ── Voice note: playback-only state (recording happens in DescribeIssue) ──
     const [isPlayingNote, setIsPlayingNote] = useState(false);
     const notePlayerRef = useRef<HTMLAudioElement | null>(null);
 
@@ -133,8 +132,6 @@ export default function BookingSidebar({
     useEffect(() => {
         return () => { if (media) URL.revokeObjectURL(media.previewUrl); };
     }, [media]);
-
-    // ── Media (image/video) upload ───────────────────────────────────────────
 
     const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -194,8 +191,6 @@ export default function BookingSidebar({
         }
     }, []);
 
-    // ── VALIDATION ────────────────────────────────────────────────────────────
-
     const validateBooking = (): string | null => {
         if (!services.length)  return "Please select at least one service.";
         if (!localDate)        return "Please select an appointment date.";
@@ -203,8 +198,6 @@ export default function BookingSidebar({
         if (!address.trim())   return "Please enter or detect your service address.";
         return null;
     };
-
-    // ── BOOK NOW HANDLER ──────────────────────────────────────────────────────
 
     const handleBookNow = async () => {
         const validationError = validateBooking();
@@ -243,7 +236,6 @@ export default function BookingSidebar({
                 }
             }
 
-            // Upload voice note (blob is owned by ProviderPage, received via props)
             if (voiceNoteBlob) {
                 const audioFormData = new FormData();
                 audioFormData.append("file", voiceNoteBlob, "voice-note.webm");
@@ -296,8 +288,6 @@ export default function BookingSidebar({
         }
     };
 
-    // ── DERIVED VALUES ────────────────────────────────────────────────────────
-
     const services     = externalServices ?? [];
     const hasServices  = services.length > 0;
     const estimatedMin = services.reduce((s, svc) => s + svc.priceMin, 0);
@@ -306,26 +296,26 @@ export default function BookingSidebar({
     const periodInfo   = localPeriod ? PERIOD_LABELS[localPeriod] : null;
 
     return (
-        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col gap-0 overflow-hidden max-w-sm w-full">
-            {/* Header */}
-            <div className="px-5 pt-5 pb-4 border-b border-gray-100">
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col gap-0 overflow-hidden w-full max-w-sm sm:max-w-md lg:max-w-sm mx-auto">
+            {/* Header Title Stack */}
+            <div className="px-4 sm:px-5 pt-5 pb-4 border-b border-gray-100">
                 <h2 className="font-bold text-gray-900 text-lg leading-tight">Book This Provider</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-400 mt-0.5 truncate">
                     {(provider as any).specialties?.join(", ") ?? "Certified Local Expert"}
                 </p>
             </div>
 
             <div className="flex flex-col gap-0 divide-y divide-gray-100">
 
-                {/* Selected Services */}
-                <div className="px-5 py-4">
+                {/* Selected Services Layout */}
+                <div className="px-4 sm:px-5 py-3.5 sm:py-4">
                     <p className="text-xs font-semibold text-gray-500 mb-2">Selected Services</p>
                     {hasServices ? (
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto pr-0.5">
                             {services.map((svc) => (
-                                <div key={svc.name} className="flex items-center justify-between bg-green-50 border border-green-100 rounded-xl px-3 py-2">
-                                    <span className="text-sm font-medium text-gray-800">{svc.name}</span>
-                                    <span className="text-sm font-bold text-[#e8683f]">Rs. {svc.priceMin.toLocaleString()}</span>
+                                <div key={svc.name} className="flex items-center justify-between gap-3 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
+                                    <span className="text-sm font-medium text-gray-800 truncate">{svc.name}</span>
+                                    <span className="text-sm font-bold text-[#e8683f] shrink-0">Rs. {svc.priceMin.toLocaleString()}</span>
                                 </div>
                             ))}
                         </div>
@@ -342,22 +332,22 @@ export default function BookingSidebar({
                     )}
                 </div>
 
-                {/* Task Summary */}
-                <div className="px-5 py-4">
+                {/* Task Summary Container */}
+                <div className="px-4 sm:px-5 py-3.5 sm:py-4">
                     <p className="text-xs font-semibold text-gray-500 mb-2">Task Summary</p>
                     <div className="relative border border-gray-200 rounded-xl bg-gray-50 focus-within:border-blue-300 transition-colors">
-            <textarea
-                value={taskSummary}
-                onChange={(e) => setTaskSummary(e.target.value)}
-                placeholder="Briefly explain what needs fixing..."
-                rows={3}
-                className="w-full bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none resize-none p-3 rounded-xl"
-            />
+                        <textarea
+                            value={taskSummary}
+                            onChange={(e) => setTaskSummary(e.target.value)}
+                            placeholder="Briefly explain what needs fixing..."
+                            rows={3}
+                            className="w-full bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none resize-none p-3 rounded-xl"
+                        />
                     </div>
                 </div>
 
-                {/* Voice Note — shared from DescribeIssue via ProviderPage, read-only here */}
-                <div className="px-5 py-4">
+                {/* Voice Note Module */}
+                <div className="px-4 sm:px-5 py-3.5 sm:py-4">
                     <p className="text-xs font-semibold text-gray-500 mb-2">
                         Voice Note <span className="font-normal text-gray-400">(optional)</span>
                     </p>
@@ -370,11 +360,11 @@ export default function BookingSidebar({
                     )}
 
                     {voiceNoteBlob && voiceNoteUrl && (
-                        <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl px-4 py-2.5">
+                        <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl px-3 sm:px-4 py-2.5">
                             <button
                                 onClick={toggleNotePlayback}
                                 type="button"
-                                className="w-7 h-7 flex items-center justify-center rounded-full bg-[#1e3a8a] text-white hover:bg-blue-800 active:scale-95 transition-all"
+                                className="w-7 h-7 flex items-center justify-center rounded-full bg-[#1e3a8a] text-white hover:bg-blue-800 active:scale-95 transition-all shrink-0"
                             >
                                 <Mic size={13} />
                             </button>
@@ -384,7 +374,7 @@ export default function BookingSidebar({
                                 onEnded={() => setIsPlayingNote(false)}
                                 className="hidden"
                             />
-                            <span className="text-xs font-semibold text-green-700 flex-1">
+                            <span className="text-xs font-semibold text-green-700 flex-1 truncate">
                                 Voice note attached
                             </span>
                             <CheckCircle2 size={14} className="text-green-500 shrink-0" />
@@ -392,8 +382,8 @@ export default function BookingSidebar({
                     )}
                 </div>
 
-                {/* Photo or Video */}
-                <div className="px-5 py-4">
+                {/* Photo or Video File Picker */}
+                <div className="px-4 sm:px-5 py-3.5 sm:py-4">
                     <p className="text-xs font-semibold text-gray-500 mb-2">
                         Photo or Video <span className="font-normal text-gray-400">(optional, max 1)</span>
                     </p>
@@ -402,21 +392,21 @@ export default function BookingSidebar({
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             type="button"
-                            className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-3 text-sm text-gray-400 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                            className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-3 text-xs sm:text-sm text-gray-400 hover:border-gray-300 hover:bg-gray-50 transition-all"
                         >
-                            <Upload size={15} /> Upload a photo or video
+                            <Upload size={14} /> Upload a photo or video
                         </button>
                     ) : (
                         <div className="flex flex-col gap-2">
-                            <div className="flex items-center justify-between border border-green-200 bg-green-50 rounded-xl px-3 py-2.5">
-                                <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between gap-2 border border-green-200 bg-green-50 rounded-xl px-3 py-2.5">
+                                <div className="flex items-center gap-2 min-w-0">
                                     <CheckCircle2 size={15} className="text-green-500 shrink-0" />
-                                    <div className="flex flex-col">
+                                    <div className="flex flex-col min-w-0">
                                         <span className="text-xs font-semibold text-green-700">1 item attached</span>
-                                        <span className="text-[10px] text-green-600/70 truncate max-w-[140px]">{media.file.name}</span>
+                                        <span className="text-[10px] text-green-600/70 truncate max-w-[140px] sm:max-w-[200px]">{media.file.name}</span>
                                     </div>
                                 </div>
-                                <button onClick={removeMedia} type="button" className="w-5 h-5 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors">
+                                <button onClick={removeMedia} type="button" className="w-5 h-5 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors shrink-0">
                                     <X size={10} />
                                 </button>
                             </div>
@@ -437,23 +427,23 @@ export default function BookingSidebar({
                     )}
                 </div>
 
-                {/* Date & Time */}
-                <div className="px-5 py-4 flex gap-2">
-                    <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
+                {/* Date & Time Flex Grid Group */}
+                <div className="px-4 sm:px-5 py-3.5 sm:py-4 flex gap-2">
+                    <div className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Date</p>
                         {dateDisplay ? (
-                            <p className="text-sm font-bold text-gray-900 mt-0.5 flex items-center gap-1.5">
-                                <Calendar size={13} className="text-[#1e3a8a]" /> {dateDisplay}
+                            <p className="text-xs sm:text-sm font-bold text-gray-900 mt-0.5 flex items-center gap-1 truncate">
+                                <Calendar size={13} className="text-[#1e3a8a] shrink-0" /> {dateDisplay}
                             </p>
                         ) : (
                             <p className="text-xs text-gray-400 mt-0.5 italic">Not selected</p>
                         )}
                     </div>
-                    <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
+                    <div className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Time</p>
                         {periodInfo ? (
-                            <p className="text-sm font-bold text-gray-900 mt-0.5">
-                                {periodInfo.label} <span className="text-gray-400 font-normal text-xs">({periodInfo.time})</span>
+                            <p className="text-xs sm:text-sm font-bold text-gray-900 mt-0.5 truncate">
+                                {periodInfo.label} <span className="text-gray-400 font-normal text-[11px]">({periodInfo.time})</span>
                             </p>
                         ) : (
                             <p className="text-xs text-gray-400 mt-0.5 italic">Not selected</p>
@@ -461,11 +451,11 @@ export default function BookingSidebar({
                     </div>
                 </div>
 
-                {/* Service Location */}
-                <div className="px-5 py-4">
-                    <div className="flex items-center justify-between mb-2">
+                {/* Service Location Tracking Block */}
+                <div className="px-4 sm:px-5 py-3.5 sm:py-4">
+                    <div className="flex items-center justify-between gap-2 mb-2">
                         <p className="text-xs font-semibold text-gray-500">Service Location</p>
-                        <button onClick={detectCurrentLocation} disabled={isGeoLoading} type="button" className="flex items-center gap-1 text-xs font-semibold text-[#1e3a8a] hover:underline disabled:opacity-50">
+                        <button onClick={detectCurrentLocation} disabled={isGeoLoading} type="button" className="flex items-center gap-1 text-xs font-semibold text-[#1e3a8a] hover:underline disabled:opacity-50 whitespace-nowrap">
                             {isGeoLoading ? <Loader2 size={12} className="animate-spin" /> : <Navigation size={12} />}
                             Auto-detect
                         </button>
@@ -484,7 +474,7 @@ export default function BookingSidebar({
                         <MapPin size={13} /> {showMap ? "Hide Map" : "Pin on Live Map"}
                     </button>
                     {showMap && (
-                        <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 h-44">
+                        <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 h-44 w-full">
                             <MapContainer center={markerPos} zoom={15} style={{ height: "100%", width: "100%" }} whenReady={(mapInstance: any) => { mapRef.current = mapInstance.target; }}>
                                 <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                 <Marker position={markerPos} eventHandlers={{ click: async (e) => { const { lat, lng } = e.latlng; setMarkerPos([lat, lng]); await reverseGeocode(lat, lng); } }} />
@@ -493,54 +483,54 @@ export default function BookingSidebar({
                     )}
                 </div>
 
-                {/* Estimated Price */}
-                <div className="px-5 py-4 bg-gray-50">
+                {/* Estimated Price Section */}
+                <div className="px-4 sm:px-5 py-3.5 sm:py-4 bg-gray-50">
                     <p className="text-xs text-gray-400 font-semibold mb-1">Estimated Price</p>
                     {hasServices ? (
-                        <p className="text-2xl font-bold text-[#1e3a8a] leading-none">
+                        <p className="text-xl sm:text-2xl font-bold text-[#1e3a8a] leading-none break-words">
                             Rs. {estimatedMin === estimatedMax ? estimatedMin.toLocaleString() : `${estimatedMin.toLocaleString()} – ${estimatedMax.toLocaleString()}`}
                         </p>
                     ) : (
-                        <p className="text-sm text-gray-400 italic">Select services to see estimate</p>
+                        <p className="text-xs sm:text-sm text-gray-400 italic">Select services to see estimate</p>
                     )}
                 </div>
 
-                {/* Cancellation Policy */}
-                <div className="px-5 py-3">
-                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                        <div className="flex items-center gap-1.5 bg-slate-50 border-b border-slate-100 px-4 py-2.5 text-[12px] font-bold text-[#1e3a8a]">
+                {/* Policy Dynamic Box Component */}
+                <div className="px-4 sm:px-5 py-3">
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm w-full">
+                        <div className="flex items-center gap-1.5 bg-slate-50 border-b border-slate-100 px-3 sm:px-4 py-2.5 text-[11px] sm:text-[12px] font-bold text-[#1e3a8a]">
                             <ShieldCheck size={14} className="text-[#1e3a8a] shrink-0" strokeWidth={2.5} />
-                            <span>Cancellation & Rescheduling Policy</span>
+                            <span className="truncate">Cancellation & Rescheduling Policy</span>
                         </div>
                         <div className="flex flex-col text-[11px] bg-white divide-y divide-slate-100">
-                            <div className="flex items-center justify-between px-4 py-3 bg-emerald-50/30">
-                                <div>
-                                    <div className="font-bold text-gray-700 text-xs">Before 24 hours</div>
-                                    <div className="text-gray-400 text-[10px]">Applies to both changes and cancellations</div>
+                            <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-3 bg-emerald-50/30">
+                                <div className="min-w-0 flex-1">
+                                    <div className="font-bold text-gray-700 text-xs truncate">Before 24 hours</div>
+                                    <div className="text-gray-400 text-[10px] leading-tight sm:leading-normal">Applies to changes and cancellations</div>
                                 </div>
-                                <div className="text-[14px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">Free</div>
+                                <div className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100 shrink-0">Free</div>
                             </div>
                             <div className="grid grid-cols-2 divide-x divide-slate-100">
-                                <div className="p-3 text-center">
-                                    <div className="text-gray-400 font-medium mb-1.5 leading-tight">Under 24 hrs<span className="text-slate-500 block font-semibold">Reschedule</span></div>
-                                    <span className="text-[14px] font-bold text-[#e8683f]">Rs. 50</span>
+                                <div className="p-2 sm:p-3 text-center min-w-0">
+                                    <div className="text-gray-400 font-medium mb-1 leading-tight text-[10px] sm:text-[11px]">Under 24 hrs<span className="text-slate-500 block font-semibold text-xs">Reschedule</span></div>
+                                    <span className="text-xs sm:text-sm font-bold text-[#e8683f]">Rs. 50</span>
                                 </div>
-                                <div className="p-3 text-center">
-                                    <div className="text-gray-400 font-medium mb-1.5 leading-tight">Under 24 hrs<span className="text-slate-500 block font-semibold">Cancel</span></div>
-                                    <span className="text-[14px] font-bold text-red-500">Rs. 100</span>
+                                <div className="p-2 sm:p-3 text-center min-w-0">
+                                    <div className="text-gray-400 font-medium mb-1 leading-tight text-[10px] sm:text-[11px]">Under 24 hrs<span className="text-slate-500 block font-semibold text-xs">Cancel</span></div>
+                                    <span className="text-xs sm:text-sm font-bold text-red-500">Rs. 100</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* CTA Buttons */}
-                <div className="px-5 py-4 flex flex-col gap-2">
+                {/* Action CTA Block */}
+                <div className="px-4 sm:px-5 py-4 flex flex-col gap-2">
                     <button
                         onClick={handleBookNow}
                         disabled={!hasServices || isBooking}
                         type="button"
-                        className="w-full bg-[#e8683f] hover:bg-[#d75930] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="w-full bg-[#e8683f] hover:bg-[#d75930] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 sm:py-3.5 rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {isBooking ? (
                             <><Loader2 size={16} className="animate-spin" /> Booking...</>
@@ -550,12 +540,12 @@ export default function BookingSidebar({
                             "Select Services to Book"
                         )}
                     </button>
-                    <div className="flex gap-2">
-                        <button type="button" className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
-                            <MessageCircle size={15} /> WhatsApp
+                    <div className="flex gap-2 w-full">
+                        <button type="button" className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 truncate">
+                            <MessageCircle size={15} className="shrink-0" /> WhatsApp
                         </button>
-                        <button type="button" className="flex-1 border border-gray-200 text-gray-700 font-semibold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
-                            <Phone size={15} /> Call
+                        <button type="button" className="flex-1 border border-gray-200 text-gray-700 font-semibold py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 truncate">
+                            <Phone size={15} className="shrink-0" /> Call
                         </button>
                     </div>
                 </div>
