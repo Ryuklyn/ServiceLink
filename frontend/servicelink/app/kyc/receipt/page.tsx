@@ -39,7 +39,12 @@ function ReceiptPageCore() {
                     <ArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <button
-                    onClick={() => generateReceiptPDF("receipt-print-area", referenceNumber)}
+                    // onClick={() => generateReceiptPDF("receipt-print-area", referenceNumber)}
+                    onClick={() => {
+                        generateReceiptPDF("receipt-print-area", referenceNumber).catch(() => {
+                            alert("Failed to generate PDF. Please try again."); // वा toast/state-based UI
+                        });
+                    }}
                     className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#1e3a8a] hover:bg-[#162a63] px-4 py-2 rounded-lg transition shadow-sm"
                 >
                     <Download className="w-4 h-4" /> Download Statement PDF

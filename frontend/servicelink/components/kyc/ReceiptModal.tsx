@@ -24,11 +24,24 @@ export default function ReceiptModal({
                                      }: ReceiptModalProps) {
     const [isDownloading, setIsDownloading] = useState(false);
 
+    const [downloadError, setDownloadError] = useState(false);
+
     const handleDownload = async () => {
         setIsDownloading(true);
-        await generateReceiptPDF("receipt-print-area", referenceNumber);
-        setIsDownloading(false);
+        setDownloadError(false);
+        try {
+            await generateReceiptPDF("receipt-print-area", referenceNumber);
+        } catch {
+            setDownloadError(true);
+        } finally {
+            setIsDownloading(false);
+        }
     };
+    // const handleDownload = async () => {
+    //     setIsDownloading(true);
+    //     await generateReceiptPDF("receipt-print-area", referenceNumber);
+    //     setIsDownloading(false);
+    // };
 
     return (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fade-in">

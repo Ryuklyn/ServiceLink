@@ -21,29 +21,26 @@ export const generateReceiptPDF = async (elementId: string, referenceNumber: str
                 for (let i = 0; i < styleTags.length; i++) {
                     const styleTag = styleTags[i];
                     if (styleTag.innerHTML) {
-                        // Regex patterns to convert modern lab/oklch rules to fallback clean Hex/RGB strings
                         let cleanCSS = styleTag.innerHTML;
 
-                        // If the stylesheet contains un-supported color spaces, remove those declarations or components
+                        // Tailwind v4 / modern browsers ले oklch()/lab() use garna sakcha,
+                        // html2canvas le tinilai parse garna sakdaina — strip garne
                         if (cleanCSS.includes("lab(") || cleanCSS.includes("oklch(")) {
-                            // Strip lines or blocks matching modern color spaces that confuse ancient html2canvas parsers
                             cleanCSS = cleanCSS.replace(/[^}]*color:[^;]*oklch\([^)]*\)[^;]*;/g, "");
                             cleanCSS = cleanCSS.replace(/[^}]*background[^;]*oklch\([^)]*\)[^;]*;/g, "");
                             cleanCSS = cleanCSS.replace(/[^}]*border[^;]*oklch\([^)]*\)[^;]*;/g, "");
                             cleanCSS = cleanCSS.replace(/[^}]*color:[^;]*lab\([^)]*\)[^;]*;/g, "");
                             cleanCSS = cleanCSS.replace(/[^}]*background[^;]*lab\([^)]*\)[^;]*;/g, "");
-
                             styleTag.innerHTML = cleanCSS;
                         }
                     }
                 }
 
-                // Explicitly format target container background
                 const clonedTarget = clonedDoc.getElementById(elementId);
                 if (clonedTarget) {
                     clonedTarget.style.backgroundColor = "#ffffff";
                 }
-            }
+            },
         });
 
         element.style.width = originalWidth; // Restore user UI state layout width
@@ -60,7 +57,8 @@ export const generateReceiptPDF = async (elementId: string, referenceNumber: str
         pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
 
-        while (heightLeft >= 0) {
+        // ✅ Fixed: >= 0 ले extra blank page थप्थ्यो, > 0 मा सही हुन्छ
+        while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
             pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
@@ -69,6 +67,7 @@ export const generateReceiptPDF = async (elementId: string, referenceNumber: str
 
         pdf.save(`ServiceLink-Receipt-${referenceNumber}.pdf`);
     } catch (error) {
-        console.error("Failed to generate crisp PDF:", error);
+        console.error("Failed to generate PDF:", error);
+        throw error; // ✅ थपियो — caller (ReceiptModal) ले catch गरेर UI मा error देखाउन सकोस्
     }
 };
