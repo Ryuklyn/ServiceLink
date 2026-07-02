@@ -17,7 +17,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -28,75 +28,115 @@ public class SecurityConfig {
 
     public SecurityConfig(
             OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler,
-            JwtAuthenticationFilter jwtAuthenticationFilter) {
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) {
         this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
+                // ---------------------------------------------------------
+                // CORS & CSRF
+                // ---------------------------------------------------------
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, exx) ->
-                                res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
 
+                // ---------------------------------------------------------
+                // Stateless JWT Authentication
+                // ---------------------------------------------------------
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                // ---------------------------------------------------------
+                // Authentication Exception
+                // ---------------------------------------------------------
+                .exceptionHandling(ex ->
+                        ex.authenticationEntryPoint((request, response, authException) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+                        )
+                )
+
+                // ---------------------------------------------------------
+                // Authorization Rules
+                // ---------------------------------------------------------
                 .authorizeHttpRequests(auth -> auth
+
+                        // Allow browser pre-flight requests
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // ── Public: Auth & System ─────────────────────────────
+                        // =====================================================
+                        // PUBLIC ENDPOINTS
+                        // =====================================================
+
+                        // Authentication
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/oauth2/**",
                                 "/error"
                         ).permitAll()
 
-                        // ── Public: Providers & Catalog ───────────────────────
-                        // Allows unauthorized clients to browse the general catalog
-                        // and view verified public profiles (Phases 2, 10, 12 verification).
-                        .requestMatchers(HttpMethod.GET, "/api/providers/catalog").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/providers/{providerId}").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/providers/{providerId}/reviews").permitAll()
-
-                        // ── Public: KYC Onboarding ────────────────────────────
+                        // File Uploads
                         .requestMatchers(
-                                "/api/kyc/submit/**",
+                                HttpMethod.POST,
+                                "/api/storage/upload"
+                        ).permitAll()
+
+                        // KYC
+                        .requestMatchers(
                                 "/api/kyc/**"
                         ).permitAll()
 
-                        // ── Public: Payment Gateways ──────────────────────────
+                        // Business / Payment
                         .requestMatchers(
-                                "/api/business/payment/subscription",
-                                "/api/business/**",
-                                "/api/business/organization",
-                                "/api/business/workspace",
-                                "/api/business/payment/initiate",
-                                "/api/business/payment/esewa/callback",
-                                "/api/business/payment/khalti/callback"
+                                "/api/business/**"
                         ).permitAll()
 
-                        // ── Protected: Admin Operations ───────────────────────
-                        // Restricts catalog creation, KYC approval, and specialized overrides
-                        // strictly to user accounts bearing the ADMIN role (Phases 2, 4, 5).
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // Provider Catalog
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/providers/catalog",
+                                "/api/providers/{providerId}",
+                                "/api/providers/{providerId}/reviews"
+                        ).permitAll()
 
-                        // ── Protected: Marketplace Core ───────────────────────
-                        // Requires a signed JWT (Provider Profile Management, Appointments, Reviews).
-                        .requestMatchers("/api/providers/me/**").authenticated()
-                        .requestMatchers("/api/appointments/**").authenticated()
+                        // =====================================================
+                        // ADMIN
+                        // =====================================================
+                        .requestMatchers(
+                                "/api/admin/**"
+                        ).hasRole("ADMIN")
 
-                        // ── Protected: Default Fallback ───────────────────────
+                        // =====================================================
+                        // AUTHENTICATED USERS
+                        // =====================================================
+                        .requestMatchers(
+                                "/api/providers/me/**",
+                                "/api/appointments/**"
+                        ).authenticated()
+
+                        // =====================================================
+                        // EVERYTHING ELSE
+                        // =====================================================
                         .anyRequest().authenticated()
                 )
 
-                .oauth2Login(oauth -> oauth
-                        .successHandler(oAuth2LoginSuccessHandler))
+                // ---------------------------------------------------------
+                // OAuth2 Login
+                // ---------------------------------------------------------
+                .oauth2Login(oauth ->
+                        oauth.successHandler(oAuth2LoginSuccessHandler)
+                )
 
-                .addFilterBefore(jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                // ---------------------------------------------------------
+                // JWT Filter
+                // ---------------------------------------------------------
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }
@@ -108,14 +148,32 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000", "http://localhost:3001")); // ⚠️ MUST match your frontend
-        config.setAllowedMethods(Arrays.asList("*"));
-        config.setAllowedHeaders(Arrays.asList("*"));
+
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:3000",
+                "http://localhost:3001"
+        ));
+
+        config.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+        ));
+
+        config.setAllowedHeaders(List.of("*"));
+
         config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 }

@@ -90,6 +90,12 @@ authClient.interceptors.request.use(
   (error) => Promise.reject(normalizeError(error)),
 );
 
+publicClient.interceptors.response.use(
+    (res) => res,
+    (error: AxiosError) => Promise.reject(normalizeError(error)),
+);
+
+
 // ─── Response interceptors (both clients) ───────────────────────────────────
 
 function attachResponseInterceptor(instance: AxiosInstance) {
@@ -105,8 +111,10 @@ function attachResponseInterceptor(instance: AxiosInstance) {
   );
 }
 
+// attachResponseInterceptor(authClient);
+// attachResponseInterceptor(publicClient);
+
 attachResponseInterceptor(authClient);
-attachResponseInterceptor(publicClient);
 
 export { authClient, publicClient };
 export default authClient;

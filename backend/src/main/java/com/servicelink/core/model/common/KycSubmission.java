@@ -72,6 +72,8 @@ public class KycSubmission {
     private String panPath;
     @Column(columnDefinition = "TEXT")
     private String professionalCertPaths;   // JSON array
+    @Column(name = "profile_photo_url")
+    private String profilePhotoUrl;
 
     // ── Status ────────────────────────────────────────────────────────────────
     @Enumerated(EnumType.STRING)

@@ -34,21 +34,20 @@ public class KycController {
 
 //    @PostMapping(value = "/submit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 //    public ResponseEntity<KycSubmitResponseDTO> submit(
-//            @RequestPart("data")                                    String dataJson,
-//            @RequestPart("citizenshipFront")                        MultipartFile citizenshipFront,
-//            @RequestPart("citizenshipBack")                         MultipartFile citizenshipBack,
-//            @RequestPart("photo")                                   MultipartFile photo,
-//            @RequestPart(value = "pan",              required = false) MultipartFile pan,
+//            @RequestPart("data")                                       String dataJson,
+//            @RequestPart("citizenshipFront")                           MultipartFile citizenshipFront,
+//            @RequestPart("citizenshipBack")                            MultipartFile citizenshipBack,
+//            @RequestPart("photo")                                      MultipartFile photo,
+//            @RequestPart(value = "pan",               required = false) MultipartFile pan,
 //            @RequestPart(value = "professionalCerts", required = false) MultipartFile[] certs,
 //            @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
 //            Authentication auth
 //    ) throws Exception {
 //
 //        ObjectMapper objectMapper = new ObjectMapper();
-//        KycSubmitRequestDTO dto =
-//            objectMapper.readValue(dataJson, KycSubmitRequestDTO.class);
+//        KycSubmitRequestDTO dto = objectMapper.readValue(dataJson, KycSubmitRequestDTO.class);
 //
-//        String applicantIdentifier = resolveIdentifier(providerToken, auth);
+//        String applicantIdentifier = resolveIdentifier(providerToken, auth, dto.getApplicantIdentifier());
 //
 //        return ResponseEntity.ok(
 //                kycService.submit(dto, citizenshipFront, citizenshipBack,
@@ -56,37 +55,26 @@ public class KycController {
 //        );
 //    }
 
-    @PostMapping(value = "/submit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/submit", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<KycSubmitResponseDTO> submit(
-            @RequestPart("data")                                       String dataJson,
-            @RequestPart("citizenshipFront")                           MultipartFile citizenshipFront,
-            @RequestPart("citizenshipBack")                            MultipartFile citizenshipBack,
-            @RequestPart("photo")                                      MultipartFile photo,
-            @RequestPart(value = "pan",               required = false) MultipartFile pan,
-            @RequestPart(value = "professionalCerts", required = false) MultipartFile[] certs,
+            @RequestBody KycSubmitRequestDTO dto,
             @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
             Authentication auth
     ) throws Exception {
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        KycSubmitRequestDTO dto = objectMapper.readValue(dataJson, KycSubmitRequestDTO.class);
+        // Backend-side mandatory URL check (frontend validation lai matra
+        // bharosa garna mildaina)
+        if (dto.getCitizenshipFrontUrl() == null
+                || dto.getCitizenshipBackUrl() == null
+                || dto.getPhotoUrl() == null) {
+            throw new IllegalArgumentException("Missing required KYC document URLs");
+        }
 
         String applicantIdentifier = resolveIdentifier(providerToken, auth, dto.getApplicantIdentifier());
 
-        return ResponseEntity.ok(
-                kycService.submit(dto, citizenshipFront, citizenshipBack,
-                        photo, pan, certs, applicantIdentifier)
-        );
+        return ResponseEntity.ok(kycService.submit(dto, applicantIdentifier));
     }
 
-//    @GetMapping("/status")
-//    public ResponseEntity<KycStatusResponseDTO> status(
-//            @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
-//            Authentication auth) {
-//
-//        String identifier = resolveIdentifier(providerToken, auth);
-//        return ResponseEntity.ok(kycService.getStatus(identifier));
-//    }
         @GetMapping("/status")
         public ResponseEntity<KycStatusResponseDTO> status(
                 @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
@@ -100,21 +88,6 @@ public class KycController {
      * Resolves the applicant identifier from either a provider token or the
      * standard Spring Security authentication principal.
      */
-//    private String resolveIdentifier(String providerToken, Authentication auth) {
-//        if (providerToken != null && !providerToken.isBlank()) {
-//            // Validate and extract the subject (phone or email) from the provider token
-//            try {
-//                return jwtService.extractUsername(providerToken);
-//            } catch (Exception e) {
-//                throw new IllegalArgumentException("Invalid or expired provider token");
-//            }
-//        }
-//        if (auth != null && auth.isAuthenticated()) {
-//            return auth.getName();
-//        }
-//        throw new IllegalArgumentException(
-//                "Authentication required. Provide a provider token or log in.");
-//    }
 
     private String resolveIdentifier(String providerToken, Authentication auth, String dtoIdentifier) {
         // 1. Provider token (login flow)

@@ -36,16 +36,56 @@ public class KycService {
 
     // ─── Submit ───────────────────────────────────────────────────────────────
 
+//    @Transactional
+//    public KycSubmitResponseDTO submit(
+//            KycSubmitRequestDTO  dto,
+//            MultipartFile        citizenshipFront,
+//            MultipartFile        citizenshipBack,
+//            MultipartFile        photo,
+//            MultipartFile        pan,
+//            MultipartFile[]      professionalCerts,
+//            String               applicantIdentifier
+//    ) throws Exception {
+//
+//        Optional<User> userOpt = userRepository.findByEmail(applicantIdentifier);
+//
+//        if (userOpt.isPresent() && kycRepository.existsByUser(userOpt.get())) {
+//            throw new IllegalStateException("KYC already submitted for this account.");
+//        }
+//        if (kycRepository.existsByApplicantIdentifier(applicantIdentifier)) {
+//            throw new IllegalStateException("A KYC application already exists for this contact.");
+//        }
+//
+//        String frontPath = storageService.uploadFile(citizenshipFront, "kyc/citizenship-front");
+//        String backPath  = storageService.uploadFile(citizenshipBack,  "kyc/citizenship-back");
+//        String photoPath = storageService.uploadFile(photo,            "kyc/photo");
+//
+//        String panPath = (pan != null && !pan.isEmpty())
+//                ? storageService.uploadFile(pan, "kyc/pan") : null;
+//
+//        String certPaths = buildCertPaths(professionalCerts);
+//
+//        KycSubmission submission = kycMapper.toEntity(
+//                dto,
+//                userOpt.orElse(null),
+//                applicantIdentifier,
+//                frontPath, backPath, photoPath, panPath, certPaths);
+//
+//        kycRepository.save(submission);
+//        log.info("KYC submitted for applicant [{}] — ref: {}",
+//                mask(applicantIdentifier), submission.getReferenceNumber());
+//
+//        String notifyEmail = dto.getEmail() != null ? dto.getEmail() : applicantIdentifier;
+//        emailService.sendKycConfirmationEmail(notifyEmail, submission.getReferenceNumber());
+//
+//        return kycMapper.toSubmitResponse(submission, notifyEmail);
+//    }
+
     @Transactional
     public KycSubmitResponseDTO submit(
-            KycSubmitRequestDTO  dto,
-            MultipartFile        citizenshipFront,
-            MultipartFile        citizenshipBack,
-            MultipartFile        photo,
-            MultipartFile        pan,
-            MultipartFile[]      professionalCerts,
-            String               applicantIdentifier
-    ) throws Exception {
+            KycSubmitRequestDTO dto,
+            String              applicantIdentifier
+    ) {
 
         Optional<User> userOpt = userRepository.findByEmail(applicantIdentifier);
 
@@ -56,20 +96,9 @@ public class KycService {
             throw new IllegalStateException("A KYC application already exists for this contact.");
         }
 
-        String frontPath = storageService.uploadFile(citizenshipFront, "kyc/citizenship-front");
-        String backPath  = storageService.uploadFile(citizenshipBack,  "kyc/citizenship-back");
-        String photoPath = storageService.uploadFile(photo,            "kyc/photo");
-
-        String panPath = (pan != null && !pan.isEmpty())
-                ? storageService.uploadFile(pan, "kyc/pan") : null;
-
-        String certPaths = buildCertPaths(professionalCerts);
-
-        KycSubmission submission = kycMapper.toEntity(
-                dto,
-                userOpt.orElse(null),
-                applicantIdentifier,
-                frontPath, backPath, photoPath, panPath, certPaths);
+        // ✅ Storage upload calls hatayo — files pahile nai Supabase ma xan,
+        // dto ma URL string aaisakeko cha
+        KycSubmission submission = kycMapper.toEntity(dto, userOpt.orElse(null), applicantIdentifier);
 
         kycRepository.save(submission);
         log.info("KYC submitted for applicant [{}] — ref: {}",
@@ -80,7 +109,6 @@ public class KycService {
 
         return kycMapper.toSubmitResponse(submission, notifyEmail);
     }
-
     // ─── Status ───────────────────────────────────────────────────────────────
 
     public KycStatusResponseDTO getStatus(String applicantIdentifier) {

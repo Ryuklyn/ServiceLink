@@ -19,15 +19,52 @@ public class KycMapper {
 
     // ─── Entity construction ──────────────────────────────────────────────────
 
+//    public KycSubmission toEntity(
+//            KycSubmitRequestDTO dto,
+//            User                user,               // may be null for new applicants
+//            String              applicantIdentifier, // phone (E.164) or email
+//            String              citizenshipFrontPath,
+//            String              citizenshipBackPath,
+//            String              photoPath,
+//            String              panPath,
+//            String              professionalCertPaths
+//    ) {
+//        return KycSubmission.builder()
+//                .user(user)
+//                .applicantIdentifier(applicantIdentifier)
+//                .referenceNumber(generateReferenceNumber())
+//                .fullName(dto.getFullName())
+//                .dob(dto.getDob())
+//                .gender(dto.getGender())
+//                .phone(dto.getPhone())
+//                .province(dto.getProvince())
+//                .district(dto.getDistrict())
+//                .municipality(dto.getMunicipality())
+//                .ward(dto.getWard())
+//                .tole(dto.getTole())
+//                .primaryService(dto.getPrimaryService())
+//                .otherService(dto.getOtherService())
+//                .additionalServices(toJson(dto.getAdditionalServices()))
+//                .experienceYears(dto.getExperienceYears())
+//                .primaryDistrict(dto.getPrimaryDistrict())
+//                .secondaryDistricts(toJson(dto.getSecondaryDistricts()))
+//                .travelRadius(dto.getTravelRadius())
+//                .bio(dto.getBio())
+//                .citizenshipFrontPath(citizenshipFrontPath)
+//                .citizenshipBackPath(citizenshipBackPath)
+//                .photoPath(photoPath)
+//                .panPath(panPath)
+//                .professionalCertPaths(professionalCertPaths)
+//                .status(KycStatus.PENDING)
+//                .submittedAt(Instant.now())
+//                .build();
+//    }
+
+
     public KycSubmission toEntity(
             KycSubmitRequestDTO dto,
-            User                user,               // may be null for new applicants
-            String              applicantIdentifier, // phone (E.164) or email
-            String              citizenshipFrontPath,
-            String              citizenshipBackPath,
-            String              photoPath,
-            String              panPath,
-            String              professionalCertPaths
+            User                user,
+            String              applicantIdentifier
     ) {
         return KycSubmission.builder()
                 .user(user)
@@ -50,16 +87,17 @@ public class KycMapper {
                 .secondaryDistricts(toJson(dto.getSecondaryDistricts()))
                 .travelRadius(dto.getTravelRadius())
                 .bio(dto.getBio())
-                .citizenshipFrontPath(citizenshipFrontPath)
-                .citizenshipBackPath(citizenshipBackPath)
-                .photoPath(photoPath)
-                .panPath(panPath)
-                .professionalCertPaths(professionalCertPaths)
+                // ✅ URL haru direct dto बाट - कुनै upload गर्नुपर्दैन
+                .profilePhotoUrl(dto.getProfilePhotoUrl())
+                .citizenshipFrontPath(dto.getCitizenshipFrontUrl())
+                .citizenshipBackPath(dto.getCitizenshipBackUrl())
+                .photoPath(dto.getPhotoUrl())
+                .panPath(dto.getPanUrl())
+                .professionalCertPaths(toJson(dto.getProfessionalCertUrls()))
                 .status(KycStatus.PENDING)
                 .submittedAt(Instant.now())
                 .build();
     }
-
     // ─── Response mapping ─────────────────────────────────────────────────────
 
     public KycSubmitResponseDTO toSubmitResponse(KycSubmission submission, String email) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { User, MapPin, ArrowRight } from "lucide-react";
 import {
   FormInput,
@@ -10,7 +10,7 @@ import {
 } from "./FormFields";
 import AddressSection from "./AddressSection";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 type Address = {
   province: string;
@@ -31,23 +31,14 @@ type FormState = {
   sameAddress: boolean;
 };
 
-type FormErrors = Partial<
-    Record<
-        | keyof FormState
-        | "currentProvince"
-        | "currentDistrict"
-        | "currentMunicipality"
-        | "currentWard",
-        string
-    >
->;
+type FormErrors = Partial<Record<keyof FormState | "currentProvince" | "currentDistrict" | "currentMunicipality" | "currentWard", string>>;
 
 interface PersonalInfoStepProps {
   onNext?: (data: FormState) => void;
   initialData?: Partial<FormState>;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────────────
 
 const genderOptions = [
   { value: "male", label: "Male" },
@@ -63,43 +54,42 @@ const emptyAddress: Address = {
   tole: "",
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const createForm = (data?: Partial<FormState>): FormState => ({
+  fullName: data?.fullName ?? "",
+  dob: data?.dob ?? "",
+  gender: data?.gender ?? "",
+  phone: data?.phone ?? "",
+  email: data?.email ?? "",
+  currentAddress: data?.currentAddress ?? { ...emptyAddress },
+  permanentAddress: data?.permanentAddress ?? { ...emptyAddress },
+  sameAddress: data?.sameAddress ?? true,
+});
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export default function PersonalInfoStep({
                                            onNext,
                                            initialData,
                                          }: PersonalInfoStepProps) {
-  const [form, setForm] = useState<FormState>({
-    fullName: initialData?.fullName || "",
-    dob: initialData?.dob || "",
-    gender: initialData?.gender || "",
-    phone: initialData?.phone || "",
-    email: initialData?.email || "",
-    currentAddress: initialData?.currentAddress || { ...emptyAddress },
-    permanentAddress: initialData?.permanentAddress || { ...emptyAddress },
-    sameAddress: initialData?.sameAddress ?? true,
-  });
-
+  const [form, setForm] = useState<FormState>(() => createForm(initialData));
   const [errors, setErrors] = useState<FormErrors>({});
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (initialData) setForm(createForm(initialData));
+  }, [initialData]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
-  // Strip +977 if user pastes a full number — store clean digits only
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\s/g, "").replace(/^\+977/, "");
     update("phone", raw);
   };
 
-  // ── Validation ────────────────────────────────────────────────────────────
-
   const validate = (): FormErrors => {
     const e: FormErrors = {};
-
     if (!form.fullName.trim()) e.fullName = "Full name is required";
     if (!form.dob) e.dob = "Date of birth is required";
     if (!form.gender) e.gender = "Please select a gender";
@@ -116,41 +106,41 @@ export default function PersonalInfoStep({
       e.email = "Enter a valid email";
     }
 
-    if (!form.currentAddress.province)     e.currentProvince     = "Province is required";
-    if (!form.currentAddress.district)     e.currentDistrict     = "District is required";
+    if (!form.currentAddress.province) e.currentProvince = "Province is required";
+    if (!form.currentAddress.district) e.currentDistrict = "District is required";
     if (!form.currentAddress.municipality) e.currentMunicipality = "Municipality is required";
-    if (!form.currentAddress.ward)         e.currentWard         = "Ward is required";
+    if (!form.currentAddress.ward) e.currentWard = "Ward is required";
 
     return e;
   };
 
-  // ── Submit ────────────────────────────────────────────────────────────────
-
   const handleSubmit = () => {
-    const e = validate();
-    if (Object.keys(e).length) {
-      setErrors(e);
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length) {
+      setErrors(validationErrors);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     onNext?.(form);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   return (
-      <div className="w-full">
+      <div className="w-full pb-24 sm:pb-0">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#e8683f]/10 border border-[#e8683f]/20 mb-4">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#e8683f]/10 border border-[#e8683f]/20 mb-3 sm:mb-4">
             <User className="w-5 h-5 text-[#e8683f]" />
           </div>
-          <h1 className="text-2xl font-bold text-stone-900">Tell us about yourself</h1>
-          <p className="text-sm text-stone-500 mt-1.5">This will be verified during KYC</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-stone-900">
+            Tell us about yourself
+          </h1>
+          <p className="text-xs sm:text-sm text-stone-500 mt-1.5">
+            This will be verified during KYC
+          </p>
         </div>
 
         {/* Form */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5 sm:gap-6">
           <SectionDivider title="Personal Details" icon={User} />
 
           <FormInput
@@ -193,6 +183,7 @@ export default function PersonalInfoStep({
                 onChange={handlePhoneChange}
                 error={errors.phone}
                 required
+                inputMode="numeric"
             />
             <FormInput
                 label="Email"
@@ -202,6 +193,7 @@ export default function PersonalInfoStep({
                 onChange={(e) => update("email", e.target.value)}
                 error={errors.email}
                 required
+                inputMode="email"
             />
           </div>
 
@@ -231,12 +223,17 @@ export default function PersonalInfoStep({
               </>
           )}
 
-          {/* Action */}
-          <div className="flex justify-end pt-4">
+          {/* Action — sticky on mobile, inline on desktop */}
+          <div
+              className="
+            fixed bottom-0 left-0 right-0 z-10 bg-white border-t border-stone-100 p-4
+            sm:static sm:z-auto sm:bg-transparent sm:border-0 sm:p-0 sm:flex sm:justify-end sm:pt-4
+          "
+          >
             <button
                 type="button"
                 onClick={handleSubmit}
-                className="flex items-center gap-2 px-8 py-3 bg-[#e8683f] text-white rounded-xl"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 sm:py-3 bg-[#e8683f] text-white rounded-xl font-semibold hover:bg-[#d95a2f] active:scale-[0.98] transition"
             >
               Continue <ArrowRight className="w-4 h-4" />
             </button>

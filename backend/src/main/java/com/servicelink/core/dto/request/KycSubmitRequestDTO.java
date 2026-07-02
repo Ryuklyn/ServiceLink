@@ -33,4 +33,15 @@ public class KycSubmitRequestDTO {
     private String travelRadius;
     private String bio;
     // Files come separately as MultipartFile parameters
+
+    // ✅ थपियो — files अब यहीँ URL string को रूपमा आउँछन्, MultipartFile होइन
+    private String profilePhotoUrl;
+    private String citizenshipFrontUrl;
+    private String citizenshipBackUrl;
+    private String photoUrl;
+    private String panUrl;
+    private List<String> professionalCertUrls;
+
+    // ✅ थपियो — orphan cleanup को लागि track गर्न
+    private String draftSessionId;
 }
