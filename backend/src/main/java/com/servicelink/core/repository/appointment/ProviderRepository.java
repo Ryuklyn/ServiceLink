@@ -17,6 +17,8 @@ import java.util.Optional;
 public interface ProviderRepository extends JpaRepository<Provider, Long>,
         JpaSpecificationExecutor<Provider> {
 
+    Optional<Provider> findByPhone(String phone);
+
     // ── Profile fetches ───────────────────────────────────────────────────────
 
     /**

@@ -18,6 +18,10 @@ import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.security.JwtService;
 import com.servicelink.core.service.*;
 
+import com.servicelink.core.model.provider.Provider;
+import com.servicelink.core.model.user.Role;
+import com.servicelink.core.repository.appointment.ProviderRepository;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -42,6 +46,7 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final UserMapper userMapper;
     private final UserService userService;
+    private final ProviderRepository providerRepository;
 
     // ─── Standard registration / login ────────────────────────────────────────
 
@@ -313,5 +318,152 @@ public class AuthController {
                 .message("Email verified successfully")
                 .providerToken(providerToken)
                 .build());
+    }
+
+    // ─── Provider Login (phone or email — validates against existing accounts) ─
+
+    /**
+     * PhoneStep — validates the phone belongs to an EXISTING Provider before
+     * sending a login code. Deliberately opposite of send-phone-otp (KYC flow),
+     * which never checks Provider existence since the applicant isn't one yet.
+     */
+    @PostMapping("/provider/send-phone-otp")
+    public ResponseEntity<OtpSendResponseDTO> sendProviderLoginPhoneOtp(
+            @RequestBody Map<String, String> body) {
+
+        String phone = body.get("phone");
+        if (phone == null || phone.isBlank()) {
+            throw new IllegalArgumentException("Phone number is required");
+        }
+
+        providerRepository.findByPhone(phone)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No registered provider found for this phone number"));
+
+        String otp = otpService.generateOtp(phone);
+        PhoneOtpService.SendResult result = phoneOtpService.sendOtp(phone, otp);
+
+        return ResponseEntity.ok(OtpSendResponseDTO.builder()
+                .message(result.isAutomated()
+                        ? "Login code sent — check your phone"
+                        : "Login code ready — tap the WhatsApp link to view it")
+                .deliveryMethod(result.method().name())
+                .whatsappLink(result.whatsappLink())
+                .build());
+    }
+
+    /**
+     * Verifies the phone-based login OTP, re-confirms the Provider + linked
+     * User still exist and are active, then issues a real session JWT
+     * (not a purpose-token like the KYC flow — this is a genuine login).
+     */
+    @PostMapping("/provider/verify-phone-otp")
+    public ResponseEntity<AuthResponseDTO> verifyProviderLoginByPhone(
+            @RequestBody Map<String, String> body) {
+
+        String phone = body.get("phone");
+        String otp = body.get("otp");
+        if (phone == null || otp == null) {
+            throw new IllegalArgumentException("Phone and OTP are required");
+        }
+
+        boolean valid = otpService.verifyOtp(phone, otp);
+        if (!valid) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid or expired login code");
+        }
+
+        Provider provider = providerRepository.findByPhone(phone)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, "No registered provider found for this phone number"));
+
+        User user = provider.getUser();
+        if (user == null || user.getRole() != Role.PROVIDER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Linked account is not a valid provider");
+        }
+        if (!Boolean.TRUE.equals(provider.getIsActive())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This provider account is inactive");
+        }
+
+        return ResponseEntity.ok(issueSessionTokens(user));
+    }
+
+    /**
+     * OtpStep (email mode) — validates the email belongs to a User with
+     * role = PROVIDER before sending a login code.
+     */
+    @PostMapping("/provider/send-email-otp")
+    public ResponseEntity<OtpSendResponseDTO> sendProviderLoginEmailOtp(
+            @RequestBody Map<String, String> body) {
+
+        String email = body.get("email");
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+
+        userRepository.findByEmailAndRole(email, Role.PROVIDER)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No provider account found for this email"));
+
+        String otp = otpService.generateOtp(email);
+        emailService.sendOtpEmail(email, otp);
+
+        return ResponseEntity.ok(OtpSendResponseDTO.builder()
+                .message("Login code sent to " + email)
+                .deliveryMethod("EMAIL")
+                .build());
+    }
+
+    /**
+     * Verifies the email-based login OTP. Looks up User by email + role=PROVIDER,
+     * then confirms the linked Provider row exists via user_id (the FK you
+     * specifically asked to use), and is active, before issuing a JWT.
+     */
+    @PostMapping("/provider/verify-email-otp")
+    public ResponseEntity<AuthResponseDTO> verifyProviderLoginByEmail(
+            @RequestBody Map<String, String> body) {
+
+        String email = body.get("email");
+        String otp = body.get("otp");
+        if (email == null || otp == null) {
+            throw new IllegalArgumentException("Email and OTP are required");
+        }
+
+        boolean valid = otpService.verifyOtp(email, otp);
+        if (!valid) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid or expired login code");
+        }
+
+        User user = userRepository.findByEmailAndRole(email, Role.PROVIDER)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, "No provider account found for this email"));
+
+        Provider provider = providerRepository.findByUser_Id(user.getId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, "Provider profile not found for this account"));
+
+        if (!Boolean.TRUE.equals(provider.getIsActive())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This provider account is inactive");
+        }
+
+        return ResponseEntity.ok(issueSessionTokens(user));
+    }
+
+    /**
+     * Shared token-issuing logic — same pattern as /refresh-token, so login
+     * sessions behave identically to refreshed sessions (same claims, same
+     * refresh-token storage/rotation mechanics).
+     */
+    private AuthResponseDTO issueSessionTokens(User user) {
+        String accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+        String jti = jwtService.extractJti(refreshToken);
+
+        refreshTokenService.store(user.getEmail(), jti, refreshToken, jwtService.getRefreshTokenExpirationMillis());
+
+        return AuthResponseDTO.builder()
+                .token(accessToken)
+                .refreshToken(refreshToken)
+                .email(user.getEmail())
+                .build();
     }
 }
