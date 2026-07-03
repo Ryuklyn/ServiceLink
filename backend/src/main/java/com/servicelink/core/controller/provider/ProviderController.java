@@ -28,8 +28,22 @@ public class ProviderController {
     private final ProviderProfileService providerProfileService;
 
     // ─────────────────────────────────────────────────────────────────────────
-    // PUBLIC — no auth required
-    // ─────────────────────────────────────────────────────────────────────────
+// PUBLIC — no auth required
+// ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/providers?category=ELECTRICIAN&page=0&size=20
+     * Public paginated list of verified providers — used by the Explore page.
+     */
+    @GetMapping
+    public ResponseEntity<Page<ProviderProfileDTO>> getAllProviders(
+            @RequestParam(required = false) ServiceCategory category,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        return ResponseEntity.ok(
+                providerProfileService.getAllPublicProviders(category, PageRequest.of(page, size)));
+    }
 
     /**
      * GET /api/providers/{id}

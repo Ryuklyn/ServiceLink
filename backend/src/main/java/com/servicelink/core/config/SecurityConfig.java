@@ -85,11 +85,7 @@ public class SecurityConfig {
                                 "/api/storage/upload"
                         ).permitAll()
 
-                        // KYC
-//                        .requestMatchers(
-//                                HttpMethod.GET, "/api/kyc/status/by-reference",
-//                                "/api/kyc/**"
-//                        ).permitAll()
+
                                 // KYC
                                 .requestMatchers(
                                         HttpMethod.GET, "/api/kyc/status/by-reference"
@@ -106,6 +102,7 @@ public class SecurityConfig {
 
                         // Provider Catalog
                         .requestMatchers(HttpMethod.GET,
+                                "/api/providers",
                                 "/api/providers/catalog",
                                 "/api/providers/{providerId}",
                                 "/api/providers/{providerId}/reviews"

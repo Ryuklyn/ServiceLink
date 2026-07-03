@@ -24,7 +24,7 @@ const renderStars = (r: number) =>
 export default function ProfileHero({ provider }: ProfileHeroProps) {
   return (
       <div
-          className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 text-white w-full max-w-4xl"
+          className="rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 text-white w-full max-w-4xl"
           style={{ backgroundColor: "#1e3a8a" }}
       >
         {/* Top Container: Adapts dynamically from top-stacked list to inline flex container */}

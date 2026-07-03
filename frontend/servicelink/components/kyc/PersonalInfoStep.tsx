@@ -54,6 +54,8 @@ const emptyAddress: Address = {
   tole: "",
 };
 
+const MIN_PROVIDER_AGE = 18; // adjust if your business rule differs
+
 const createForm = (data?: Partial<FormState>): FormState => ({
   fullName: data?.fullName ?? "",
   dob: data?.dob ?? "",
@@ -64,6 +66,24 @@ const createForm = (data?: Partial<FormState>): FormState => ({
   permanentAddress: data?.permanentAddress ?? { ...emptyAddress },
   sameAddress: data?.sameAddress ?? true,
 });
+
+// ─── DOB helpers ────────────────────────────────────────────────────────────
+
+const getMaxDob = (): string => {
+  const today = new Date();
+  return today.toISOString().split("T")[0]; // YYYY-MM-DD — stops the date picker itself from offering future dates
+};
+
+const calculateAge = (dobStr: string): number => {
+  const dob = new Date(dobStr);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -91,7 +111,21 @@ export default function PersonalInfoStep({
   const validate = (): FormErrors => {
     const e: FormErrors = {};
     if (!form.fullName.trim()) e.fullName = "Full name is required";
-    if (!form.dob) e.dob = "Date of birth is required";
+
+    if (!form.dob) {
+      e.dob = "Date of birth is required";
+    } else {
+      const dobDate = new Date(form.dob);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (dobDate > today) {
+        e.dob = "Date of birth cannot be in the future";
+      } else if (calculateAge(form.dob) < MIN_PROVIDER_AGE) {
+        e.dob = `You must be at least ${MIN_PROVIDER_AGE} years old to register as a provider`;
+      }
+    }
+
     if (!form.gender) e.gender = "Please select a gender";
 
     if (!form.phone.trim()) {
@@ -161,6 +195,7 @@ export default function PersonalInfoStep({
                 onChange={(e) => update("dob", e.target.value)}
                 error={errors.dob}
                 required
+                max={getMaxDob()}
             />
             <FormSelect
                 label="Gender"

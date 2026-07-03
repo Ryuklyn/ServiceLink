@@ -24,6 +24,7 @@ interface Provider {
   available: boolean;
   areas: string[];
   bgColor: string;
+  avatarUrl: string | null;
 }
 
 function getInitials(name: string): string {
@@ -61,6 +62,7 @@ function mapBackendToProvider(data: any): Provider {
         ? data.coveredDistricts.split(",").map((d: string) => d.trim())
         : [data.baseDistrict ?? "Kathmandu"],
     bgColor: "#1e3a8a",
+    avatarUrl: data.profilePictureUrl?.trim() ? data.profilePictureUrl : null,
   };
 }
 
@@ -77,6 +79,38 @@ const renderStars = (r: number) =>
             }`}
         />
     ));
+
+/**
+ * Provider avatar with graceful fallback.
+ * Renders the real profile photo when available; if the URL is missing
+ * OR the image fails to load (e.g. deleted from Supabase, broken link),
+ * falls back to the initials circle instead of a broken-image icon.
+ */
+function ProviderAvatar({ provider }: { provider: Provider }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImage = provider.avatarUrl && !imgFailed;
+
+  return (
+      <>
+        {showImage && (
+            <img
+                src={provider.avatarUrl!}
+                alt={provider.name}
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover"
+                onError={() => setImgFailed(true)}
+            />
+        )}
+        {!showImage && (
+            <div
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-base sm:text-lg font-bold"
+                style={{ backgroundColor: provider.bgColor }}
+            >
+              {provider.initials}
+            </div>
+        )}
+      </>
+  );
+}
 
 export default function ExploreSection() {
   const [allProviders, setAllProviders] = useState<Provider[]>([]);
@@ -96,12 +130,8 @@ export default function ExploreSection() {
         setLoading(true);
         setError(null);
 
-        const [res1, res2] = await Promise.all([
-          api.get("/providers/1"),
-          api.get("/providers/2"),
-        ]);
-
-        const mapped = [res1.data, res2.data].map(mapBackendToProvider);
+        const res = await api.get("/providers");
+        const mapped = res.data.content.map(mapBackendToProvider);
         setAllProviders(mapped);
       } catch (err) {
         console.error("Failed to fetch providers:", err);
@@ -203,12 +233,7 @@ export default function ExploreSection() {
                     {/* Top Section */}
                     <div className="flex items-start gap-3 sm:gap-4">
                       <div className="relative shrink-0">
-                        <div
-                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-base sm:text-lg font-bold"
-                            style={{ backgroundColor: provider.bgColor }}
-                        >
-                          {provider.initials}
-                        </div>
+                        <ProviderAvatar provider={provider} />
                         {provider.available && (
                             <span className="absolute top-0.5 right-0.5 w-3 h-3 bg-green-400 border-2 border-white rounded-full" />
                         )}

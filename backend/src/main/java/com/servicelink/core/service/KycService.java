@@ -128,12 +128,19 @@ public class KycService {
         Provider provider = Provider.builder()
                 .user(user)
                 .build();
-        provider.syncFromKyc(submission); // sets kycSubmission, fullName, phone, primaryService, otherService, experienceYears, bio, isVerified
+        provider.syncFromKyc(submission); // sets kycSubmission, fullName, phone, primaryService, otherService, experienceYears, bio
 
         provider.setBaseDistrict(submission.getPrimaryDistrict());
         provider.setCoveredDistricts(submission.getSecondaryDistricts()); // already JSON-as-text
         provider.setProfilePictureUrl(submission.getProfilePhotoUrl());
         provider.setTravelRadiusKm(parseTravelRadiusKm(submission.getTravelRadius()));
+
+        // Approval is what makes a provider verified and active — set explicitly here
+        // rather than relying on syncFromKyc(), since these are approval-outcome flags,
+        // not KYC-submission data. Do not remove or move this without checking
+        // syncFromKyc() doesn't also set these — keep exactly one source of truth.
+        provider.setIsVerified(true);
+        provider.setIsActive(true);
 
         providerRepository.save(provider);
 

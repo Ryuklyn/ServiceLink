@@ -62,6 +62,24 @@ public class ProviderProfileService {
         return mapper.toProfileDTO(provider, recent);
     }
 
+
+    /**
+     * Public paginated list of verified + active providers, for the Explore page.
+     * Optionally filtered by category. Sorted by rating desc (baked into repo query).
+     *
+     * NOTE: uses an empty review list per provider to avoid N+1 queries across
+     * the whole page — full recent reviews are only loaded on the single-provider
+     * profile page via getPublicProfile().
+     */
+    @Transactional(readOnly = true)
+    public Page<ProviderProfileDTO> getAllPublicProviders(ServiceCategory category, Pageable pageable) {
+        Page<Provider> providers = (category != null)
+                ? providerRepo.findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(category, pageable)
+                : providerRepo.findByIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(pageable);
+
+        return providers.map(p -> mapper.toProfileDTO(p, List.of()));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // PROVIDER OWN PROFILE
     // ══════════════════════════════════════════════════════════════════════════

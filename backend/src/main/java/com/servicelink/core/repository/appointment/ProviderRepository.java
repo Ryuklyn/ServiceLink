@@ -158,4 +158,11 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
      */
     Page<Provider> findByIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(
             Pageable pageable);
+
+    /**
+     * Same as above, scoped to a single category — used by the Explore page
+     * when the user filters by category server-side.
+     */
+    Page<Provider> findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(
+            ServiceCategory primaryService, Pageable pageable);
 }
