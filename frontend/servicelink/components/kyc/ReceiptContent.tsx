@@ -38,11 +38,25 @@ export default function ReceiptContent({
         >
             {/* Header Grid Layout */}
             <div className="flex justify-between items-start pb-6" style={{ borderBottom: "2px solid #1e3a8a" }}>
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-[#1e3a8a]" style={{ color: "#1e3a8a" }}>ServiceLink</h1>
-                    <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-semibold">
-                        Building Trust. Connecting Services.
-                    </p>
+                {/*<div>*/}
+                {/*    <h1 className="text-2xl font-bold tracking-tight text-[#1e3a8a]" style={{ color: "#1e3a8a" }}>ServiceLink</h1>*/}
+                {/*    <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-semibold">*/}
+                {/*        Building Trust. Connecting Services.*/}
+                {/*    </p>*/}
+                {/*</div>*/}
+                <div className="flex items-center gap-3">
+                    <img
+                        src="/images/SL.png"
+                        alt="ServiceLink"
+                        crossOrigin="anonymous"
+                        className="h-10 w-auto object-contain"
+                    />
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-[#1e3a8a]" style={{ color: "#1e3a8a" }}>ServiceLink</h1>
+                        <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-semibold">
+                            Building Trust. Connecting Services.
+                        </p>
+                    </div>
                 </div>
                 <div className="text-right">
                     <div className="text-white text-xs font-bold px-3 py-1.5 rounded uppercase tracking-widest" style={{ backgroundColor: "#1e3a8a" }}>
