@@ -1,5 +1,3 @@
-// src/constants/serviceCategory.ts
-
 export const SERVICE_OPTIONS = [
     {
         value: "electrical",
@@ -32,10 +30,6 @@ export const SERVICE_OPTIONS = [
         backend: "AC_REPAIR",
     },
 ] as const;
-
-// export function toBackendServiceCategory(value: string): string | undefined {
-//     return SERVICE_OPTIONS.find(s => s.value === value)?.backend;
-// }
 
 export function toBackendServiceCategory(
     value?: string

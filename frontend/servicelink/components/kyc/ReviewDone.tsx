@@ -44,15 +44,8 @@ type Professional = {
   photoConfirmed?: boolean;
 };
 
-// type KYC = {
-//   citizenshipFront?: File | null;
-//   citizenshipBack?: File | null;
-//   pan?: File | null;
-//   professional?: File[];
-//   photo?: File | null;
-// };
 type KYC = {
-  citizenshipFront?: string | null;   // ✅ URL string
+  citizenshipFront?: string | null;
   citizenshipBack?: string | null;
   pan?: string | null;
   professional?: string[];
@@ -226,6 +219,7 @@ export function ReviewDone({
     try {
       const payload = buildKycPayload(allData, draftSessionId);
       const res: KycSubmitResponse = await kycApi.submitKyc(payload);
+      console.log("KYC submit response:", res);
       onSubmitSuccess?.(res);
     } catch (err: unknown) {
       setSubmitError(getErrorMessage(err));

@@ -10,6 +10,7 @@ import java.util.Optional;
 
 public interface KycRepository extends JpaRepository<KycSubmission, Long> {
 
+
     Optional<KycSubmission> findByUser(User user);
 
     Optional<KycSubmission> findByReferenceNumber(String referenceNumber);

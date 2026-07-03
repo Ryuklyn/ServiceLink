@@ -12,6 +12,7 @@ interface ReceiptModalProps {
     formattedTime: string;
     applicantName: string;
     applicantEmail: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
 }
 
 export default function ReceiptModal({
@@ -21,9 +22,9 @@ export default function ReceiptModal({
                                          formattedTime,
                                          applicantName,
                                          applicantEmail,
+                                         status,
                                      }: ReceiptModalProps) {
     const [isDownloading, setIsDownloading] = useState(false);
-
     const [downloadError, setDownloadError] = useState(false);
 
     const handleDownload = async () => {
@@ -37,17 +38,11 @@ export default function ReceiptModal({
             setIsDownloading(false);
         }
     };
-    // const handleDownload = async () => {
-    //     setIsDownloading(true);
-    //     await generateReceiptPDF("receipt-print-area", referenceNumber);
-    //     setIsDownloading(false);
-    // };
 
     return (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full border border-slate-200 flex flex-col my-auto overflow-hidden">
 
-                {/* Control Action Bar */}
                 <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[#1e3a8a]">
                         <ShieldCheck className="w-5 h-5 text-[#e8683f]" />
@@ -71,7 +66,12 @@ export default function ReceiptModal({
                     </div>
                 </div>
 
-                {/* Scaled Preview Frame */}
+                {downloadError && (
+                    <div className="px-6 py-2 bg-red-50 border-b border-red-100 text-xs text-red-600 font-medium">
+                        Failed to generate PDF. Please try again.
+                    </div>
+                )}
+
                 <div className="flex-1 bg-slate-100 p-4 sm:p-6 max-h-[70vh] overflow-y-auto shadow-inner">
                     <div className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200 transform scale-100 origin-top">
                         <ReceiptContent
@@ -80,6 +80,7 @@ export default function ReceiptModal({
                             formattedTime={formattedTime}
                             applicantName={applicantName}
                             applicantEmail={applicantEmail}
+                            status={status}
                         />
                     </div>
                 </div>

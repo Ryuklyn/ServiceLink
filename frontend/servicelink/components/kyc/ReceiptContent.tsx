@@ -9,7 +9,15 @@ interface ReceiptContentProps {
     formattedTime: string;
     applicantName: string;
     applicantEmail: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    reviewNotes?: string | null;
 }
+
+const STATUS_CONFIG = {
+    PENDING:  { label: "Under Review", title: "Submitted successfully", color: "#047857", bg: "#d1fae5", border: "#a7f3d0" },
+    APPROVED: { label: "Approved",     title: "Application approved",   color: "#047857", bg: "#d1fae5", border: "#a7f3d0" },
+    REJECTED: { label: "Rejected",     title: "Application rejected",   color: "#b91c1c", bg: "#fee2e2", border: "#fecaca" },
+} as const;
 
 export default function ReceiptContent({
                                            referenceNumber,
@@ -17,6 +25,8 @@ export default function ReceiptContent({
                                            formattedTime,
                                            applicantName,
                                            applicantEmail,
+                                           status,
+                                           reviewNotes,
                                        }: ReceiptContentProps) {
 
     const qrValue = JSON.stringify({
@@ -24,7 +34,19 @@ export default function ReceiptContent({
         name: applicantName,
         date: `${formattedDate} ${formattedTime}`,
         verifiedBy: "ServiceLink Core Engine",
+        status,
     });
+
+    const statusConfig = STATUS_CONFIG[status];
+    const isApproved = status === "APPROVED";
+
+    const checklistItems = [
+        { label: "Personal Info Validation", complete: true },
+        { label: "Professional Background Declaration", complete: true },
+        { label: "KYC Cryptographic Document Uploads", complete: true },
+        { label: "Manual Registry Check & Sign-off", complete: isApproved },
+        { label: "Final 30-Day Free Trial Provisioning", complete: isApproved },
+    ];
 
     return (
         <div
@@ -38,12 +60,6 @@ export default function ReceiptContent({
         >
             {/* Header Grid Layout */}
             <div className="flex justify-between items-start pb-6" style={{ borderBottom: "2px solid #1e3a8a" }}>
-                {/*<div>*/}
-                {/*    <h1 className="text-2xl font-bold tracking-tight text-[#1e3a8a]" style={{ color: "#1e3a8a" }}>ServiceLink</h1>*/}
-                {/*    <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-semibold">*/}
-                {/*        Building Trust. Connecting Services.*/}
-                {/*    </p>*/}
-                {/*</div>*/}
                 <div className="flex items-center gap-3">
                     <img
                         src="/images/SL.png"
@@ -70,12 +86,21 @@ export default function ReceiptContent({
             <div className="my-6 p-4 rounded-r-lg flex justify-between items-center" style={{ backgroundColor: "#eef4ff", borderLeft: "4px solid #1e3a8a" }}>
                 <div>
                     <p className="text-xs uppercase font-bold text-[#1e3a8a] tracking-wider">Application Status</p>
-                    <p className="text-lg font-bold mt-0.5" style={{ color: "#1e293b" }}>Submitted successfully</p>
+                    <p className="text-lg font-bold mt-0.5" style={{ color: "#1e293b" }}>{statusConfig.title}</p>
                 </div>
-                <span className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider" style={{ color: "#047857", backgroundColor: "#d1fae5", border: "1px solid #a7f3d0" }}>
-                  Under Review
+                <span
+                    className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider"
+                    style={{ color: statusConfig.color, backgroundColor: statusConfig.bg, border: `1px solid ${statusConfig.border}` }}
+                >
+                    {statusConfig.label}
                 </span>
             </div>
+            {status === "REJECTED" && reviewNotes && (
+                <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca" }}>
+                    <p className="text-xs uppercase font-bold text-red-700 tracking-wider mb-1">Reviewer Notes</p>
+                    <p className="text-sm text-red-800">{reviewNotes}</p>
+                </div>
+            )}
 
             {/* User Attributes Grid */}
             <div className="mb-6">
@@ -126,13 +151,7 @@ export default function ReceiptContent({
                     Verification Milestones
                 </h3>
                 <div className="space-y-2.5">
-                    {[
-                        { label: "Personal Info Validation", complete: true },
-                        { label: "Professional Background Declaration", complete: true },
-                        { label: "KYC Cryptographic Document Uploads", complete: true },
-                        { label: "Manual Registry Check & Sign-off", complete: false },
-                        { label: "Final 30-Day Free Trial Provisioning", complete: false },
-                    ].map((item, idx) => (
+                    {checklistItems.map((item, idx) => (
                         <div key={idx} className="flex justify-between items-center py-2 px-3 rounded-md" style={{ backgroundColor: "#f8fafc", border: "1px solid #f1f5f9" }}>
                             <span className="text-xs font-medium text-slate-700">{item.label}</span>
                             <div className="flex items-center gap-1.5">

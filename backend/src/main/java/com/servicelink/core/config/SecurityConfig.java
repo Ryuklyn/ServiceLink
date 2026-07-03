@@ -86,9 +86,18 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // KYC
-                        .requestMatchers(
-                                "/api/kyc/**"
-                        ).permitAll()
+//                        .requestMatchers(
+//                                HttpMethod.GET, "/api/kyc/status/by-reference",
+//                                "/api/kyc/**"
+//                        ).permitAll()
+                                // KYC
+                                .requestMatchers(
+                                        HttpMethod.GET, "/api/kyc/status/by-reference"
+                                ).permitAll()
+
+                                .requestMatchers(
+                                        "/api/kyc/**"
+                                ).permitAll()
 
                         // Business / Payment
                         .requestMatchers(

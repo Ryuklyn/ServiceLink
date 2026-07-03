@@ -44,6 +44,7 @@ public class KycSubmission {
     private String dob;
     private String gender;
     private String phone;
+    private String email;
 
     // ── Address ───────────────────────────────────────────────────────────────
     private String province;

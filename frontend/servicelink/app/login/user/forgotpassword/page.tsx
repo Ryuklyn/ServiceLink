@@ -66,7 +66,7 @@ export default function Page() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@email.com"
-            className="w-full pl-10 py-3 border rounded-xl placeholder-gray-500"
+            className="w-full text-slate-900 pl-10 py-3 border rounded-xl placeholder-gray-500"
           />
         </div>
 

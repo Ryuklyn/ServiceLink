@@ -9,6 +9,7 @@ import {
     saveProfessionalStep,
     loadDraftFromBrowser,
     resetKyc,
+    setSubmitResponse as setKycReferenceNumber,
     KycPersonalData,
     KycProfessionalData,
 } from "@/store/slices/kycSlice";
@@ -41,7 +42,7 @@ export default function KycPage() {
 
     // const { currentStep, personal, professional, draftLoaded } =
     //     useAppSelector((state) => state.kyc);
-    const { currentStep, personal, professional, draftLoaded, draftSessionId } =
+    const { currentStep, personal, professional, draftLoaded, draftSessionId, referenceNumber  } =
         useAppSelector((state) => state.kyc);
 
     // Files Redux ma store garna mildaina (non-serializable)
@@ -100,11 +101,24 @@ export default function KycPage() {
         [goTo]
     );
 
+    // const handleSubmitSuccess = useCallback(
+    //     (response?: KycSubmitResponse) => {
+    //         if (response) setSubmitResponse(response);
+    //         setSubmittedSummary({ personal, professional });
+    //         dispatch(resetKyc()); // Redux clear + localStorage clear
+    //         goTo(5);
+    //     },
+    //     [dispatch, goTo, personal, professional]
+    // );
     const handleSubmitSuccess = useCallback(
         (response?: KycSubmitResponse) => {
-            if (response) setSubmitResponse(response);
+            if (response) {
+                setSubmitResponse(response); // local state — full response for DoneStep's allData/UI needs
+
+                dispatch(resetKyc());        // clear the wizard's personal/professional/step first...
+                dispatch(setKycReferenceNumber({ referenceNumber: response.referenceNumber })); // ...then persist the ref on top
+            }
             setSubmittedSummary({ personal, professional });
-            dispatch(resetKyc()); // Redux clear + localStorage clear
             goTo(5);
         },
         [dispatch, goTo, personal, professional]
@@ -178,7 +192,7 @@ export default function KycPage() {
                 return (
                     <DoneStep
                         onRestart={resetFlow}
-                        referenceNumber={submitResponse?.referenceNumber}
+                        referenceNumber={referenceNumber ?? submitResponse?.referenceNumber}
                         allData={submittedSummary ?? { personal, professional }}
                     />
                 );

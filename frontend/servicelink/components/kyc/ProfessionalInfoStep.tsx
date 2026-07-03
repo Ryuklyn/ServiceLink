@@ -120,34 +120,6 @@ export default function SkillsServicesForm({ onNext, onBack, initialData, draftS
       [primaryDistrict],
   );
 
-  // const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const file = e.target.files?.[0];
-  //   if (!file) return;
-  //   setPhotoError("");
-  //
-  //   if (!["image/jpeg", "image/png"].includes(file.type)) {
-  //     setPhotoError("Only JPG and PNG files are allowed.");
-  //     return;
-  //   }
-  //   if (file.size > 5 * 1024 * 1024) {
-  //     setPhotoError("File size must be under 5MB.");
-  //     return;
-  //   }
-  //
-  //   const img = new Image();
-  //   const url = URL.createObjectURL(file);
-  //   img.onload = () => {
-  //     if (img.width < 400 || img.height < 600) {
-  //       setPhotoError(`Image resolution too low (${img.width}x${img.height}). Minimum 400x600 px required.`);
-  //       URL.revokeObjectURL(url);
-  //       return;
-  //     }
-  //     setImage(url);
-  //     setPhotoConfirmed(false);
-  //   };
-  //   img.src = url;
-  // };
-
   const [uploading, setUploading] = useState(false);
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,12 +164,6 @@ export default function SkillsServicesForm({ onNext, onBack, initialData, draftS
 
     img.src = localPreview;
   };
-
-  // useEffect(() => {
-  //   return () => {
-  //     if (image) URL.revokeObjectURL(image);
-  //   };
-  // }, [image]);
 
   const handleContinue = () => {
     if (!primaryService) {

@@ -1,6 +1,9 @@
 "use client";
 
-import { ShieldCheck, Clock, CreditCard, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ShieldCheck, Clock, CreditCard, ArrowRight, CheckCircle2, Sparkles, Search } from "lucide-react";
+import CheckStatusModal from "./CheckStatusModal";
 
 interface WelcomeStepProps {
     onStart: () => void;
@@ -25,12 +28,19 @@ const TRIAL_POINTS = [
 ];
 
 export default function WelcomeStep({ onStart }: WelcomeStepProps) {
+    const router = useRouter();
+    const [showStatusModal, setShowStatusModal] = useState(false);
+
+    const handleValidReference = (referenceNumber: string) => {
+        setShowStatusModal(false);
+        router.push(`/kyc/status?ref=${encodeURIComponent(referenceNumber)}`);
+    };
+
     return (
         <div className="min-h-screen bg-[#f7f6f3] flex items-center justify-center px-4 py-6 sm:py-10">
             <div className="w-full max-w-xl bg-white rounded-2xl sm:rounded-3xl border border-stone-100 shadow-sm overflow-hidden">
                 {/* Header — navy, brand-consistent */}
                 <div className="relative bg-[#1e3a8a] text-white px-6 sm:px-8 py-9 sm:py-12 text-center overflow-hidden">
-                    {/* subtle decorative glow */}
                     <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#e8683f]/20 blur-3xl pointer-events-none" />
                     <div className="absolute -bottom-20 -left-10 w-40 h-40 rounded-full bg-white/5 blur-2xl pointer-events-none" />
 
@@ -93,11 +103,26 @@ export default function WelcomeStep({ onStart }: WelcomeStepProps) {
                     Start KYC Application <ArrowRight className="w-4 h-4" />
                 </button>
 
+                {/* Check Status — secondary action for returning applicants */}
+                <button
+                    onClick={() => setShowStatusModal(true)}
+                    className="w-full mt-2.5 flex items-center justify-center gap-2 px-6 py-3 border border-stone-200 text-stone-600 rounded-xl font-semibold text-sm hover:border-[#1e3a8a] hover:text-[#1e3a8a] active:scale-[0.98] transition"
+                >
+                    <Search className="w-4 h-4" /> Check Application Status
+                </button>
+
                 <p className="text-center text-xs text-stone-400 mt-4">
                     Takes about 5–10 minutes · Documents reviewed within 2–3 business days
                 </p>
             </div>
         </div>
+
+    {showStatusModal && (
+        <CheckStatusModal
+            onClose={() => setShowStatusModal(false)}
+            onValidReference={handleValidReference}
+        />
+    )}
 </div>
 );
 }

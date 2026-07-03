@@ -3,6 +3,7 @@ package com.servicelink.core.controller;
 import com.servicelink.core.dto.request.KycSubmitRequestDTO;
 import com.servicelink.core.dto.response.KycStatusResponseDTO;
 import com.servicelink.core.dto.response.KycSubmitResponseDTO;
+import com.servicelink.core.dto.response.kyc.PublicKycStatusResponseDTO;
 import com.servicelink.core.security.JwtService;
 import com.servicelink.core.service.KycService;
 import lombok.RequiredArgsConstructor;
@@ -32,28 +33,6 @@ public class KycController {
     private final KycService kycService;
     private final JwtService jwtService;
 
-//    @PostMapping(value = "/submit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    public ResponseEntity<KycSubmitResponseDTO> submit(
-//            @RequestPart("data")                                       String dataJson,
-//            @RequestPart("citizenshipFront")                           MultipartFile citizenshipFront,
-//            @RequestPart("citizenshipBack")                            MultipartFile citizenshipBack,
-//            @RequestPart("photo")                                      MultipartFile photo,
-//            @RequestPart(value = "pan",               required = false) MultipartFile pan,
-//            @RequestPart(value = "professionalCerts", required = false) MultipartFile[] certs,
-//            @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
-//            Authentication auth
-//    ) throws Exception {
-//
-//        ObjectMapper objectMapper = new ObjectMapper();
-//        KycSubmitRequestDTO dto = objectMapper.readValue(dataJson, KycSubmitRequestDTO.class);
-//
-//        String applicantIdentifier = resolveIdentifier(providerToken, auth, dto.getApplicantIdentifier());
-//
-//        return ResponseEntity.ok(
-//                kycService.submit(dto, citizenshipFront, citizenshipBack,
-//                        photo, pan, certs, applicantIdentifier)
-//        );
-//    }
 
     @PostMapping(value = "/submit", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<KycSubmitResponseDTO> submit(
@@ -83,6 +62,21 @@ public class KycController {
             String identifier = resolveIdentifier(providerToken, auth, null); // status still requires auth
             return ResponseEntity.ok(kycService.getStatus(identifier));
         }
+
+    /**
+     * Public, token-independent status lookup by reference number.
+     * Used by the post-submission confirmation page (DoneStep) and the
+     * receipt view, which must remain accessible even after the applicant's
+     * short-lived provider token (15 min) has expired.
+     *
+     * Intentionally does NOT require X-Provider-Token or Authentication —
+     * the reference number itself (random, non-sequential) is the lookup key.
+     */
+    @GetMapping("/status/by-reference")
+    public ResponseEntity<PublicKycStatusResponseDTO> statusByReference(
+            @RequestParam("ref") String referenceNumber) {
+        return ResponseEntity.ok(kycService.getStatusByReferenceNumber(referenceNumber));
+    }
 
     /**
      * Resolves the applicant identifier from either a provider token or the
