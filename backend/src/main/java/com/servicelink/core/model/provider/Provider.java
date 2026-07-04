@@ -109,25 +109,16 @@ public class Provider {
     private Instant memberSince;
 
     // Services offered
-//    @Builder.Default
-//    @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
-//    private List<ProviderService> services = new ArrayList<>();
     @Builder.Default
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ProviderService> services = new HashSet<>();
 
     // Reviews
-//    @Builder.Default
-//    @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
-//    private List<Review> reviews = new ArrayList<>();
     @Builder.Default
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Review> reviews = new HashSet<>();
 
     // Portfolio
-//    @Builder.Default
-//    @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
-//    private List<Portfolio> portfolio = new ArrayList<>();
     @Builder.Default
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Portfolio> portfolio = new HashSet<>();
@@ -135,7 +126,6 @@ public class Provider {
     @PrePersist
     protected void onCreate() {
         this.memberSince = Instant.now();
-        this.isVerified = false;
     }
 
     public void syncFromKyc(KycSubmission kyc) {
