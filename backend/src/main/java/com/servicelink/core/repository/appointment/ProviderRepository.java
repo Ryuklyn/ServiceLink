@@ -19,6 +19,8 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
 
     Optional<Provider> findByPhone(String phone);
 
+    Optional<Provider> findByUser_Email(String email);
+
     // ── Profile fetches ───────────────────────────────────────────────────────
 
     /**

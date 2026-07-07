@@ -1,85 +1,146 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import type { ContactMode } from "@/components/kyc/PhoneStep";
 
 import PhoneStep from "@/components/kyc/PhoneStep";
 import OtpStep from "@/components/kyc/OTPStep";
+import SetPinStep from "@/components/provider/auth/SetPinStep";
+import PinStep from "@/components/provider/auth/PinStep";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+    setDeviceId,
+    setPhase,
+    otpSent,
+    otpVerified,
+    resetToOtp,
+    authenticated,
+} from "@/store/slices/authFlowSlice";
+import { getOrCreateDeviceId } from "@/lib/api/device";
+import { pinApi } from "@/lib/api/pinApi";
 
-type OtpPhase = "phone" | "otp";
-
-// ─── Component ────────────────────────────────────────────────────────────────
+// utils/axios.ts keeps its own token helpers private (not exported), but it
+// reads/writes these exact two localStorage keys — so we mirror that here
+// rather than importing a `storage` export that doesn't exist.
+const getRefreshToken = () =>
+    typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
 
 /**
  * Login Page  (/login)
  *
- * Responsibilities:
- *  1. Collect the provider's registered phone / e-mail and dispatch a login OTP (PhoneStep)
- *  2. Verify the OTP with the backend — backend validates the contact belongs
- *     to an existing PROVIDER before issuing any token                        (OtpStep)
- *  3. Persist the resulting session JWT + refresh token to localStorage,
- *     under the SAME keys utils/axios.ts reads ("accessToken"/"refreshToken"),
- *     so every subsequent request through the shared `api` instance is
- *     authenticated automatically.
- *  4. Redirect to the provider dashboard                                     (/dashboard/provider)
+ * Flow:
+ *  checking   -> silently decides pinEntry vs otp based on refreshToken + check-device
+ *  otp        -> PhoneStep -> OtpStep (first login, new device, forgot-PIN, or lockout)
+ *  setPin     -> shown ONCE right after a first-time OTP success on this device
+ *  pinEntry   -> fast daily path: PIN only, no phone/email re-entry
+ *  authenticated -> redirect to /dashboard/provider
  */
 export default function LoginPage() {
     const router = useRouter();
+    const dispatch = useAppDispatch();
+    const { phase, contact, contactMode, whatsappLink, deviceId, pendingProviderToken } =
+        useAppSelector((s) => s.authFlow);
 
-    const [phase, setPhase] = useState<OtpPhase>("phone");
-    const [verifiedContact, setVerifiedContact] = useState("");
-    const [contactMode, setContactMode] = useState<ContactMode>("phone");
-    const [whatsappLink, setWhatsappLink] = useState<string | undefined>();
+    // ── On mount: establish device identity, decide starting phase ───────────
+    useEffect(() => {
+        const id = getOrCreateDeviceId();
+        dispatch(setDeviceId(id));
 
-    const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+        const decideStartingPhase = async () => {
+            const refreshToken = getRefreshToken();
+            if (!refreshToken) {
+                dispatch(setPhase("otp"));
+                return;
+            }
+            try {
+                const { pinExists } = await pinApi.checkDevice(id);
+                dispatch(setPhase(pinExists ? "pinEntry" : "otp"));
+            } catch {
+                // Fail safe: never strand the user on a blank screen
+                dispatch(setPhase("otp"));
+            }
+        };
 
-    /** Called by PhoneStep once a login OTP has been dispatched to the contact. */
+        decideStartingPhase();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ── Redirect once authenticated ───────────────────────────────────────────
+    useEffect(() => {
+        if (phase === "authenticated") {
+            router.push("/dashboard/provider");
+        }
+    }, [phase, router]);
+
+    // ── Handlers ───────────────────────────────────────────────────────────────
     const handleOtpSent = useCallback(
-        (contact: string, mode: ContactMode, waLink?: string) => {
-            setVerifiedContact(contact);
-            setContactMode(mode);
-            setWhatsappLink(waLink);
-            setPhase("otp");
-            scrollTop();
+        (c: string, mode: typeof contactMode, waLink?: string) => {
+            dispatch(otpSent({ contact: c, mode, whatsappLink: waLink }));
         },
-        [],
+        [dispatch],
     );
 
     /**
-     * Called by OtpStep after the backend verifies the OTP and returns
-     * real session tokens (LOGIN purpose — see otpApi.ts normalization).
+     * OtpStep (LOGIN purpose) hands us the short-lived providerToken.
+     * We don't persist real session tokens yet — that only happens after
+     * set-pin / skip-pin, which is what actually issues the full session.
      */
     const handleOtpVerified = useCallback(
-        (accessToken: string, refreshToken?: string) => {
-            localStorage.setItem("accessToken", accessToken);
-            if (refreshToken) {
-                localStorage.setItem("refreshToken", refreshToken);
-            }
-
-            router.push("/dashboard/provider");
+        (providerToken: string) => {
+            dispatch(otpVerified({ providerToken }));
         },
-        [router],
+        [dispatch],
     );
 
-    /** Go back to phone / email entry from the OTP screen. */
     const handleChangeContact = useCallback(() => {
-        setVerifiedContact("");
-        setWhatsappLink(undefined);
-        setPhase("phone");
-        scrollTop();
-    }, []);
+        dispatch(resetToOtp());
+    }, [dispatch]);
 
-    if (phase === "phone") {
+    const persistSessionAndFinish = useCallback(
+        (accessToken: string, refreshToken?: string) => {
+            localStorage.setItem("accessToken", accessToken);
+            if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+            dispatch(authenticated());
+        },
+        [dispatch],
+    );
+
+    // ── Render by phase ─────────────────────────────────────────────────────────
+    if (phase === "checking") {
+        return (
+            <div className="min-h-[100dvh] w-full flex items-center justify-center bg-[#f0f4ff]">
+                <div className="w-10 h-10 border-4 border-[#1e3a8a]/20 border-t-[#1e3a8a] rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (phase === "pinEntry") {
+        return (
+            <PinStep
+                deviceId={deviceId}
+                onVerified={persistSessionAndFinish}
+                onFallbackToOtp={() => dispatch(resetToOtp())}
+            />
+        );
+    }
+
+    if (phase === "setPin" && pendingProviderToken) {
+        return (
+            <SetPinStep
+                providerToken={pendingProviderToken}
+                deviceId={deviceId}
+                onComplete={persistSessionAndFinish}
+            />
+        );
+    }
+
+    // phase === "otp"
+    if (!contact) {
         return (
             <PhoneStep
                 onOtpSent={handleOtpSent}
                 purpose="LOGIN"
-                heading="Welcome back"
-                subheading="Enter your registered phone number or email to receive a one-time code."
-                ctaLabel="Send login code"
                 footerPrompt="Don't have an account?"
                 footerLinkLabel="Register here"
                 footerLinkHref="/register"
@@ -89,15 +150,12 @@ export default function LoginPage() {
 
     return (
         <OtpStep
-            contact={verifiedContact}
+            contact={contact}
             mode={contactMode}
             whatsappLink={whatsappLink}
             onVerified={handleOtpVerified}
             onChangeContact={handleChangeContact}
             purpose="LOGIN"
-            heading="Check your messages"
-            subheading="We sent a one-time login code to"
-            resendLabel="Resend login code"
         />
     );
 }

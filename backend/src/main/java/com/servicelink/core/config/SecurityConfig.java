@@ -85,27 +85,34 @@ public class SecurityConfig {
                                 "/api/storage/upload"
                         ).permitAll()
 
+                        // KYC
+                        .requestMatchers(
+                                HttpMethod.GET, "/api/kyc/status/by-reference"
+                        ).permitAll()
 
-                                // KYC
-                                .requestMatchers(
-                                        HttpMethod.GET, "/api/kyc/status/by-reference"
-                                ).permitAll()
-
-                                .requestMatchers(
-                                        "/api/kyc/**"
-                                ).permitAll()
+                        .requestMatchers(
+                                "/api/kyc/**"
+                        ).permitAll()
 
                         // Business / Payment
                         .requestMatchers(
                                 "/api/business/**"
                         ).permitAll()
 
-                        // Provider Catalog
+                        // Provider Catalog (GET only)
                         .requestMatchers(HttpMethod.GET,
                                 "/api/providers",
                                 "/api/providers/catalog",
                                 "/api/providers/{providerId}",
                                 "/api/providers/{providerId}/reviews"
+                        ).permitAll()
+
+                        // Provider PIN auth (POST — OTP-adjacent, not method-restricted)
+                        .requestMatchers(
+                                "/api/providers/auth/check-device",
+                                "/api/providers/auth/set-pin",
+                                "/api/providers/auth/skip-pin",
+                                "/api/providers/auth/verify-pin"
                         ).permitAll()
 
                         // =====================================================
