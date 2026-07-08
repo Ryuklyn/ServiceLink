@@ -55,4 +55,5 @@ public class ProviderService {
                 ? customDuration
                 : catalogItem.getDefaultDuration();
     }
+    
 }

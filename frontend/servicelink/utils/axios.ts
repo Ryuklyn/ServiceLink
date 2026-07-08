@@ -123,6 +123,7 @@ api.interceptors.response.use(
       return new Promise<string>((resolve, reject) => {
         queue.push({ resolve, reject });
       }).then((newToken) => {
+        original._retry = true;
         original.headers["Authorization"] = `Bearer ${newToken}`;
         return api(original);
       });

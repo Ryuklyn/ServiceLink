@@ -1,6 +1,6 @@
-package com.servicelink.core.repository.provider;
+package com.servicelink.core.repository.provider.pin;
 
-import com.servicelink.core.model.provider.ProviderDevicePin;
+import com.servicelink.core.model.provider.pin.ProviderDevicePin;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

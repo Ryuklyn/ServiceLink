@@ -1,4 +1,4 @@
-package com.servicelink.core.repository.appointment;
+package com.servicelink.core.repository.provider;
 
 import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.provider.Provider;
@@ -17,7 +17,14 @@ import java.util.Optional;
 public interface ProviderRepository extends JpaRepository<Provider, Long>,
         JpaSpecificationExecutor<Provider> {
 
+    Page<Provider> findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(
+            ServiceCategory category, Pageable pageable);
+
+    Page<Provider> findByIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(
+            Pageable pageable);
+
     Optional<Provider> findByPhone(String phone);
+    Optional<Provider> findByReferralCode(String referralCode);
 
     Optional<Provider> findByUser_Email(String email);
 

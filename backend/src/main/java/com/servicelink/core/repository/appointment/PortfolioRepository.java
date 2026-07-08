@@ -1,7 +1,7 @@
 package com.servicelink.core.repository.appointment;
 
 // com/servicelink/core/repository/provider/PortfolioRepository.java
-import com.servicelink.core.model.provider.Portfolio;
+import com.servicelink.core.model.provider.portfolio.Portfolio;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

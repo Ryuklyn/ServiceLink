@@ -1,6 +1,6 @@
 package com.servicelink.core.dto.response.provider;
 
-import com.servicelink.core.model.provider.Portfolio;
+import com.servicelink.core.model.provider.portfolio.Portfolio;
 import lombok.Builder;
 import lombok.Data;
 

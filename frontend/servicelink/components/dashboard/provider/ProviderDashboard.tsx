@@ -8,11 +8,11 @@ import {
     MapPin,
     TrendingUp,
     Copy,
-    Share2, PartyPopper,
+    Share2,
+    PartyPopper,
 } from "lucide-react";
 import Link from "next/link";
 import { FaWhatsapp } from "react-icons/fa";
-
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -128,18 +128,18 @@ function ActiveJobBanner() {
                     <div className="flex items-center gap-1.5 mt-1.5">
                         <Clock size={13} className="text-[#E8683F]" />
                         <span className="text-sm text-[#E8683F] font-semibold">
-              ETA: 8 mins
-            </span>
+                            ETA: 8 mins
+                        </span>
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-3 flex-shrink-0">
-                <button className="flex items-center gap-2 px-4 py-2.5 border-2 border-[#1E3A8A] text-[#1E3A8A] rounded-xl text-sm font-semibold hover:bg-[#1E3A8A] hover:text-white transition-all">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto flex-shrink-0">
+                <button className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-[#1E3A8A] text-[#1E3A8A] rounded-xl text-sm font-semibold hover:bg-[#1E3A8A] hover:text-white transition-all w-full sm:w-auto">
                     <Navigation size={15} />
                     Track Customer
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2.5 bg-[#25D366] text-white rounded-xl text-sm font-semibold hover:bg-[#1ebe5a] transition-all shadow-sm">
+                <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#25D366] text-white rounded-xl text-sm font-semibold hover:bg-[#1ebe5a] transition-all shadow-sm w-full sm:w-auto">
                     <FaWhatsapp size={15} />
                     WhatsApp
                 </button>
@@ -167,7 +167,7 @@ function ServiceLinkScore() {
     ];
 
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-6">
             <h3 className="text-gray-800 font-bold text-base mb-5">
                 ServiceLink Score
             </h3>
@@ -214,14 +214,14 @@ function ServiceLinkScore() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
                 {stats.map(({ label, value }) => (
                     <div
                         key={label}
-                        className="bg-gray-50 rounded-xl px-4 py-3 text-center"
+                        className="bg-gray-50 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-center"
                     >
-                        <p className="text-xs text-gray-400 font-medium mb-0.5">{label}</p>
-                        <p className="text-base font-bold text-gray-800">{value}</p>
+                        <p className="text-[11px] sm:text-xs text-gray-400 font-medium mb-0.5">{label}</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-800">{value}</p>
                     </div>
                 ))}
             </div>
@@ -234,7 +234,7 @@ function ServiceLinkScore() {
 /** Today's Schedule */
 function TodaySchedule() {
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-6">
             <h3 className="text-gray-800 font-bold text-base mb-1">Today, June 14</h3>
             <p className="text-xs text-gray-400 mb-5">
                 {todayJobs.length} jobs scheduled
@@ -265,9 +265,9 @@ function TodaySchedule() {
                                 className={`text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
                                     jobStatusStyles[job.status]
                                 }`}
-                                >
-                            {job.status}
-                          </span>
+                            >
+                                {job.status}
+                            </span>
                         </div>
                     </div>
                 ))}
@@ -285,12 +285,12 @@ function EarningsCard() {
     const percent = Math.round((earned / goal) * 100);
 
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-            <div className="flex items-start gap-6">
-                {/* Left */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-6">
+            <div className="flex flex-col md:flex-row items-stretch md:items-start gap-6">
+                {/* Left Progress Content */}
                 <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-500 font-medium mb-1">This Month's Earnings</p>
-                    <h2 className="text-4xl font-black text-gray-900 tracking-tight">
+                    <h2 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
                         Rs. {earned.toLocaleString()}
                     </h2>
                     <div className="mt-4">
@@ -310,39 +310,42 @@ function EarningsCard() {
                     </div>
                 </div>
 
-                {/* Right Stats */}
-                <div className="flex flex-col gap-3 w-36 flex-shrink-0">
-                    <div className="bg-gray-50 rounded-xl px-4 py-3">
-                        <p className="text-xs text-gray-400 font-medium">This Week</p>
-                        <p className="text-base font-bold text-green-600 mt-0.5">+12%</p>
+                {/* Right Breakdown Metrics Grid */}
+                <div className="grid grid-cols-3 md:flex md:flex-col gap-2.5 sm:gap-3 w-full md:w-36 flex-shrink-0">
+                    <div className="bg-gray-50 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center md:text-left">
+                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium">This Week</p>
+                        <p className="text-sm sm:text-base font-bold text-green-600 mt-0.5">+12%</p>
                     </div>
-                    <div className="bg-gray-50 rounded-xl px-4 py-3">
-                        <p className="text-xs text-gray-400 font-medium">Today</p>
-                        <p className="text-base font-bold text-gray-900 mt-0.5">2 jobs</p>
+                    <div className="bg-gray-50 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center md:text-left">
+                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium">Today</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-900 mt-0.5">2 jobs</p>
                     </div>
-                    <div className="bg-gray-50 rounded-xl px-4 py-3">
-                        <p className="text-xs text-gray-400 font-medium">Avg/Job</p>
-                        <p className="text-base font-bold text-gray-900 mt-0.5">Rs. 520</p>
+                    <div className="bg-gray-50 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center md:text-left">
+                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium">Avg/Job</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-900 mt-0.5">Rs. 520</p>
                     </div>
                 </div>
             </div>
 
-            {/* HR */}
             <hr className="border-t border-gray-100 mt-5 mb-4" />
 
-            {/* Bottom row */}
-            <div className="flex items-center">
-                <span className="text-xs text-gray-400 mr-1">Paid</span>
-                <span className="text-base font-bold text-[#E8683F] mr-4">Rs. 11,200</span>
+            {/* Bottom Row Totals */}
+            <div className="flex flex-wrap items-center gap-y-2 text-sm sm:text-base">
+                <div className="flex items-center mr-4">
+                    <span className="text-xs text-gray-400 mr-1.5">Paid</span>
+                    <span className="font-bold text-[#E8683F]">Rs. 11,200</span>
+                </div>
 
-                <div className="w-px h-5 bg-gray-200 mr-4" />
+                <div className="hidden sm:block w-px h-5 bg-gray-200 mr-4" />
 
-                <span className="text-xs text-gray-400 mr-1">Pending</span>
-                <span className="text-base font-bold text-yellow-500">Rs. 1,250</span>
+                <div className="flex items-center">
+                    <span className="text-xs text-gray-400 mr-1.5">Pending</span>
+                    <span className="font-bold text-yellow-500">Rs. 1,250</span>
+                </div>
 
                 <Link
                     href="/dashboard/provider/earnings"
-                    className="ml-auto text-sm font-semibold text-[#1E3A8A] hover:underline"
+                    className="ml-auto text-xs sm:text-sm font-semibold text-[#1E3A8A] hover:underline"
                 >
                     View Earnings →
                 </Link>
@@ -356,13 +359,14 @@ function EarningsCard() {
 /** Recent Bookings Table */
 function RecentBookings() {
     return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6 overflow-hidden">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
                 Recent Bookings
             </h3>
 
-            <div className="overflow-x-auto">
-                <table className="w-full">
+            {/* Added container for smooth mobile responsive layout scrolling */}
+            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+                <table className="w-full min-w-[600px] sm:min-w-full">
                     <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
                         {[
@@ -375,7 +379,7 @@ function RecentBookings() {
                         ].map((col) => (
                             <th
                                 key={col}
-                                className="px-5 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                                className="px-4 py-3 sm:px-5 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
                             >
                                 {col}
                             </th>
@@ -389,33 +393,33 @@ function RecentBookings() {
                             key={i}
                             className="border-b border-gray-100 last:border-0 hover:bg-orange-50/30 transition-colors"
                         >
-                            <td className="px-5 py-4 font-semibold text-gray-900 whitespace-nowrap">
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 font-semibold text-gray-900 whitespace-nowrap">
                                 {b.customer}
                             </td>
 
-                            <td className="px-5 py-4 text-gray-600 whitespace-nowrap">
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 text-gray-600 whitespace-nowrap">
                                 {b.service}
                             </td>
 
-                            <td className="px-5 py-4 text-gray-600 whitespace-nowrap">
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 text-gray-600 whitespace-nowrap">
                                 {b.date}
                             </td>
 
-                            <td className="px-5 py-4 font-semibold text-gray-900 whitespace-nowrap">
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 font-semibold text-gray-900 whitespace-nowrap">
                                 {b.amount}
                             </td>
 
-                            <td className="px-5 py-4">
-                            <span
-                                className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border ${
-                                    paymentStyles[b.payment]
-                                }`}
-                            >
-                                {b.payment}
-                            </span>
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 whitespace-nowrap">
+                                    <span
+                                        className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border ${
+                                            paymentStyles[b.payment]
+                                        }`}
+                                    >
+                                        {b.payment}
+                                    </span>
                             </td>
 
-                            <td className="px-5 py-4 text-center text-gray-400 font-medium">
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 text-center text-gray-400 font-medium whitespace-nowrap">
                                 —
                             </td>
                         </tr>
@@ -424,12 +428,11 @@ function RecentBookings() {
                 </table>
             </div>
 
-            {/* Footer */}
-            <div className="flex justify-end pt-6">
+            <div className="flex justify-end pt-5 sm:pt-6">
                 <Link href={"/dashboard/provider/bookings"}>
-                    <button className="flex items-center gap-2 text-base font-medium text-[#1E3A8A] hover:text-[#16306f] transition-colors">
+                    <button className="flex items-center gap-2 text-sm sm:text-base font-medium text-[#1E3A8A] hover:text-[#16306f] transition-colors">
                         View All Bookings
-                        <span className="text-xl">→</span>
+                        <span className="text-lg sm:text-xl">→</span>
                     </button>
                 </Link>
             </div>
@@ -453,7 +456,7 @@ function ReferralsPanel() {
     };
 
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
             <h3 className="text-gray-800 font-bold text-base mb-1">Referrals</h3>
 
             <div className="flex items-center justify-between mb-3">
@@ -464,7 +467,7 @@ function ReferralsPanel() {
                     {Array.from({ length: totalSteps }).map((_, i) => (
                         <span
                             key={i}
-                            className={`w-3 h-3 rounded-full ${
+                            className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${
                                 i < completed ? "bg-[#E8683F]" : "bg-gray-200"
                             }`}
                         />
@@ -484,32 +487,32 @@ function ReferralsPanel() {
             </p>
 
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 mb-4">
-        <span className="flex-1 text-sm font-mono font-semibold text-gray-700 tracking-wide">
-          {referralCode}
-        </span>
+                <span className="flex-1 text-xs sm:text-sm font-mono font-semibold text-gray-700 tracking-wide truncate">
+                    {referralCode}
+                </span>
                 <button
                     onClick={handleCopy}
-                    className="text-[#1E3A8A] hover:text-[#E8683F] transition"
+                    className="text-[#1E3A8A] hover:text-[#E8683F] transition p-1"
                 >
                     <Copy size={15} />
                 </button>
                 {copied && (
-                    <span className="text-xs text-green-500 font-medium">Copied!</span>
+                    <span className="text-xs text-green-500 font-medium whitespace-nowrap">Copied!</span>
                 )}
             </div>
 
             <div className="flex gap-2">
-                <button className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#25D366] text-white text-sm font-semibold rounded-xl hover:bg-[#1ebe5a] transition shadow-sm">
+                <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#25D366] text-white text-sm font-semibold rounded-xl hover:bg-[#1ebe5a] transition shadow-sm">
                     <FaWhatsapp size={15} />
                     WhatsApp
                 </button>
-                <button className="flex-1 flex items-center justify-center gap-2 py-2 border-2 border-[#1877F2] text-[#1877F2] text-sm font-semibold rounded-xl hover:bg-[#1877F2] hover:text-white transition">
+                <button className="flex-1 flex items-center justify-center gap-2 py-2.5 border-2 border-[#1877F2] text-[#1877F2] text-sm font-semibold rounded-xl hover:bg-[#1877F2] hover:text-white transition">
                     <Share2 size={15} />
                     Share
                 </button>
             </div>
 
-            <p className="flex items-center justify-center gap-1.5 text-xs text-[#E8683F] font-semibold mt-3">
+            <p className="flex items-center justify-center gap-1.5 text-xs text-[#E8683F] font-semibold mt-3.5">
                 2 more referrals = 1 month FREE
                 <PartyPopper size={14} className="text-[#E8683F] rotate-[-10deg]" />
             </p>
@@ -522,7 +525,7 @@ function ReferralsPanel() {
 /** Monthly Plan Card */
 function MonthlyPlanCard() {
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-sm font-semibold text-gray-800">Monthly Plan</p>
@@ -531,8 +534,8 @@ function MonthlyPlanCard() {
                     </p>
                 </div>
                 <span className="bg-[#E8683F] text-white text-xs font-semibold px-3 py-1 rounded-full">
-          Active
-        </span>
+                    Active
+                </span>
             </div>
             <Link href="/dashboard/provider/subscription">
                 <button className="mt-4 text-sm font-semibold text-[#1E3A8A] hover:underline">
@@ -549,12 +552,12 @@ function MonthlyPlanCard() {
 
 export default function ProviderDashboard() {
     return (
-        <div className="flex flex-col gap-5 max-w-[1200px] mx-auto">
+        <div className="flex flex-col gap-4 sm:gap-5 max-w-[1200px] mx-auto w-full">
             {/* 1. Active Job Banner */}
             <ActiveJobBanner />
 
             {/* 2. Score + Schedule */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
                 <ServiceLinkScore />
                 <TodaySchedule />
             </div>
@@ -563,9 +566,9 @@ export default function ProviderDashboard() {
             <EarningsCard />
 
             {/* 4. Bookings + Right Column */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 sm:gap-5">
                 <RecentBookings />
-                <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-4 sm:gap-5">
                     <ReferralsPanel />
                     <MonthlyPlanCard />
                 </div>

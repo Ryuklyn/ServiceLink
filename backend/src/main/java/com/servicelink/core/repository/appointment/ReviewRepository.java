@@ -1,7 +1,7 @@
 package com.servicelink.core.repository.appointment;
 
 // com/servicelink/core/repository/provider/ReviewRepository.java
-import com.servicelink.core.model.provider.Review;
+import com.servicelink.core.model.provider.review.Review;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

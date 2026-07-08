@@ -12,7 +12,7 @@ import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.KycRepository;
-import com.servicelink.core.repository.appointment.ProviderRepository;
+import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.storage.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;

@@ -25,6 +25,7 @@ public class ProviderProfileDTO {
     private Boolean isVerified;
     private Boolean isActive;
     private Boolean isOnline;
+    private Boolean hasCompletedOnboarding;
 
     // Location
     private String  baseDistrict;

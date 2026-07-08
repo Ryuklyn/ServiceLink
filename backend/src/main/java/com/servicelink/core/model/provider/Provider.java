@@ -3,6 +3,8 @@ package com.servicelink.core.model.provider;
 import com.servicelink.core.model.common.KycStatus;
 import com.servicelink.core.model.common.KycSubmission;
 import com.servicelink.core.model.common.ServiceCategory;
+import com.servicelink.core.model.provider.portfolio.Portfolio;
+import com.servicelink.core.model.provider.review.Review;
 import com.servicelink.core.model.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -102,6 +104,14 @@ public class Provider {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "has_completed_onboarding")
+    @Builder.Default
+    private Boolean hasCompletedOnboarding = false;
+
+    @Column(name = "referral_code", unique = true)
+    private String referralCode;
+
+
     @Column(name = "is_online")
     private Boolean isOnline = false;
 
@@ -123,10 +133,23 @@ public class Provider {
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Portfolio> portfolio = new HashSet<>();
 
+//    @PrePersist
+//    protected void onCreate() {
+//        this.memberSince = Instant.now();
+//    }
+
     @PrePersist
     protected void onCreate() {
         this.memberSince = Instant.now();
+        if (this.referralCode == null) {
+            this.referralCode = generateReferralCode();
+        }
     }
+
+    private String generateReferralCode() {
+        return java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+    }
+
 
     public void syncFromKyc(KycSubmission kyc) {
         this.kycSubmission = kyc;
@@ -137,6 +160,22 @@ public class Provider {
         this.experienceYears = kyc.getExperienceYears();
         this.bio = kyc.getBio();
         this.isVerified = kyc.getStatus() == KycStatus.APPROVED;
+
+        // Business name isn't a KYC concept — default to legal name, never
+        // overwrite a value the provider has already customized.
+        if (this.businessName == null) {
+            this.businessName = kyc.getFullName();
+        }
+
+        // Service area — genuinely sourced from KYC, same guard logic: only
+        // seed on first sync, don't clobber a provider's later Settings edits
+        // if syncFromKyc is ever re-run (re-verification, admin correction).
+        if (this.baseDistrict == null) {
+            this.baseDistrict = kyc.getPrimaryDistrict();
+        }
+        if (this.coveredDistricts == null) {
+            this.coveredDistricts = kyc.getSecondaryDistricts();
+        }
     }
 
     public Double calculateAverageRating() {

@@ -1,4 +1,4 @@
-package com.servicelink.core.service.provider;
+package com.servicelink.core.service.provider.pin;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;

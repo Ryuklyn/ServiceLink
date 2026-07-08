@@ -3,7 +3,7 @@ package com.servicelink.core.controller.provider;
 import com.servicelink.core.dto.request.provider.*;
 import com.servicelink.core.dto.response.provider.*;
 import com.servicelink.core.security.JwtService;
-import com.servicelink.core.service.provider.ProviderPinService;
+import com.servicelink.core.service.provider.pin.ProviderPinService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

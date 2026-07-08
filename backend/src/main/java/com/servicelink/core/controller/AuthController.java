@@ -20,7 +20,7 @@ import com.servicelink.core.service.*;
 
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.user.Role;
-import com.servicelink.core.repository.appointment.ProviderRepository;
+import com.servicelink.core.repository.provider.ProviderRepository;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

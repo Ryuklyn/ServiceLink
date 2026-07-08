@@ -1,4 +1,4 @@
-package com.servicelink.core.model.provider;
+package com.servicelink.core.model.provider.review;
 
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.user.User;

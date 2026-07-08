@@ -3,6 +3,8 @@ package com.servicelink.core.mapper.provider;
 // com/servicelink/core/mapper/provider/ProviderMapper.java
 import com.servicelink.core.dto.response.provider.*;
 import com.servicelink.core.model.provider.*;
+import com.servicelink.core.model.provider.portfolio.Portfolio;
+import com.servicelink.core.model.provider.review.Review;
 import com.servicelink.core.model.user.User;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +29,7 @@ public class ProviderMapper {
                 .experienceYears(p.getExperienceYears())
                 .isVerified(p.getIsVerified())
                 .isActive(p.getIsActive())
+                .hasCompletedOnboarding(p.getHasCompletedOnboarding())
                 .isOnline(p.getIsOnline())
                 .baseDistrict(p.getBaseDistrict())
                 .serviceAreaText(p.getServiceAreaText())

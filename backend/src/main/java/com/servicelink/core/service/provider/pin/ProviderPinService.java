@@ -1,12 +1,11 @@
-package com.servicelink.core.service.provider;
+package com.servicelink.core.service.provider.pin;
 
 import com.servicelink.core.dto.response.provider.*;
-import com.servicelink.core.exception.BusinessException;
 import com.servicelink.core.exception.ResourceNotFoundException;
 import com.servicelink.core.model.provider.Provider;
-import com.servicelink.core.model.provider.ProviderDevicePin;
-import com.servicelink.core.repository.provider.ProviderDevicePinRepository;
-import com.servicelink.core.repository.appointment.ProviderRepository;
+import com.servicelink.core.model.provider.pin.ProviderDevicePin;
+import com.servicelink.core.repository.provider.pin.ProviderDevicePinRepository;
+import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.security.JwtService;
 import com.servicelink.core.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;

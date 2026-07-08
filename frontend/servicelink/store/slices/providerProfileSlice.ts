@@ -17,6 +17,7 @@ export interface ProviderProfile {
     isOnline?: boolean;
     averageRating?: number;
     baseDistrict?: string | null;
+    hasCompletedOnboarding: boolean;
 }
 
 interface ProviderProfileState {

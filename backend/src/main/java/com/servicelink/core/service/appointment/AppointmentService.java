@@ -15,7 +15,7 @@ import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.ProviderService;
 import com.servicelink.core.model.provider.ServiceCatalog;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
-import com.servicelink.core.repository.appointment.ProviderRepository;
+import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.appointment.ProviderServiceRepository;
 import com.servicelink.core.repository.appointment.ServiceCatalogRepository;
 import lombok.RequiredArgsConstructor;

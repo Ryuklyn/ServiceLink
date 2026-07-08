@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Menu } from "lucide-react"; // Added Menu icon
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchProviderProfile } from "@/store/slices/providerProfileSlice";
 import { getActiveNavLabel } from "@/lib/navigation/providerNavItems";
 
-export default function Navbar() {
+interface NavbarProps {
+    onMenuClick?: () => void; // Trigger callback to open Mobile Sidebar
+}
+
+export default function Navbar({ onMenuClick }: NavbarProps) {
     const pathname = usePathname();
     const dispatch = useAppDispatch();
     const { data: provider } = useAppSelector((state) => state.providerProfile);
@@ -26,16 +30,23 @@ export default function Navbar() {
         : "P";
 
     return (
-        <header className="h-16 flex-shrink-0 bg-gradient-to-r from-[#E8683F] to-[#C8501F] flex items-center justify-between px-6 gap-4 shadow-sm">
-            {/* Left — page title reflects whichever sidebar link is active */}
-            <div className="flex items-center gap-2 min-w-0">
+        <header className="h-16 flex-shrink-0 bg-gradient-to-r from-[#E8683F] to-[#C8501F] flex items-center justify-between px-4 sm:px-6 gap-4 shadow-sm">
+            {/* Left — Hamburger + page title */}
+            <div className="flex items-center gap-3 min-w-0">
+                <button
+                    onClick={onMenuClick}
+                    className="lg:hidden p-1.5 text-white bg-white/10 hover:bg-white/20 rounded-lg transition"
+                    aria-label="Open menu"
+                >
+                    <Menu size={20} />
+                </button>
                 <p className="text-white font-bold text-base truncate">{activeLabel}</p>
             </div>
 
-            {/* Right — search shifted here (further right than before), then
-                plan badge, notifications, avatar */}
+            {/* Right — action elements */}
             <div className="flex items-center gap-3">
-                <div className="relative hidden sm:block">
+                {/* Search shifted layout control */}
+                <div className="relative hidden md:block">
                     <Search
                         size={15}
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60"
@@ -45,7 +56,7 @@ export default function Navbar() {
                         placeholder="Search bookings or customers..."
                         className="pl-9 pr-4 py-2 text-sm bg-white/15 border-2 border-white/20 hover:border-white/40
                         focus:border-white focus:bg-white/25 focus:outline-none rounded-xl text-white
-                        placeholder-white/60 w-64 transition-all"
+                        placeholder-white/60 w-48 lg:w-64 transition-all"
                     />
                 </div>
 
@@ -65,7 +76,7 @@ export default function Navbar() {
                     </span>
                 </Link>
 
-                {/* Avatar — same provider profile data as Sidebar's footer card */}
+                {/* Avatar */}
                 <div className="relative w-9 h-9 flex-shrink-0">
                     {provider?.profilePictureUrl ? (
                         <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-white shadow-md">

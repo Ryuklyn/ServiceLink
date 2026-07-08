@@ -5,6 +5,8 @@ import com.servicelink.core.dto.response.provider.*;
 import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.service.provider.ProviderProfileService;
+import com.servicelink.core.dto.request.provider.ProviderServiceSelectionDTO;
+import com.servicelink.core.dto.response.provider.onboarding.OnboardingStatusDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -260,5 +262,50 @@ public class ProviderController {
 
         return ResponseEntity.ok(providerProfileService.getMyReviewsAsCustomer(
                 user.getId(), PageRequest.of(page, size, Sort.by("createdAt").descending())));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ONBOARDING — first-time setup flow (ROLE_PROVIDER)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/providers/me/onboarding-status
+     * Drives the onboarding wizard. Also issues the one-time free trial
+     * subscription on first call (idempotent — see ProviderSubscriptionService).
+     */
+    @GetMapping("/me/onboarding-status")
+    @PreAuthorize("hasRole('PROVIDER')")
+    public ResponseEntity<OnboardingStatusDTO> getOnboardingStatus(
+            @AuthenticationPrincipal User user) {
+
+        return ResponseEntity.ok(providerProfileService.getOnboardingStatus(user.getId()));
+    }
+
+    /**
+     * POST /api/providers/me/services/batch
+     * Provider's self-service batch save of sub-services during onboarding
+     * (distinct from the admin-only single-service endpoints elsewhere).
+     */
+    @PostMapping("/me/services/batch")
+    @PreAuthorize("hasRole('PROVIDER')")
+    public ResponseEntity<Void> saveMyServicesBatch(
+            @AuthenticationPrincipal User user,
+            @RequestBody List<ProviderServiceSelectionDTO> selections) {
+
+        providerProfileService.saveMyServicesBatch(user.getId(), selections);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * POST /api/providers/me/complete-onboarding
+     * Marks onboarding finished — requires at least one service already saved.
+     */
+    @PostMapping("/me/complete-onboarding")
+    @PreAuthorize("hasRole('PROVIDER')")
+    public ResponseEntity<Void> completeOnboarding(
+            @AuthenticationPrincipal User user) {
+
+        providerProfileService.completeOnboarding(user.getId());
+        return ResponseEntity.ok().build();
     }
 }

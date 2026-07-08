@@ -1,4 +1,4 @@
-package com.servicelink.core.model.provider;
+package com.servicelink.core.model.provider.pin;
 
 import com.servicelink.core.model.provider.Provider;
 import jakarta.persistence.*;
@@ -43,7 +43,7 @@ public class ProviderDevicePin {
     @Column(name = "expires_at")
     private Instant expiresAt;
 
-    private static final long PIN_TTL_DAYS= 30;
+    public static final long PIN_TTL_DAYS= 30;
 
     @PrePersist
     protected void onCreate() {

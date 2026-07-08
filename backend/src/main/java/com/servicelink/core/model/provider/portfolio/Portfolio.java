@@ -1,5 +1,6 @@
-package com.servicelink.core.model.provider;
+package com.servicelink.core.model.provider.portfolio;
 
+import com.servicelink.core.model.provider.Provider;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.Instant;

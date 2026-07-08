@@ -3,6 +3,7 @@ package com.servicelink.core.service.provider;
 // com/servicelink/core/service/provider/ProviderProfileService.java
 import com.servicelink.core.dto.request.provider.*;
 import com.servicelink.core.dto.response.provider.*;
+import com.servicelink.core.dto.response.provider.onboarding.OnboardingStatusDTO;
 import com.servicelink.core.exception.BusinessException;
 import com.servicelink.core.exception.ConflictException;
 import com.servicelink.core.exception.ResourceNotFoundException;
@@ -11,18 +12,21 @@ import com.servicelink.core.model.appointment.Appointment;
 import com.servicelink.core.model.appointment.AppointmentStatus;
 import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.provider.*;
+import com.servicelink.core.model.provider.portfolio.Portfolio;
+import com.servicelink.core.model.provider.review.Review;
+import com.servicelink.core.model.provider.subscription.ProviderSubscription;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
-import com.servicelink.core.repository.appointment.ProviderRepository;
+import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.appointment.ProviderServiceRepository;
 import com.servicelink.core.repository.appointment.ServiceCatalogRepository;
 import com.servicelink.core.repository.appointment.PortfolioRepository;
 import com.servicelink.core.repository.appointment.ReviewRepository;
+import com.servicelink.core.service.provider.subscription.ProviderSubscriptionService;
 import com.servicelink.core.storage.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +47,7 @@ public class ProviderProfileService {
     private final AppointmentRepository      appointmentRepo;
     private final SupabaseStorageService     storageService;
     private final ProviderMapper             mapper;
+    private final ProviderSubscriptionService subscriptionService;
 
     // ══════════════════════════════════════════════════════════════════════════
     // PUBLIC PROFILE (no auth required)
@@ -71,11 +76,12 @@ public class ProviderProfileService {
      * the whole page — full recent reviews are only loaded on the single-provider
      * profile page via getPublicProfile().
      */
+
     @Transactional(readOnly = true)
     public Page<ProviderProfileDTO> getAllPublicProviders(ServiceCategory category, Pageable pageable) {
         Page<Provider> providers = (category != null)
-                ? providerRepo.findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(category, pageable)
-                : providerRepo.findByIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(pageable);
+                ? providerRepo.findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(category, pageable)
+                : providerRepo.findByIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(pageable);
 
         return providers.map(p -> mapper.toProfileDTO(p, List.of()));
     }
@@ -417,5 +423,96 @@ public class ProviderProfileService {
                 .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Active provider profile not found for user id: " + userId));
+    }
+
+    @Transactional
+    public OnboardingStatusDTO getOnboardingStatus(Long userId) {
+        Provider provider = resolveActiveProvider(userId);
+
+        ProviderSubscription subscription = subscriptionService.issueTrialIfEligible(provider);
+
+        return OnboardingStatusDTO.builder()
+                .hasCompletedOnboarding(Boolean.TRUE.equals(provider.getHasCompletedOnboarding()))
+                .hasProfilePicture(provider.getProfilePictureUrl() != null)
+                .hasBio(provider.getBio() != null && !provider.getBio().isBlank())
+                .hasServiceArea(provider.getBaseDistrict() != null)
+                .hasAtLeastOneService(!provider.getServices().isEmpty())
+                .subscriptionDaysRemaining(subscription.getDaysRemaining())
+                .subscriptionPlanType(subscription.getPlanType())
+                .subscriptionActive(subscription.isCurrentlyActive())
+                .referralCode(provider.getReferralCode())
+                .build();
+    }
+
+    /** Called from the onboarding wizard's final step. */
+    @Transactional
+    public void completeOnboarding(Long userId) {
+        Provider provider = resolveActiveProvider(userId);
+
+        if (provider.getServices().isEmpty()) {
+            throw new BusinessException(
+                    "Add at least one service before completing onboarding", "ONBOARDING_INCOMPLETE");
+        }
+
+        provider.setHasCompletedOnboarding(true);
+        providerRepo.save(provider);
+        log.info("Provider {} completed onboarding", provider.getId());
+    }
+
+    /** Batch upsert of the provider's own services during onboarding (self-service, not admin). */
+//    @Transactional
+//    public void saveMyServicesBatch(Long userId, List<ProviderServiceSelectionDTO> selections) {
+//        Provider provider = resolveActiveProvider(userId);
+//
+//        for (ProviderServiceSelectionDTO sel : selections) {
+//            ServiceCatalog catalog = catalogRepo.findByIdAndIsActiveTrue(sel.getCatalogId())
+//                    .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", sel.getCatalogId()));
+//
+//            ProviderService ps = providerServiceRepo
+//                    .findByProviderIdAndCatalogId(provider.getId(), sel.getCatalogId())
+//                    .orElseGet(() -> ProviderService.builder()
+//                            .provider(provider)
+//                            .catalogItem(catalog)
+//                            .build());
+//
+//            ps.setIsAvailable(sel.isAvailable());
+//            ps.setCustomPrice(sel.getCustomPrice());
+//            providerServiceRepo.save(ps);
+//        }
+//
+//        log.info("Provider {} saved {} service selection(s) via onboarding batch",
+//                provider.getId(), selections.size());
+//    }
+
+    @Transactional
+    public void saveMyServicesBatch(Long userId, List<ProviderServiceSelectionDTO> selections) {
+        Provider provider = resolveActiveProvider(userId);
+
+        for (ProviderServiceSelectionDTO sel : selections) {
+
+            // Guard first — fail clearly before touching the DB at all.
+            if (sel.getCustomPrice() == null) {
+                throw new BusinessException(
+                        "customPrice is required for catalog item " + sel.getCatalogId(),
+                        "MISSING_PRICE");
+            }
+
+            ServiceCatalog catalog = catalogRepo.findByIdAndIsActiveTrue(sel.getCatalogId())
+                    .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", sel.getCatalogId()));
+
+            ProviderService ps = providerServiceRepo
+                    .findByProviderIdAndCatalogId(provider.getId(), sel.getCatalogId())
+                    .orElseGet(() -> ProviderService.builder()
+                            .provider(provider)
+                            .catalogItem(catalog)
+                            .build());
+
+            ps.setIsAvailable(sel.isAvailable());
+            ps.setCustomPrice(sel.getCustomPrice());
+            providerServiceRepo.save(ps);
+        }
+
+        log.info("Provider {} saved {} service selection(s) via onboarding batch",
+                provider.getId(), selections.size());
     }
 }
