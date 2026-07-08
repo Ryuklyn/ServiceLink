@@ -60,9 +60,82 @@ public class SecurityConfig {
                         )
                 )
 
-                // ---------------------------------------------------------
-                // Authorization Rules
-                // ---------------------------------------------------------
+//                // ---------------------------------------------------------
+//                // Authorization Rules
+//                // ---------------------------------------------------------
+//                .authorizeHttpRequests(auth -> auth
+//
+//                        // Allow browser pre-flight requests
+//                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+//
+//                        // =====================================================
+//                        // PUBLIC ENDPOINTS
+//                        // =====================================================
+//
+//                        // Authentication
+//                        .requestMatchers(
+//                                "/api/auth/**",
+//                                "/oauth2/**",
+//                                "/error"
+//                        ).permitAll()
+//
+//                        // File Uploads
+//                        .requestMatchers(
+//                                HttpMethod.POST,
+//                                "/api/storage/upload"
+//                        ).permitAll()
+//
+//                        // KYC
+//                        .requestMatchers(
+//                                HttpMethod.GET, "/api/kyc/status/by-reference"
+//                        ).permitAll()
+//
+//                        .requestMatchers(
+//                                "/api/kyc/**"
+//                        ).permitAll()
+//
+//                        // Business / Payment
+//                        .requestMatchers(
+//                                "/api/business/**"
+//                        ).permitAll()
+//
+//                        // Provider Catalog (GET only)
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/providers",
+//                                "/api/providers/catalog",
+//                                "/api/providers/{providerId}",
+//                                "/api/providers/{providerId}/reviews"
+//                        ).permitAll()
+//
+//                        // Provider PIN auth (POST — OTP-adjacent, not method-restricted)
+//                        .requestMatchers(
+//                                "/api/providers/auth/check-device",
+//                                "/api/providers/auth/set-pin",
+//                                "/api/providers/auth/skip-pin",
+//                                "/api/providers/auth/verify-pin"
+//                        ).permitAll()
+//
+//                        // =====================================================
+//                        // ADMIN
+//                        // =====================================================
+//                        .requestMatchers(
+//                                "/api/admin/**"
+//                        ).hasRole("ADMIN")
+//
+//                        // =====================================================
+//                        // AUTHENTICATED USERS
+//                        // =====================================================
+//                        .requestMatchers(
+//                                "/api/providers/me/**",
+//                                "/api/appointments/**"
+//                        ).authenticated()
+//
+//                        // =====================================================
+//                        // EVERYTHING ELSE
+//                        // =====================================================
+//                        .anyRequest().authenticated()
+//                )
+
                 .authorizeHttpRequests(auth -> auth
 
                         // Allow browser pre-flight requests
@@ -72,20 +145,17 @@ public class SecurityConfig {
                         // PUBLIC ENDPOINTS
                         // =====================================================
 
-                        // Authentication
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/oauth2/**",
                                 "/error"
                         ).permitAll()
 
-                        // File Uploads
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/storage/upload"
                         ).permitAll()
 
-                        // KYC
                         .requestMatchers(
                                 HttpMethod.GET, "/api/kyc/status/by-reference"
                         ).permitAll()
@@ -94,17 +164,8 @@ public class SecurityConfig {
                                 "/api/kyc/**"
                         ).permitAll()
 
-                        // Business / Payment
                         .requestMatchers(
                                 "/api/business/**"
-                        ).permitAll()
-
-                        // Provider Catalog (GET only)
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/providers",
-                                "/api/providers/catalog",
-                                "/api/providers/{providerId}",
-                                "/api/providers/{providerId}/reviews"
                         ).permitAll()
 
                         // Provider PIN auth (POST — OTP-adjacent, not method-restricted)
@@ -116,6 +177,28 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // =====================================================
+                        // AUTHENTICATED PROVIDER — must come BEFORE the generic
+                        // "/api/providers/{providerId}" catalog rule below, since
+                        // {providerId} matches literal "me" as a path variable and
+                        // would otherwise shadow this and leak it as public.
+                        // =====================================================
+                        .requestMatchers(
+                                "/api/providers/me",
+                                "/api/providers/me/**"
+                        ).authenticated()
+
+                        // =====================================================
+                        // Provider Catalog (GET only) — public, generic {providerId}
+                        // Declared AFTER /me so it can no longer match it first.
+                        // =====================================================
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/providers",
+                                "/api/providers/catalog",
+                                "/api/providers/{providerId}",
+                                "/api/providers/{providerId}/reviews"
+                        ).permitAll()
+
+                        // =====================================================
                         // ADMIN
                         // =====================================================
                         .requestMatchers(
@@ -123,10 +206,9 @@ public class SecurityConfig {
                         ).hasRole("ADMIN")
 
                         // =====================================================
-                        // AUTHENTICATED USERS
+                        // AUTHENTICATED USERS (everything else under these prefixes)
                         // =====================================================
                         .requestMatchers(
-                                "/api/providers/me/**",
                                 "/api/appointments/**"
                         ).authenticated()
 

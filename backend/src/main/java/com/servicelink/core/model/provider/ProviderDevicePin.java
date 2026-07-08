@@ -3,6 +3,8 @@ package com.servicelink.core.model.provider;
 import com.servicelink.core.model.provider.Provider;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.Duration;
 import java.time.Instant;
 
 @Entity
@@ -38,9 +40,22 @@ public class ProviderDevicePin {
     @Column(name = "created_at")
     private Instant createdAt;
 
+    @Column(name = "expires_at")
+    private Instant expiresAt;
+
+    private static final long PIN_TTL_DAYS= 30;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
         this.lastUsedAt = Instant.now();
+        if (this.expiresAt == null) {
+            this.expiresAt = this.createdAt.plus(Duration.ofDays(PIN_TTL_DAYS));
+        }
+    }
+
+
+    public boolean isExpired() {
+        return expiresAt != null && Instant.now().isAfter(expiresAt);
     }
 }

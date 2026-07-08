@@ -3,6 +3,7 @@ import userReducer from "./slices/userSlice";
 import kycReducer from "./slices/kycSlice";
 import onboardingReducer from "./slices/onboardingSlice";
 import authFlowReducer from "./slices/authFlowSlice";
+import providerProfileReducer from "./slices/providerProfileSlice";
 
 export const store = configureStore({
     reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
         onboarding: onboardingReducer,
         kyc: kycReducer,
         authFlow: authFlowReducer,
+        providerProfile: providerProfileReducer,
         // booking: bookingReducer,      ← पछि थप्ने
         // notification: notificationReducer, ← पछि थप्ने
     },

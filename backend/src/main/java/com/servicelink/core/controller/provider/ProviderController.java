@@ -100,6 +100,9 @@ public class ProviderController {
     public ResponseEntity<ProviderProfileDTO> getMyProfile(
             @AuthenticationPrincipal User user) {
 
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(providerProfileService.getMyProfile(user.getId()));
     }
 

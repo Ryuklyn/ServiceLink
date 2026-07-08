@@ -47,11 +47,31 @@ public class ProviderPinController {
     }
 
     /** Public — the fast daily-login path. No providerToken needed at all. */
+//    @PostMapping("/verify-pin")
+//    public ResponseEntity<VerifyPinResponseDTO> verifyPin(
+//            @Valid @RequestBody VerifyPinRequestDTO req) {
+//
+//        VerifyPinResponseDTO res = pinService.verifyPin(req.getDeviceId(), req.getPin());
+//        if (!res.isVerified() && res.getAttemptsLeft() != null && res.getAttemptsLeft() == 0) {
+//            return ResponseEntity.status(429).body(res); // matches your PinStep's 429 handling
+//        }
+//        if (!res.isVerified()) {
+//            return ResponseEntity.status(401).body(res);
+//        }
+//        return ResponseEntity.ok(res);
+//    }
+
+    /** Public — the fast daily-login path. No providerToken needed at all. */
     @PostMapping("/verify-pin")
     public ResponseEntity<VerifyPinResponseDTO> verifyPin(
             @Valid @RequestBody VerifyPinRequestDTO req) {
 
         VerifyPinResponseDTO res = pinService.verifyPin(req.getDeviceId(), req.getPin());
+
+        // Expired PIN — distinct from wrong-PIN, so frontend can route to OTP reset
+        if (Boolean.TRUE.equals(res.getExpired())) {
+            return ResponseEntity.status(401).body(res);
+        }
         if (!res.isVerified() && res.getAttemptsLeft() != null && res.getAttemptsLeft() == 0) {
             return ResponseEntity.status(429).body(res); // matches your PinStep's 429 handling
         }

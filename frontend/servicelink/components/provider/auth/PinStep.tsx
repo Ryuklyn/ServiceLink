@@ -79,14 +79,18 @@ export default function PinStep({
 
             onVerified(res.accessToken!, res.refreshToken ?? undefined);
         } catch (err: any) {
-            // Locked (429) or device no longer recognized (410/404) → fall back to OTP
-            if (err?.response?.status === 429 || err?.response?.status === 410) {
+            // Expired PIN — distinct from wrong-PIN/lockout, must reset via OTP.
+            // err here is a normalized ApiError (from client.ts), not a raw AxiosError —
+            // so check err.expired / err.status / err.message, not err.response.*
+            if (err?.expired) {
                 onFallbackToOtp();
                 return;
             }
-            const backendMessage =
-                err?.response?.data?.message ?? err?.response?.data?.error;
-            setError(backendMessage ?? err?.message ?? "Something went wrong. Please try again.");
+            if (err?.status === 429 || err?.status === 410) {
+                onFallbackToOtp();
+                return;
+            }
+            setError(err?.message ?? "Something went wrong. Please try again.");
             setPin("");
         } finally {
             setLoading(false);

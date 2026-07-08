@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 
 @Slf4j
@@ -55,6 +56,7 @@ public class ProviderPinService {
 
         devicePin.setPinHash(hash);
         devicePin.setLastUsedAt(Instant.now());
+        devicePin.setExpiresAt(Instant.now().plus(Duration.ofDays(ProviderDevicePin.PIN_TTL_DAYS)));
         pinRepo.save(devicePin);
 
         pinAttemptService.resetOnSuccess(deviceId); // clear any stale lockout
@@ -73,6 +75,40 @@ public class ProviderPinService {
     }
 
     // ── Verify PIN — the fast daily path ────────────────────────────────────
+//    @Transactional
+//    public VerifyPinResponseDTO verifyPin(String deviceId, String pin) {
+//        if (pinAttemptService.isLockedOut(deviceId)) {
+//            return VerifyPinResponseDTO.builder()
+//                    .verified(false)
+//                    .message("Too many attempts. Please log in with a code.")
+//                    .attemptsLeft(0)
+//                    .build();
+//        }
+//
+//        ProviderDevicePin devicePin = pinRepo.findByDeviceId(deviceId).orElse(null);
+//        if (devicePin == null || !passwordEncoder.matches(pin, devicePin.getPinHash())) {
+//            int remaining = pinAttemptService.recordFailure(deviceId);
+//            return VerifyPinResponseDTO.builder()
+//                    .verified(false)
+//                    .message("Incorrect PIN.")
+//                    .attemptsLeft(remaining)
+//                    .build();
+//        }
+//
+//        pinAttemptService.resetOnSuccess(deviceId);
+//        devicePin.setLastUsedAt(Instant.now());
+//        pinRepo.save(devicePin);
+//
+//        SetPinResponseDTO session = issueSession(devicePin.getProvider().getUser().getEmail());
+//        return VerifyPinResponseDTO.builder()
+//                .verified(true)
+//                .message("Login successful")
+//                .accessToken(session.getAccessToken())
+//                .refreshToken(session.getRefreshToken())
+//                .build();
+//    }
+
+    // ── Verify PIN — the fast daily path ────────────────────────────────────
     @Transactional
     public VerifyPinResponseDTO verifyPin(String deviceId, String pin) {
         if (pinAttemptService.isLockedOut(deviceId)) {
@@ -84,7 +120,26 @@ public class ProviderPinService {
         }
 
         ProviderDevicePin devicePin = pinRepo.findByDeviceId(deviceId).orElse(null);
-        if (devicePin == null || !passwordEncoder.matches(pin, devicePin.getPinHash())) {
+        if (devicePin == null) {
+            int remaining = pinAttemptService.recordFailure(deviceId);
+            return VerifyPinResponseDTO.builder()
+                    .verified(false)
+                    .message("Incorrect PIN.")
+                    .attemptsLeft(remaining)
+                    .build();
+        }
+
+        // Expired PIN is not a "wrong guess" — check before the hash match,
+        // and don't burn an attempt on it.
+        if (devicePin.isExpired()) {
+            return VerifyPinResponseDTO.builder()
+                    .verified(false)
+                    .expired(true)
+                    .message("Your PIN has expired. Please log in with a code.")
+                    .build();
+        }
+
+        if (!passwordEncoder.matches(pin, devicePin.getPinHash())) {
             int remaining = pinAttemptService.recordFailure(deviceId);
             return VerifyPinResponseDTO.builder()
                     .verified(false)

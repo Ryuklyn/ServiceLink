@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class VerifyPinResponseDTO {
     private boolean verified;
+    private Boolean expired;
     private String message;
     private String accessToken;
     private String refreshToken;

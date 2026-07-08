@@ -10,17 +10,20 @@ export interface ApiErrorShape {
   status: number;
   code: string;
   message: string;
+  expired?: boolean;
 }
 
 export class ApiError extends Error implements ApiErrorShape {
   status: number;
   code: string;
+  expired?: boolean;
 
-  constructor({ status, code, message }: ApiErrorShape) {
+  constructor({ status, code, message, expired }: ApiErrorShape) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.expired = expired;
   }
 }
 
@@ -38,6 +41,7 @@ export function normalizeError(error: unknown): ApiError {
       status: error.response?.status ?? 0,
       code,
       message,
+        expired: data?.expired as boolean | undefined,
     });
   }
   if (error instanceof ApiError) return error;

@@ -15,6 +15,7 @@ export interface SkipPinResponse {
 export interface VerifyPinResponse {
     verified: boolean;
     message: string;
+    expired?: boolean;
     accessToken: string | null;
     refreshToken?: string | null;
     /** Present on failed attempts so the UI can show a live countdown. */

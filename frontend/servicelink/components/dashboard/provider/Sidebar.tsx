@@ -4,31 +4,11 @@ import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import {
-    LayoutDashboard,
-    CalendarDays,
-    Wallet,
-    BarChart2,
-    Users,
-    CreditCard,
-    Settings,
-    UserCheck,
-    LogOut,
-    BadgeCheck,
-} from "lucide-react";
+import { LogOut, BadgeCheck } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchUser, clearUser } from "@/store/slices/userSlice";
-
-const navItems = [
-    { label: "Dashboard", href: "/dashboard/provider", icon: LayoutDashboard },
-    { label: "Bookings", href: "/dashboard/provider/bookings", icon: CalendarDays },
-    { label: "Earnings", href: "/dashboard/provider/earnings", icon: Wallet },
-    { label: "Analytics", href: "/dashboard/provider/analytics", icon: BarChart2 },
-    { label: "Referrals", href: "/dashboard/provider/referral", icon: Users },
-    { label: "Subscription", href: "/dashboard/provider/subscription", icon: CreditCard },
-    { label: "Settings", href: "/dashboard/provider/settings", icon: Settings },
-    { label: "Profile / KYC", href: "/dashboard/provider/profile", icon: UserCheck },
-];
+import { fetchProviderProfile, clearProviderProfile } from "@/store/slices/providerProfileSlice";
+import { clearUser } from "@/store/slices/userSlice";
+import { providerNavItems } from "@/lib/navigation/providerNavItems";
 
 interface SidebarProps {
     onNavigate?: () => void;
@@ -39,30 +19,34 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     const router = useRouter();
 
     const dispatch = useAppDispatch();
-    const { data: user } = useAppSelector((state) => state.user);
+    const { data: provider } = useAppSelector((state) => state.providerProfile);
 
     useEffect(() => {
-        if (!user) {
-            dispatch(fetchUser());
+        if (!provider) {
+            dispatch(fetchProviderProfile());
         }
-    }, [dispatch, user]);
+    }, [dispatch, provider]);
 
     const handleLogout = () => {
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("token");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        dispatch(clearProviderProfile());
         dispatch(clearUser());
         router.push("/login");
     };
 
-    const initials = user?.fullName
-        ? user.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    const displayName = provider?.businessName || provider?.fullName || "Provider";
+
+    const initials = provider?.fullName
+        ? provider.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
         : "P";
 
     return (
         <aside className="w-64 h-full flex flex-col bg-gradient-to-b from-[#E8683F] to-[#C8501F] flex-shrink-0">
-            {/* Logo (Replicated exactly from UserSidebar) */}
-            <div className="px-5 pt-6 pb-6">
-                <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2 w-fit shadow-sm">
+            {/* Logo — same horizontal padding (px-3) and full width as nav links below,
+                so the white pill lines up exactly with the active "Dashboard" pill */}
+            <div className="px-3 pt-6 pb-6">
+                <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 w-full shadow-sm">
                     <Image
                         src="/images/SL.png"
                         alt="ServiceLink Logo"
@@ -84,7 +68,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
 
             {/* Navigation */}
             <nav className="flex-1 flex flex-col gap-0.5 px-3">
-                {navItems.map(({ label, href, icon: Icon }) => {
+                {providerNavItems.map(({ label, href, icon: Icon }) => {
                     const isActive =
                         href === "/dashboard/provider"
                             ? pathname === href
@@ -114,15 +98,15 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                 })}
             </nav>
 
-            {/* Footer Profile Card */}
+            {/* Footer Profile Card — fullName/profilePictureUrl sourced from
+                Provider (synced from KycSubmission + linked User on approval) */}
             <div className="m-3 mt-4 bg-[#1E3A8A] rounded-2xl p-4 shadow-lg">
                 <div className="flex items-center gap-3">
-                    {/* Dynamic Avatar */}
                     <div className="relative w-11 h-11 flex-shrink-0">
-                        {user?.profileImage ? (
+                        {provider?.profilePictureUrl ? (
                             <div className="relative w-full h-full rounded-full overflow-hidden">
                                 <Image
-                                    src={user.profileImage}
+                                    src={provider.profilePictureUrl}
                                     alt="profile"
                                     fill
                                     sizes="44px"
@@ -139,11 +123,13 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
 
                     <div className="min-w-0">
                         <p className="text-white font-semibold text-sm truncate">
-                            {user?.fullName || "Provider"}
+                            {displayName}
                         </p>
                         <div className="flex items-center gap-1 mt-0.5">
                             <BadgeCheck size={12} className="text-[#E8683F] flex-shrink-0" />
-                            <p className="text-white/60 text-xs">Verified Provider</p>
+                            <p className="text-white/60 text-xs">
+                                {provider?.isVerified ? "Verified Provider" : "Pending Verification"}
+                            </p>
                         </div>
                     </div>
                 </div>
