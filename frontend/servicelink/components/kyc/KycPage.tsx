@@ -101,15 +101,6 @@ export default function KycPage() {
         [goTo]
     );
 
-    // const handleSubmitSuccess = useCallback(
-    //     (response?: KycSubmitResponse) => {
-    //         if (response) setSubmitResponse(response);
-    //         setSubmittedSummary({ personal, professional });
-    //         dispatch(resetKyc()); // Redux clear + localStorage clear
-    //         goTo(5);
-    //     },
-    //     [dispatch, goTo, personal, professional]
-    // );
     const handleSubmitSuccess = useCallback(
         (response?: KycSubmitResponse) => {
             if (response) {

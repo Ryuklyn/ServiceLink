@@ -67,13 +67,31 @@ public class KycSubmission {
     private String  bio;
 
     // ── Document paths ────────────────────────────────────────────────────────
+//    private String citizenshipFrontPath;
+//    private String citizenshipBackPath;
+//    private String photoPath;
+//    private String panPath;
+//    @Column(columnDefinition = "TEXT")
+//    private String professionalCertPaths;   // JSON array
+//    @Column(name = "profile_photo_url")
+//    private String profilePhotoUrl;
+    // ── Document paths ────────────────────────────────────────────────────────
+    @Column(columnDefinition = "TEXT")
     private String citizenshipFrontPath;
+
+    @Column(columnDefinition = "TEXT")
     private String citizenshipBackPath;
+
+    @Column(columnDefinition = "TEXT")
     private String photoPath;
+
+    @Column(columnDefinition = "TEXT")
     private String panPath;
+
     @Column(columnDefinition = "TEXT")
     private String professionalCertPaths;   // JSON array
-    @Column(name = "profile_photo_url")
+
+    @Column(name = "profile_photo_url", columnDefinition = "TEXT")
     private String profilePhotoUrl;
 
     // ── Status ────────────────────────────────────────────────────────────────

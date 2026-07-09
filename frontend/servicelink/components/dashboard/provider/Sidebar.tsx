@@ -9,6 +9,8 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchProviderProfile, clearProviderProfile } from "@/store/slices/providerProfileSlice";
 import { clearUser } from "@/store/slices/userSlice";
 import { providerNavItems } from "@/lib/navigation/providerNavItems";
+import { getPlanBadgeLabelUpper } from "@/utils/subscriptionDisplay";
+import { fetchProviderSubscription } from "@/store/slices/providerSubscriptionSlice";
 
 interface SidebarProps {
     isOpen?: boolean;         // Control mobile visibility
@@ -21,12 +23,20 @@ export default function Sidebar({ isOpen = false, onNavigate }: SidebarProps) {
 
     const dispatch = useAppDispatch();
     const { data: provider } = useAppSelector((state) => state.providerProfile);
+    const { data: subscription } = useAppSelector((state) => state.providerSubscription);
 
     useEffect(() => {
         if (!provider) {
             dispatch(fetchProviderProfile());
         }
     }, [dispatch, provider]);
+
+    useEffect(() => {
+        if (!subscription) {
+            dispatch(fetchProviderSubscription());
+        }
+    }, [dispatch, subscription]);
+
 
     const handleLogout = () => {
         localStorage.removeItem("accessToken");
@@ -156,8 +166,11 @@ export default function Sidebar({ isOpen = false, onNavigate }: SidebarProps) {
                     </div>
 
                     <div className="mt-3 flex items-center justify-between">
+                        {/*<span className="bg-[#E8683F] text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-wide">*/}
+                        {/*    MONTHLY PLAN ✓*/}
+                        {/*</span>*/}
                         <span className="bg-[#E8683F] text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-wide">
-                            MONTHLY PLAN ✓
+                            {getPlanBadgeLabelUpper(subscription?.planType)} ✓
                         </span>
                         <button
                             onClick={handleLogout}

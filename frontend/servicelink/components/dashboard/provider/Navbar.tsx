@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchProviderProfile } from "@/store/slices/providerProfileSlice";
 import { getActiveNavLabel } from "@/lib/navigation/providerNavItems";
+import { getPlanBadgeLabel } from "@/utils/subscriptionDisplay";
+import { fetchProviderSubscription } from "@/store/slices/providerSubscriptionSlice";
 
 interface NavbarProps {
     onMenuClick?: () => void; // Trigger callback to open Mobile Sidebar
@@ -16,12 +18,19 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     const pathname = usePathname();
     const dispatch = useAppDispatch();
     const { data: provider } = useAppSelector((state) => state.providerProfile);
+    const { data: subscription } = useAppSelector((state) => state.providerSubscription);
 
     useEffect(() => {
         if (!provider) {
             dispatch(fetchProviderProfile());
         }
     }, [dispatch, provider]);
+
+    useEffect(() => {
+        if (!subscription) {
+            dispatch(fetchProviderSubscription());
+        }
+    }, [dispatch, subscription]);
 
     const activeLabel = getActiveNavLabel(pathname);
 
@@ -61,8 +70,14 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                 </div>
 
                 {/* Plan Badge */}
+                {/*<div className="hidden sm:flex items-center gap-1.5 bg-[#1E3A8A] text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-sm">*/}
+                {/*    <span>Monthly</span>*/}
+                {/*    <span className="text-[#E8683F]">✓</span>*/}
+                {/*</div>*/}
+
+                {/* Plan Badge */}
                 <div className="hidden sm:flex items-center gap-1.5 bg-[#1E3A8A] text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-sm">
-                    <span>Monthly</span>
+                    <span>{getPlanBadgeLabel(subscription?.planType)}</span>
                     <span className="text-[#E8683F]">✓</span>
                 </div>
 

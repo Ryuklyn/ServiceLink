@@ -133,11 +133,6 @@ public class Provider {
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Portfolio> portfolio = new HashSet<>();
 
-//    @PrePersist
-//    protected void onCreate() {
-//        this.memberSince = Instant.now();
-//    }
-
     @PrePersist
     protected void onCreate() {
         this.memberSince = Instant.now();

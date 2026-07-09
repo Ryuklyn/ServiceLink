@@ -32,15 +32,21 @@
 
         const activeSelections = Object.values(selections).filter((s) => s.isAvailable);
         const hasInvalidPrice = activeSelections.some((s) => !s.customPrice || s.customPrice <= 0);
-        const canProceed = activeSelections.length > 0 && !hasInvalidPrice;
+        const canProceed = catalog.length === 0 || (activeSelections.length > 0 && !hasInvalidPrice);
 
         const handleNext = async () => {
-            if (!canProceed) return; // slice could carry a local validation message if you want one distinct from the server error
+            if (!canProceed) return;
+
+            // Nothing to save if there's no catalog for this category yet
+            if (catalog.length === 0) {
+                onNext();
+                return;
+            }
+
             const result = await dispatch(saveOnboardingServices());
             if (saveOnboardingServices.fulfilled.match(result)) {
                 onNext();
             }
-            // on rejection, state.providerOnboarding.error is already populated — rendered below
         };
 
         return (
