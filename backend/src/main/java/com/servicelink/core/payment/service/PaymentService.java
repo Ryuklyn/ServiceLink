@@ -2,21 +2,32 @@ package com.servicelink.core.payment.service;
 
 import com.servicelink.core.dto.request.business.PaymentInitiateRequest;
 import com.servicelink.core.dto.request.business.PaymentVerifyRequest;
+import com.servicelink.core.dto.request.provider.subscription.SubscriptionCheckoutRequestDTO;
 import com.servicelink.core.dto.response.business.PaymentInitiateResponse;
 import com.servicelink.core.dto.response.business.PaymentTransactionResponse;
+import com.servicelink.core.exception.BusinessException;
+import com.servicelink.core.exception.ResourceNotFoundException;
 import com.servicelink.core.mapper.business.PaymentMapper;
-import com.servicelink.core.model.business.*;
+import com.servicelink.core.model.business.PaymentGateway;
+import com.servicelink.core.model.business.PaymentStatus;
+import com.servicelink.core.model.business.PaymentTransaction;
+import com.servicelink.core.model.provider.Provider;
+import com.servicelink.core.model.provider.subscription.ProviderSubscription;
+import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import com.servicelink.core.payment.gateway.EsewaGatewayService;
 import com.servicelink.core.payment.gateway.KhaltiGatewayService;
+import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.business.PaymentTransactionRepository;
-import com.servicelink.core.repository.business.SubscriptionRepository;
-import jakarta.transaction.Transactional;
+import com.servicelink.core.repository.provider.subscription.ProviderSubscriptionRepository;
+import com.servicelink.core.service.provider.subscription.ProviderSubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.time.Year;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Random;
 
 @Service
@@ -25,10 +36,12 @@ import java.util.Random;
 public class PaymentService {
 
     private final PaymentTransactionRepository transactionRepository;
-    private final SubscriptionRepository subscriptionRepository;
+    private final ProviderSubscriptionRepository providerSubscriptionRepo;
     private final EsewaGatewayService esewaService;
     private final KhaltiGatewayService khaltiService;
     private final PaymentMapper paymentMapper;
+    private final ProviderRepository providerRepo;
+    private final ProviderSubscriptionService providerSubscriptionService;
 
     // ─────────────────────────────────────────────────────────────
     // Step 1: Initiate — build gateway URL, save INITIATED record
@@ -36,13 +49,11 @@ public class PaymentService {
     @Transactional
     public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request) throws Exception {
 
-        // ✅ load subscription
-        Subscription subscription = subscriptionRepository
+        ProviderSubscription subscription = providerSubscriptionRepo
                 .findById(request.getSubscriptionId())
                 .orElseThrow(() -> new RuntimeException(
                         "Subscription not found: " + request.getSubscriptionId()));
 
-//        String referenceId = subscription.getReferenceId();
         String referenceId =
                 "SLP-" + Year.now().getValue() + "-"
                         + String.format("%06d", new Random().nextInt(999999));
@@ -50,23 +61,19 @@ public class PaymentService {
         log.info("Initiating payment: ref={} gateway={} amountNpr={}",
                 referenceId, request.getPaymentGateway(), request.getAmountNpr());
 
-        // ✅ block BANK_TRANSFER early before any processing
         if (request.getPaymentGateway() == PaymentGateway.BANK_TRANSFER) {
             throw new UnsupportedOperationException("Bank transfer is not supported yet");
         }
 
-        // ✅ duplicate SUCCESS guard — reject if already paid
         transactionRepository.findByReferenceId(referenceId).ifPresent(existing -> {
             if (existing.getPaymentStatus() == PaymentStatus.SUCCESS) {
                 throw new IllegalStateException(
                         "Payment already completed for ref: " + referenceId);
             }
-            // ✅ warn if re-initiating after FAILED or INITIATED (allowed)
             log.warn("Re-initiating payment: ref={} previousStatus={}",
                     referenceId, existing.getPaymentStatus());
         });
 
-        // ✅ resolve gateway URL + pidx
         String gatewayRedirectUrl;
         String gatewayMethod = "GET";
         java.util.Map<String, String> gatewayFormFields = null;
@@ -101,7 +108,6 @@ public class PaymentService {
                     "Unsupported gateway: " + request.getPaymentGateway());
         }
 
-        // ✅ persist transaction — field names match PaymentTransaction entity
         PaymentTransaction tx = PaymentTransaction.builder()
                 .subscription(subscription)
                 .referenceId(referenceId)
@@ -109,7 +115,7 @@ public class PaymentService {
                 .paymentStatus(PaymentStatus.INITIATED)
                 .amountNpr(request.getAmountNpr())
                 .gatewayRedirectUrl(gatewayRedirectUrl)
-                .gatewayTransactionId(pidx)       // null for eSewa, pidx for Khalti
+                .gatewayTransactionId(pidx)
                 .build();
 
         transactionRepository.save(tx);
@@ -126,12 +132,15 @@ public class PaymentService {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Step 2: Verify — confirm with gateway, activate subscription
+    // Step 2: Verify — confirm with gateway. Does NOT touch the
+    // ProviderSubscription itself; that's verifyAndSync()'s job via
+    // ProviderSubscriptionService.upgradePlan(), which is the single
+    // source of truth for plan/status/dates (correct per-plan duration,
+    // isActive sync, etc.) — duplicating that logic here would fight it.
     // ─────────────────────────────────────────────────────────────
     @Transactional
     public PaymentTransactionResponse verifyAndComplete(PaymentVerifyRequest request) throws Exception {
 
-        // ✅ load existing transaction
         PaymentTransaction tx = transactionRepository
                 .findByReferenceId(request.getReferenceId())
                 .orElseThrow(() -> new RuntimeException(
@@ -140,13 +149,11 @@ public class PaymentService {
         log.info("Verifying payment: ref={} gateway={} currentStatus={}",
                 tx.getReferenceId(), tx.getPaymentGateway(), tx.getPaymentStatus());
 
-        // ✅ idempotency — skip re-verification if already SUCCESS
         if (tx.getPaymentStatus() == PaymentStatus.SUCCESS) {
             log.warn("Payment already verified, skipping: ref={}", tx.getReferenceId());
             return paymentMapper.toResponse(tx);
         }
 
-        // ✅ call correct gateway verifier — exhaustive switch covers all enum values
         boolean verified = switch (tx.getPaymentGateway()) {
             case ESEWA -> esewaService.verifyPayment(
                     tx.getReferenceId(),
@@ -154,8 +161,8 @@ public class PaymentService {
                     request.getGatewayResponseData()
             );
             case KHALTI -> khaltiService.verifyPayment(
-                    tx.getGatewayTransactionId(),   // pidx stored at initiation
-                    tx.getAmountNpr() * 100L        // NPR → paisa
+                    tx.getGatewayTransactionId(),
+                    tx.getAmountNpr() * 100L
             );
             case BANK_TRANSFER -> throw new UnsupportedOperationException(
                     "Bank transfer verification not implemented yet"
@@ -163,24 +170,12 @@ public class PaymentService {
         };
 
         if (verified) {
-            // ✅ mark transaction SUCCESS
             tx.setPaymentStatus(PaymentStatus.SUCCESS);
             tx.setGatewayTransactionId(request.getGatewayTransactionId());
             tx.setGatewayResponse(request.getGatewayResponseData());
-            tx.setCompletedAt(LocalDateTime.now());
+            tx.setCompletedAt(java.time.LocalDateTime.now());
             log.info("Payment verified SUCCESS: ref={}", tx.getReferenceId());
-
-            // ✅ activate subscription for 1 month
-            Subscription sub = tx.getSubscription();
-            sub.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
-            sub.setCurrentPeriodStart(LocalDateTime.now());
-            sub.setCurrentPeriodEnd(LocalDateTime.now().plusMonths(1));
-            subscriptionRepository.save(sub);
-            log.info("Subscription activated: subId={} until={}",
-                    sub.getId(), sub.getCurrentPeriodEnd());
-
         } else {
-            // ✅ mark transaction FAILED
             tx.setPaymentStatus(PaymentStatus.FAILED);
             log.warn("Payment verification FAILED: ref={} gateway={}",
                     tx.getReferenceId(), tx.getPaymentGateway());
@@ -189,4 +184,90 @@ public class PaymentService {
         return paymentMapper.toResponse(transactionRepository.save(tx));
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Checkout — bridges plan selection to an actual gateway payment.
+    // Requires the provider to already have a ProviderSubscription row
+    // (created at onboarding via issueTrialIfEligible) — checkout does
+    // not create one, only ProviderSubscriptionService owns that.
+    // ─────────────────────────────────────────────────────────────
+    @Transactional
+    public PaymentInitiateResponse checkout(Long userId, SubscriptionCheckoutRequestDTO req,
+                                            String successUrl, String failureUrl) throws Exception {
+        Provider provider = providerRepo.findByUser_Id(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Provider for user", userId));
+
+        long amountNpr = resolvePrice(req.getSubscriptionPlanType()); // server-side source of truth
+
+        ProviderSubscription bizSub = providerSubscriptionRepo.findByProvider_Id(provider.getId())
+                .orElseThrow(() -> new BusinessException(
+                        "No subscription found for provider", "SUBSCRIPTION_NOT_FOUND"));
+
+        // Tentatively record the plan being purchased so initiatePayment() and
+        // the later verifyAndSync() can read it off the linked subscription —
+        // upgradePlan() re-applies plan/status/dates correctly once payment is
+        // actually confirmed, so this early write is safely overwritten either
+        // way (a failed payment just leaves a stale planType until the next
+        // successful checkout, with no dates/status changed — isCurrentlyActive()
+        // is driven by endDate/status, not planType, so this can't fake activation).
+        bizSub.setPlanType(req.getSubscriptionPlanType());
+        providerSubscriptionRepo.save(bizSub);
+
+        PaymentInitiateRequest payReq = new PaymentInitiateRequest();
+        payReq.setSubscriptionId(bizSub.getId());
+        payReq.setAmountNpr(amountNpr);
+        payReq.setPaymentGateway(req.getPaymentGateway());
+        payReq.setSuccessUrl(successUrl);
+        payReq.setFailureUrl(failureUrl);
+
+        return initiatePayment(payReq);
+    }
+
+    private long resolvePrice(SubscriptionPlanType plan) {
+        return switch (plan) {
+            case MONTHLY -> 500L;
+            case QUARTERLY -> 1200L;
+            case YEARLY -> 4000L;
+            default -> throw new BusinessException("Unsupported plan for checkout", "INVALID_PLAN");
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // The sync — activates the REAL provider subscription via
+    // ProviderSubscriptionService, which sets plan/status/dates and
+    // syncs Provider.isActive, all in one authoritative place.
+    // ─────────────────────────────────────────────────────────────
+    @Transactional
+    public PaymentTransactionResponse verifyAndSync(Long userId, PaymentVerifyRequest req) throws Exception {
+        Provider provider = providerRepo.findByUser_Id(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Provider for user", userId));
+
+        PaymentTransactionResponse result = verifyAndComplete(req);
+
+        if (result.getStatus() == PaymentStatus.SUCCESS) {
+            transactionRepository.findByReferenceId(req.getReferenceId())
+                    .map(PaymentTransaction::getSubscription)
+                    .ifPresent(sub ->
+                            providerSubscriptionService.upgradePlan(provider.getId(), sub.getPlanType()));
+        }
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Billing history
+    // ─────────────────────────────────────────────────────────────
+    @Transactional(readOnly = true)
+    public List<PaymentTransactionResponse> getTransactionsForProvider(Long userId) {
+        Provider provider = providerRepo.findByUser_Id(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Provider for user", userId));
+
+        return providerSubscriptionRepo.findByProvider_Id(provider.getId())
+                .map(sub -> transactionRepository.findBySubscription_Id(sub.getId()))
+                .orElse(List.of())
+                .stream()
+                .sorted(Comparator.comparing(
+                        PaymentTransaction::getCompletedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(paymentMapper::toResponse)
+                .toList();
+    }
 }

@@ -83,7 +83,15 @@ public class ProviderSubscriptionService {
         return toDto(sub);
     }
 
-    /** Payment-driven upgrade/renewal — always brings the provider back to ACTIVE. */
+    /**
+     * Payment-driven upgrade/renewal — always brings the provider back to ACTIVE.
+     * <p>
+     * Stacking rule: if the current subscription (trial or paid) still has time
+     * left, that remaining time is carried over and the new plan's duration is
+     * added on top of it, rather than overwriting endDate outright. If the
+     * current subscription has already lapsed, the new plan simply starts a
+     * fresh cycle from now.
+     */
     @Transactional
     public SubscriptionStatusDTO upgradePlan(Long providerId, SubscriptionPlanType newPlan) {
         ProviderSubscription sub = subscriptionRepo.findByProvider_Id(providerId)
@@ -91,13 +99,26 @@ public class ProviderSubscriptionService {
                         "No subscription found for provider", "SUBSCRIPTION_NOT_FOUND"));
 
         Instant now = Instant.now();
+        boolean hasRemainingTime = sub.getEndDate() != null && sub.getEndDate().isAfter(now);
+        Instant carryOverBase = hasRemainingTime ? sub.getEndDate() : now;
+        long carriedOverDays = hasRemainingTime ? ChronoUnit.DAYS.between(now, sub.getEndDate()) : 0;
+
         sub.setPlanType(newPlan);
         sub.setStatus(SubscriptionStatus.ACTIVE);
-        sub.setStartDate(now);
-        sub.setEndDate(now.plus(newPlan.getDurationDays(), ChronoUnit.DAYS));
+        if (!hasRemainingTime) {
+            // Nothing left to carry over — this purchase starts a brand new cycle.
+            sub.setStartDate(now);
+        }
+        // If time remains, startDate is deliberately left untouched so the
+        // start→end span still reflects the full stacked period (used by the
+        // frontend to render the billing-period progress bar correctly).
+        sub.setEndDate(carryOverBase.plus(newPlan.getDurationDays(), ChronoUnit.DAYS));
         subscriptionRepo.save(sub);
 
         syncProviderIsActive(sub.getProvider(), true);
+
+        log.info("Provider {} upgraded to {} — {} carried-over day(s) + {} new day(s), new end date {}",
+                providerId, newPlan, carriedOverDays, newPlan.getDurationDays(), sub.getEndDate());
         return toDto(sub);
     }
 

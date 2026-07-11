@@ -13,4 +13,6 @@ public class KycStatusResponseDTO {
     private Instant submittedAt;
     private Instant reviewedAt;
     private String reviewNotes;
+    private String fullName;   // NEW
+    private String email;     // NEW
 }

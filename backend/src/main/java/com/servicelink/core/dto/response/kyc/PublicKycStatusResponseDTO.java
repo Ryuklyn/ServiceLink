@@ -12,5 +12,5 @@ public class PublicKycStatusResponseDTO {
     private String status;
     private Instant submittedAt;
     private Instant reviewedAt;
-    private String reviewNotes; // REJECTED भएमा मात्र देखाउने हो भने frontend ले conditionally use गर्ला
+    private String reviewNotes;
 }

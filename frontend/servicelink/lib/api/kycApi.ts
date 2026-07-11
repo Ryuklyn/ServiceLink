@@ -17,6 +17,8 @@ export interface KycStatusResponse {
   submittedAt: string;
   reviewedAt: string | null;
   reviewNotes: string | null;
+  fullName: string;  // NEW
+  email: string;     // NEW
 }
 
 // Public, token-independent status shape — same fields as KycStatusResponse,

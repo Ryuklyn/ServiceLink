@@ -252,6 +252,8 @@ public class KycService {
                 .submittedAt(submission.getSubmittedAt())
                 .reviewedAt(submission.getReviewedAt())
                 .reviewNotes(submission.getReviewNotes())
+                .fullName(submission.getFullName())   // NEW
+                .email(submission.getEmail())         // NEW
                 .build();
     }
 
