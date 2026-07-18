@@ -2,16 +2,25 @@ package com.servicelink.core.mapper.provider;
 
 // com/servicelink/core/mapper/provider/ProviderMapper.java
 import com.servicelink.core.dto.response.provider.*;
+import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
+import com.servicelink.core.mapper.provider.portfolio.PortfolioMapper;
 import com.servicelink.core.model.provider.*;
 import com.servicelink.core.model.provider.portfolio.Portfolio;
 import com.servicelink.core.model.provider.review.Review;
 import com.servicelink.core.model.user.User;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class ProviderMapper {
+
+    // Delegates actual Portfolio -> PortfolioResponseDTO mapping to
+    // PortfolioMapper so there's one source of truth, shared with the
+    // standalone PortfolioController/PortfolioService stack.
+    private final PortfolioMapper portfolioMapper;
 
     // ── Provider full profile ─────────────────────────────────────────────────
 
@@ -21,6 +30,7 @@ public class ProviderMapper {
                 .id(p.getId())
                 .fullName(p.getFullName())
                 .phone(p.getPhone())
+                .email(p.getUser() != null ? p.getUser().getEmail() : null)
                 .businessName(p.getBusinessName())
                 .bio(p.getBio())
                 .profilePictureUrl(p.getProfilePictureUrl())
@@ -70,16 +80,8 @@ public class ProviderMapper {
 
     // ── Portfolio ─────────────────────────────────────────────────────────────
 
-    public PortfolioDTO toPortfolioDTO(Portfolio portfolio) {
-        return PortfolioDTO.builder()
-                .id(portfolio.getId())
-                .mediaUrl(portfolio.getMediaUrl())
-                .mediaType(portfolio.getMediaType())
-                .caption(portfolio.getCaption())
-                .serviceCategory(portfolio.getServiceCategory())
-                .isPrimary(portfolio.getIsPrimary())
-                .uploadedAt(portfolio.getUploadedAt())
-                .build();
+    public PortfolioResponseDTO toPortfolioDTO(Portfolio portfolio) {
+        return portfolioMapper.toResponse(portfolio);
     }
 
     // ── Review ────────────────────────────────────────────────────────────────

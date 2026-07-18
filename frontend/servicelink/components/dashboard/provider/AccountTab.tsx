@@ -1,30 +1,43 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-    Camera,
-    Phone,
-    Mail,
-    CalendarDays,
-    ShieldCheck,
-    ClipboardEdit,
-    MapPin,
-    Pencil,
-    X,
-    Save,
-    Monitor,
-    Sun,
-    Moon, Zap, Star,
+    Camera, Phone, Mail, CalendarDays, ShieldCheck, ClipboardEdit,
+    MapPin, Pencil, X, Save, Monitor, Sun, Moon, Zap, Star,
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMap, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+    fetchProviderProfile,
+    updateProviderProfile,
+    uploadProviderPicture,
+} from "@/store/slices/providerProfileSlice";
 
-type VerificationItem = {
-    label: string;
-    date: string;
-};
+type Theme = "system" | "light" | "dark";
+type Language = "en" | "ne";
 
+const customMarkerIcon = L.icon({
+    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+});
+
+function MapRecenter({ center }: { center: [number, number] }) {
+    const map = useMap();
+    useEffect(() => {
+        setTimeout(() => map.invalidateSize(), 100);
+        map.setView(center, map.getZoom());
+    }, [map, center]);
+    return null;
+}
+
+// NOTE: backend (ProviderProfileDTO) currently only exposes a single
+// isVerified boolean — no per-check timestamps. These stay static until
+// the backend adds individual verification records/dates.
+type VerificationItem = { label: string; date: string };
 const VERIFICATIONS: VerificationItem[] = [
     { label: "Identity Verification", date: "Verified on May 12, 2022" },
     { label: "Phone Verification", date: "Verified on May 12, 2022" },
@@ -33,163 +46,207 @@ const VERIFICATIONS: VerificationItem[] = [
     { label: "Trade Certification", date: "Verified on Jun 05, 2022" },
 ];
 
-type Theme = "system" | "light" | "dark";
-type Language = "en" | "ne";
-
-// Leaflet configuration fix for Next.js build setup
-const customMarkerIcon = L.icon({
-    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-});
-
-// Utility component forcing container sizing recalculation upon dynamic viewport rendering
-function MapRecenter({ center }: { center: [number, number] }) {
-    const map = useMap();
-    useEffect(() => {
-        setTimeout(() => {
-            map.invalidateSize();
-        }, 100);
-        map.setView(center, map.getZoom());
-    }, [map, center]);
-    return null;
-}
-
 export default function AccountTab() {
-    // const [bio, setBio] = useState(
-    //     "Experienced electrician with 6 years of residential and commercial wiring work across Kathmandu valley. Specialized in wiring, lighting installation, circuit repair and inverter setup."
-    // );
+    const dispatch = useAppDispatch();
+    const { data: profile, loading, saving, uploadingPicture, error } = useAppSelector(
+        (state) => state.providerProfile,
+    );
+
     const [theme, setTheme] = useState<Theme>("system");
     const [language, setLanguage] = useState<Language>("en");
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Data States
-    const [bio, setBio] = useState("Professional certified electrician based in Kathmandu. Specialized in domestic wiring, smart home automation, high-voltage panel configuration, and appliance diagnostics with over 4 years of field experience.");
-    const [location, setLocation] = useState("Baneshwor, Kathmandu");
-    const [radius, setRadius] = useState(10); // in kilometers
-    const [coordinates, setCoordinates] = useState<[number, number]>([27.6915, 85.342]); // Baneshwor Lat/Lng
+    const DEFAULT_COORDS: [number, number] = [27.6915, 85.342];
+    const coordinates: [number, number] =
+        profile?.latitude != null && profile?.longitude != null
+            ? [profile.latitude, profile.longitude]
+            : DEFAULT_COORDS;
 
-    // Overlay Modals Toggles
     const [isBioModalOpen, setIsBioModalOpen] = useState(false);
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
-    // Temporary Form Buffer States (Preserves updates until click event dispatching)
-    const [tempBio, setTempBio] = useState(bio);
-    const [tempLocation, setTempLocation] = useState(location);
-    const [tempRadius, setTempRadius] = useState(radius);
+    const [tempBio, setTempBio] = useState("");
+    const [tempLocation, setTempLocation] = useState("");
+    const [tempRadius, setTempRadius] = useState(10);
 
-    // Handle saving data mutations
-    const saveBio = () => {
-        setBio(tempBio);
+    useEffect(() => {
+        dispatch(fetchProviderProfile());
+    }, [dispatch]);
+
+    const openBioModal = () => {
+        setTempBio(profile?.bio ?? "");
+        setIsBioModalOpen(true);
+    };
+
+    const openMapModal = () => {
+        setTempLocation(profile?.serviceAreaText ?? "");
+        setTempRadius(profile?.travelRadiusKm ?? 10);
+        setIsMapModalOpen(true);
+    };
+
+    const saveBio = async () => {
+        await dispatch(updateProviderProfile({ bio: tempBio }));
         setIsBioModalOpen(false);
     };
 
-    const saveServiceArea = () => {
-        setLocation(tempLocation);
-        setRadius(tempRadius);
+    const saveServiceArea = async () => {
+        await dispatch(
+            updateProviderProfile({
+                serviceAreaText: tempLocation,
+                travelRadiusKm: tempRadius,
+            }),
+        );
         setIsMapModalOpen(false);
     };
+
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) dispatch(uploadProviderPicture(file));
+        e.target.value = "";
+    };
+
+    if (loading && !profile) {
+        return (
+            <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm text-sm text-slate-500">
+                Loading account details…
+            </div>
+        );
+    }
+
+    if (error && !profile) {
+        return (
+            <div className="rounded-xl border border-red-100 bg-red-50 p-6 shadow-sm text-sm text-red-600">
+                Couldn&apos;t load your profile: {error}
+            </div>
+        );
+    }
+
+    const initials = (profile?.fullName ?? "")
+        .split(" ")
+        .map((s) => s[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
 
     return (
         <div className="space-y-6">
             {/* Profile header card */}
             <div className="w-full rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-
-                    {/* Left Side: Avatar & Core Information */}
                     <div className="flex items-start gap-5 flex-1">
-                        {/* Avatar Column */}
                         <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#e8683f] text-2xl font-semibold text-white tracking-wide">
-                                BM
+                            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#e8683f] text-2xl font-semibold text-white tracking-wide overflow-hidden">
+                                {profile?.profilePictureUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={profile.profilePictureUrl} alt={profile.fullName} className="h-full w-full object-cover" />
+                                ) : (
+                                    initials || "?"
+                                )}
                             </div>
-                            <button className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png"
+                                className="hidden"
+                                onChange={handlePhotoChange}
+                            />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploadingPicture}
+                                className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                            >
                                 <Camera className="h-3.5 w-3.5 text-slate-500" />
-                                Upload Photo
+                                {uploadingPicture ? "Uploading…" : "Upload Photo"}
                             </button>
                             <span className="text-[10px] text-slate-400">JPG, PNG. Max 2MB</span>
                         </div>
 
-                        {/* Basic Info Column */}
                         <div className="pt-1">
                             <div className="flex items-center gap-2 flex-wrap">
                                 <h2 className="text-xl font-bold text-slate-800 tracking-tight">
-                                    Bhumika Maharjan
+                                    {profile?.fullName ?? "—"}
                                 </h2>
-                                <span className="inline-flex items-center gap-1 bg-green-500/10 text-[#10b981] text-[11px] font-semibold px-2 py-0.5 rounded-md border border-green-500/20">
-                                <ShieldCheck className="h-3.5 w-3.5 fill-[#10b981]/10" strokeWidth={2.5} />
-                                KYC VERIFIED
-                            </span>
+                                {profile?.isVerified && (
+                                    <span className="inline-flex items-center gap-1 bg-green-500/10 text-[#10b981] text-[11px] font-semibold px-2 py-0.5 rounded-md border border-green-500/20">
+                                        <ShieldCheck className="h-3.5 w-3.5 fill-[#10b981]/10" strokeWidth={2.5} />
+                                        KYC VERIFIED
+                                    </span>
+                                )}
                             </div>
 
-                            {/* Electrician Row with Lucide Zap icon */}
                             <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-slate-500">
-                                <Zap className="h-3.5 w-3.5 text-slate-400 fill-slate-400/20" /> Electrician
+                                <Zap className="h-3.5 w-3.5 text-slate-400 fill-slate-400/20" />
+                                {profile?.primaryService ?? "—"}
                             </p>
 
                             <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-400">
                                 <MapPin className="h-4 w-4 text-slate-400" />
-                                Baneshwor, Kathmandu
+                                {profile?.serviceAreaText ?? profile?.baseDistrict ?? "Not set"}
                             </p>
 
-                            {/* Rating Row with Lucide Star icon */}
                             <p className="mt-1 flex items-center gap-1 text-sm font-medium text-slate-700">
-                                <Star className="h-4 w-4 text-amber-400 fill-amber-400 mr-0.5" /> 4.8
-                                <span className="text-slate-400 font-normal ml-0.5">(126 reviews)</span>
+                                <Star className="h-4 w-4 text-amber-400 fill-amber-400 mr-0.5" />
+                                {profile?.averageRating?.toFixed(1) ?? "—"}
+                                <span className="text-slate-400 font-normal ml-0.5">
+                                    ({profile?.totalReviews ?? 0} reviews)
+                                </span>
                             </p>
                         </div>
                     </div>
 
-                    {/* Right Side: Contact & Meta Info with Vertical Dividers */}
                     <div className="flex flex-col sm:flex-row flex-wrap items-stretch gap-6 lg:gap-0 mt-4 lg:mt-0">
-
-                        {/* Phone Block */}
                         <div className="flex items-center gap-3 lg:px-8 border-slate-100 lg:first:border-l-0 lg:border-l">
                             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50/60 text-indigo-600">
                                 <Phone className="h-5 w-5" />
                             </div>
                             <div className="space-y-0.5">
                                 <p className="text-xs font-medium text-slate-400">Phone Number</p>
-                                <p className="text-sm font-semibold text-slate-700">+977-9841234567</p>
-                                <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
-                                <ShieldCheck className="w-3.5 h-3.5 fill-[#10b981]/10" strokeWidth={2.5} />
-                                Verified
-                            </span>
+                                <p className="text-sm font-semibold text-slate-700">{profile?.phone ?? "—"}</p>
+                                {profile?.isVerified && (
+                                    <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
+                                        <ShieldCheck className="w-3.5 h-3.5 fill-[#10b981]/10" strokeWidth={2.5} />
+                                        Verified
+                                    </span>
+                                )}
                             </div>
                         </div>
 
-                        {/* Email Block */}
                         <div className="flex items-center gap-3 lg:px-8 border-slate-100 lg:border-l">
                             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8683f]/10 text-[#e8683f]">
                                 <Mail className="h-5 w-5" />
                             </div>
                             <div className="space-y-0.5">
                                 <p className="text-xs font-medium text-slate-400">Email Address</p>
-                                <p className="text-sm font-semibold text-slate-700">bhumika.maharjan@email.com</p>
-                                <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
-                                <ShieldCheck className="w-3.5 h-3.5 fill-[#10b981]/10" strokeWidth={2.5} />
-                                Verified
-                            </span>
+                                <p className="text-sm font-semibold text-slate-700">{profile?.email ?? "—"}</p>
+                                {profile?.isVerified && (
+                                    <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
+                                        <ShieldCheck className="w-3.5 h-3.5 fill-[#10b981]/10" strokeWidth={2.5} />
+                                        Verified
+                                    </span>
+                                )}
                             </div>
                         </div>
 
-                        {/* Membership Block */}
                         <div className="flex items-center gap-3 lg:pl-8 border-slate-100 lg:border-l">
                             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50/60 text-indigo-600">
                                 <CalendarDays className="h-5 w-5" />
                             </div>
                             <div className="space-y-0.5">
                                 <p className="text-xs font-medium text-slate-400">Member Since</p>
-                                <p className="text-sm font-bold text-slate-700 pt-0.5">May 2022</p>
+                                <p className="text-sm font-bold text-slate-700 pt-0.5">
+                                    {profile?.memberSince
+                                        ? new Date(profile.memberSince).toLocaleDateString("en-US", {
+                                            month: "long",
+                                            year: "numeric",
+                                        })
+                                        : "—"}
+                                </p>
                             </div>
                         </div>
-
                     </div>
-
                 </div>
             </div>
 
-            {/* Grid: Verified Info | Bio + Service Area | Preferences */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 {/* Verified Information */}
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -230,10 +287,6 @@ export default function AccountTab() {
                 </div>
 
                 <div className="space-y-6">
-
-                    {/* =========================================================
-                      1. PROFESSIONAL BIO PREVIEW CARD
-                      ========================================================= */}
                     <div className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
                         <div className="mb-3 flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -241,7 +294,7 @@ export default function AccountTab() {
                                 <h3 className="text-sm font-semibold text-slate-900">Professional Bio</h3>
                             </div>
                             <button
-                                onClick={() => { setTempBio(bio); setIsBioModalOpen(true); }}
+                                onClick={openBioModal}
                                 className="flex items-center gap-1 text-xs font-medium text-[#e8683f] hover:text-[#d4562e] transition-colors"
                             >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -249,13 +302,10 @@ export default function AccountTab() {
                             </button>
                         </div>
                         <p className="text-sm leading-relaxed text-slate-600 bg-slate-50/50 p-3.5 rounded-lg border border-slate-100">
-                            {bio || <span className="text-slate-400 italic">No professional bio summary provided yet.</span>}
+                            {profile?.bio || <span className="text-slate-400 italic">No professional bio summary provided yet.</span>}
                         </p>
                     </div>
 
-                    {/* =========================================================
-                      2. SERVICE AREA PREVIEW CARD (WITH MINI MAP)
-                      ========================================================= */}
                     <div className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
                         <div className="mb-3 flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -263,11 +313,7 @@ export default function AccountTab() {
                                 <h3 className="text-sm font-semibold text-slate-900">Service Area Coverage</h3>
                             </div>
                             <button
-                                onClick={() => {
-                                    setTempLocation(location);
-                                    setTempRadius(radius);
-                                    setIsMapModalOpen(true);
-                                }}
+                                onClick={openMapModal}
                                 className="flex items-center gap-1 text-xs font-medium text-[#e8683f] hover:text-[#d4562e] transition-colors"
                             >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -279,29 +325,33 @@ export default function AccountTab() {
                             <div className="space-y-3">
                                 <div>
                                     <p className="text-xs font-medium text-slate-400">Primary Location Hub</p>
-                                    <p className="text-sm font-semibold text-slate-800 mt-0.5">{location}</p>
+                                    <p className="text-sm font-semibold text-slate-800 mt-0.5">
+                                        {profile?.serviceAreaText ?? profile?.baseDistrict ?? "Not set"}
+                                    </p>
                                 </div>
                                 <div>
                                     <p className="text-xs font-medium text-slate-400">Operational Radius Limit</p>
-                                    <p className="text-sm font-semibold text-slate-800 mt-0.5">{radius} km Coverage</p>
+                                    <p className="text-sm font-semibold text-slate-800 mt-0.5">
+                                        {profile?.travelRadiusKm ?? "—"} km Coverage
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Leaflet Static Mini Map Box wrapper */}
                             <div className="h-28 w-full rounded-xl overflow-hidden border border-slate-100 relative z-0 shadow-inner">
                                 <MapContainer center={coordinates} zoom={11} className="w-full h-full" zoomControl={false} dragging={false} scrollWheelZoom={false}>
                                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                     <Marker position={coordinates} icon={customMarkerIcon} />
-                                    <Circle center={coordinates} radius={radius * 1000} pathOptions={{ color: '#e8683f', fillColor: '#e8683f', fillOpacity: 0.15 }} />
+                                    <Circle
+                                        center={coordinates}
+                                        radius={(profile?.travelRadiusKm ?? 10) * 1000}
+                                        pathOptions={{ color: "#e8683f", fillColor: "#e8683f", fillOpacity: 0.15 }}
+                                    />
                                     <MapRecenter center={coordinates} />
                                 </MapContainer>
                             </div>
                         </div>
                     </div>
 
-                    {/* =========================================================
-                      3. MODAL SUBSECTION: BIO EDIT DIALOG
-                      ========================================================= */}
                     {isBioModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fadeIn">
                             <div className="w-full max-w-lg rounded-xl border border-slate-100 bg-white p-6 shadow-xl">
@@ -312,31 +362,28 @@ export default function AccountTab() {
                                     </button>
                                 </div>
                                 <div className="mt-4">
-                                  <textarea
-                                      value={tempBio}
-                                      onChange={(e) => setTempBio(e.target.value)}
-                                      maxLength={500}
-                                      rows={5}
-                                      className="w-full resize-none rounded-lg border border-slate-200 p-3.5 text-sm text-slate-700 outline-none transition-all focus:border-[#e8683f] focus:ring-2 focus:ring-[#e8683f]/10"
-                                      placeholder="Write down your business description, training competencies..."
-                                  />
+                                    <textarea
+                                        value={tempBio}
+                                        onChange={(e) => setTempBio(e.target.value)}
+                                        maxLength={2000}
+                                        rows={5}
+                                        className="w-full resize-none rounded-lg border border-slate-200 p-3.5 text-sm text-slate-700 outline-none transition-all focus:border-[#e8683f] focus:ring-2 focus:ring-[#e8683f]/10"
+                                        placeholder="Write down your business description, training competencies..."
+                                    />
                                     <div className="mt-1 flex justify-end">
-                                        <span className="text-xs text-slate-400 font-medium">{tempBio.length} / 500 characters</span>
+                                        <span className="text-xs text-slate-400 font-medium">{tempBio.length} / 2000 characters</span>
                                     </div>
                                 </div>
                                 <div className="mt-5 flex gap-3 justify-end border-t border-slate-100 pt-4">
                                     <button onClick={() => setIsBioModalOpen(false)} className="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-50 rounded-lg">Cancel</button>
-                                    <button onClick={saveBio} className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#e8683f] hover:bg-[#d4562e] rounded-lg transition-colors shadow-sm">
-                                        <Save className="h-3.5 w-3.5" /> Save Bio
+                                    <button onClick={saveBio} disabled={saving} className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#e8683f] hover:bg-[#d4562e] rounded-lg transition-colors shadow-sm disabled:opacity-50">
+                                        <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save Bio"}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* =========================================================
-                      4. MODAL SUBSECTION: SERVICE AREA EDIT DIALOG (WITH MAP EXTENSION)
-                      ========================================================= */}
                     {isMapModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fadeIn">
                             <div className="w-full max-w-2xl rounded-xl border border-slate-100 bg-white p-6 shadow-xl">
@@ -348,7 +395,6 @@ export default function AccountTab() {
                                 </div>
 
                                 <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {/* Parameter Settings column inputs */}
                                     <div className="space-y-4 md:col-span-1">
                                         <div>
                                             <label className="text-xs font-bold text-slate-600 block mb-1">HQ Center Address</label>
@@ -356,6 +402,7 @@ export default function AccountTab() {
                                                 type="text"
                                                 value={tempLocation}
                                                 onChange={(e) => setTempLocation(e.target.value)}
+                                                maxLength={1000}
                                                 className="w-full rounded-lg border border-slate-200 p-2.5 text-xs text-slate-700 outline-none focus:border-[#e8683f] transition-all"
                                             />
                                         </div>
@@ -376,12 +423,11 @@ export default function AccountTab() {
                                         </div>
                                     </div>
 
-                                    {/* Advanced Leaflet Map Preview canvas viewport */}
                                     <div className="h-56 md:h-full min-h-[220px] md:col-span-2 rounded-xl overflow-hidden border border-slate-100 relative z-0">
                                         <MapContainer center={coordinates} zoom={12} className="w-full h-full">
                                             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                             <Marker position={coordinates} icon={customMarkerIcon} />
-                                            <Circle center={coordinates} radius={tempRadius * 1000} pathOptions={{ color: '#e8683f', fillColor: '#e8683f', fillOpacity: 0.15 }} />
+                                            <Circle center={coordinates} radius={tempRadius * 1000} pathOptions={{ color: "#e8683f", fillColor: "#e8683f", fillOpacity: 0.15 }} />
                                             <MapRecenter center={coordinates} />
                                         </MapContainer>
                                     </div>
@@ -389,93 +435,39 @@ export default function AccountTab() {
 
                                 <div className="mt-5 flex gap-3 justify-end border-t border-slate-100 pt-4">
                                     <button onClick={() => setIsMapModalOpen(false)} className="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-50 rounded-lg">Cancel</button>
-                                    <button onClick={saveServiceArea} className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#e8683f] hover:bg-[#d4562e] rounded-lg transition-colors shadow-sm">
-                                        <Save className="h-3.5 w-3.5" /> Save Configurations
+                                    <button onClick={saveServiceArea} disabled={saving} className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#e8683f] hover:bg-[#d4562e] rounded-lg transition-colors shadow-sm disabled:opacity-50">
+                                        <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save Configurations"}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
-
                 </div>
 
-                {/* Preferences (replaces Services & Pricing) */}
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-slate-900">
-                        Preferences
-                    </h3>
-
+                    <h3 className="mb-4 text-sm font-semibold text-slate-900">Preferences</h3>
                     <p className="mb-2 text-xs font-medium text-slate-500">Theme</p>
                     <div className="mb-5 grid grid-cols-3 gap-2">
-                        <button
-                            onClick={() => setTheme("system")}
-                            className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
-                                theme === "system"
-                                    ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
-                                    : "border-slate-200 text-slate-500 hover:bg-slate-50"
-                            }`}
-                        >
-                            <Monitor className="h-3.5 w-3.5" />
-                            System
+                        <button onClick={() => setTheme("system")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "system" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                            <Monitor className="h-3.5 w-3.5" /> System
                         </button>
-                        <button
-                            onClick={() => setTheme("light")}
-                            className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
-                                theme === "light"
-                                    ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
-                                    : "border-slate-200 text-slate-500 hover:bg-slate-50"
-                            }`}
-                        >
-                            <Sun className="h-3.5 w-3.5" />
-                            Light
+                        <button onClick={() => setTheme("light")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "light" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                            <Sun className="h-3.5 w-3.5" /> Light
                         </button>
-                        <button
-                            onClick={() => setTheme("dark")}
-                            className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
-                                theme === "dark"
-                                    ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
-                                    : "border-slate-200 text-slate-500 hover:bg-slate-50"
-                            }`}
-                        >
-                            <Moon className="h-3.5 w-3.5" />
-                            Dark
+                        <button onClick={() => setTheme("dark")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "dark" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                            <Moon className="h-3.5 w-3.5" /> Dark
                         </button>
                     </div>
-
                     <p className="mb-2 text-xs font-medium text-slate-500">Language</p>
                     <div className="grid grid-cols-2 gap-2">
-                        <button
-                            onClick={() => setLanguage("en")}
-                            className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                                language === "en"
-                                    ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
-                                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                            }`}
-                        >
+                        <button onClick={() => setLanguage("en")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "en" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
                             English
                         </button>
-                        <button
-                            onClick={() => setLanguage("ne")}
-                            className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                                language === "ne"
-                                    ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
-                                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                            }`}
-                        >
+                        <button onClick={() => setLanguage("ne")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "ne" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
                             नेपाली
                         </button>
                     </div>
                 </div>
-            </div>
-
-            {/* Footer actions */}
-            <div className="flex flex-wrap gap-3">
-                <button className="rounded-lg bg-[#e8683f] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#d95c34]">
-                    Save Changes
-                </button>
-                <button className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-[#1e3a8a] hover:bg-slate-50">
-                    Preview Public Profile
-                </button>
             </div>
         </div>
     );

@@ -601,18 +601,17 @@ export default function SubscriptionPage() {
                                         </td>
                                         <td className="px-5 py-3">
                         <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs font-semibold ${methodBadgeColor(
-                                row.gateway,
+                            className={`inline-flex items-center justify-center h-7 w-12 rounded border ${methodBadgeColor(
+                                row.gateway
                             )}`}
                         >
                           {methodMeta(row.gateway).icon && (
                               <img
                                   src={methodMeta(row.gateway).icon as string}
                                   alt={methodMeta(row.gateway).label}
-                                  className="h-3.5 w-3.5 object-contain"
+                                  className="h-7 w-12 object-contain"
                               />
                           )}
-                            {methodMeta(row.gateway).label}
                         </span>
                                         </td>
                                         <td className="px-5 py-3">

@@ -4,6 +4,7 @@ import com.servicelink.core.model.common.KycStatus;
 import com.servicelink.core.model.common.KycSubmission;
 import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.provider.portfolio.Portfolio;
+import com.servicelink.core.model.provider.portfolio.PortfolioMedia;
 import com.servicelink.core.model.provider.review.Review;
 import com.servicelink.core.model.user.User;
 import jakarta.persistence.*;
@@ -39,6 +40,9 @@ public class Provider {
 
     @Column(name = "phone", nullable = false)
     private String phone;
+
+    @Column(name = "email", nullable = false)
+    private String email;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "primary_service", nullable = false)
@@ -128,7 +132,7 @@ public class Provider {
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Review> reviews = new HashSet<>();
 
-    // Portfolio
+    // Portfolio (each Portfolio is a project, which can hold several PortfolioMedia items)
     @Builder.Default
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Portfolio> portfolio = new HashSet<>();
@@ -223,16 +227,16 @@ public class Provider {
                 .orElse(0.0);
     }
 
-    public Portfolio getPrimaryPortfolio() {
+    /**
+     * Returns portfolio projects that contain at least one media item of the
+     * given type (e.g. projects with a video attached, or projects with photos).
+     * Replaces the old getPortfolioByType(), which relied on a single
+     * mediaType per Portfolio row — that no longer applies now that one
+     * project can hold up to 5 photos + 1 video.
+     */
+    public List<Portfolio> getPortfolioByType(PortfolioMedia.MediaType mediaType) {
         return portfolio.stream()
-                .filter(Portfolio::getIsPrimary)
-                .findFirst()
-                .orElse(null);
-    }
-
-    public List<Portfolio> getPortfolioByType(Portfolio.MediaType mediaType) {
-        return portfolio.stream()
-                .filter(p -> p.getMediaType() == mediaType)
+                .filter(p -> p.getMedia().stream().anyMatch(m -> m.getMediaType() == mediaType))
                 .collect(Collectors.toList());
     }
 
@@ -257,18 +261,5 @@ public class Provider {
     public void addPortfolioItem(Portfolio portfolioItem) {
         this.portfolio.add(portfolioItem);
         portfolioItem.setProvider(this);
-    }
-
-    public void setPrimaryPortfolio(Long portfolioId) {
-        this.portfolio.forEach(p -> p.setIsPrimary(false));
-
-        Portfolio primary = this.portfolio.stream()
-                .filter(p -> p.getId().equals(portfolioId))
-                .findFirst()
-                .orElse(null);
-
-        if (primary != null) {
-            primary.setIsPrimary(true);
-        }
     }
 }

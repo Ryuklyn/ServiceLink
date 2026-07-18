@@ -1,5 +1,6 @@
 package com.servicelink.core.dto.response.provider;
 
+import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
 import com.servicelink.core.model.common.ServiceCategory;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,7 @@ public class ProviderProfileDTO {
     private String fullName;
     private String phone;
     private String businessName;
+    private String email;
     private String bio;
     private String profilePictureUrl;
 
@@ -51,6 +53,6 @@ public class ProviderProfileDTO {
 
     // Nested summaries
     private List<ProviderServiceDTO>  services;
-    private List<PortfolioDTO>        portfolio;
+    private List<PortfolioResponseDTO>        portfolio;
     private List<ReviewDTO>           recentReviews;
 }

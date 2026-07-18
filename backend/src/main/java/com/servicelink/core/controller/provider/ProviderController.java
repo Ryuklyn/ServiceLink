@@ -1,7 +1,9 @@
 package com.servicelink.core.controller.provider;
 
 import com.servicelink.core.dto.request.provider.*;
+import com.servicelink.core.dto.request.provider.portfolio.CreatePortfolioDTO;
 import com.servicelink.core.dto.response.provider.*;
+import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
 import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.service.provider.ProviderProfileService;
@@ -150,7 +152,7 @@ public class ProviderController {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // PORTFOLIO — provider manages their own media
+    // PORTFOLIO — provider manages their own portfolio projects
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -158,7 +160,7 @@ public class ProviderController {
      */
     @GetMapping("/me/portfolio")
     @PreAuthorize("hasRole('PROVIDER')")
-    public ResponseEntity<List<PortfolioDTO>> getMyPortfolio(
+    public ResponseEntity<List<PortfolioResponseDTO>> getMyPortfolio(
             @AuthenticationPrincipal User user) {
 
         return ResponseEntity.ok(providerProfileService.getMyPortfolio(user.getId()));
@@ -166,70 +168,51 @@ public class ProviderController {
 
     /**
      * POST /api/providers/me/portfolio  (multipart/form-data)
-     * Upload a new portfolio image or video.
+     * Create a new portfolio project.
      *
      * Form fields:
-     *   file           — binary (required)
-     *   mediaType      — "IMAGE" | "VIDEO" (required)
-     *   caption        — optional text
-     *   serviceCategory— optional e.g. "ELECTRICIAN"
+     *   title           — required
+     *   serviceType     — required, e.g. "Electrical Wiring"
+     *   description     — required, max 250 chars
+     *   completionDate  — optional, "yyyy-MM"
+     *   location        — optional
+     *   photos          — up to 5 image files (repeat the "photos" key)
+     *   video           — optional, single video file
      */
     @PostMapping(value = "/me/portfolio", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('PROVIDER')")
-    public ResponseEntity<PortfolioDTO> addPortfolioItem(
+    public ResponseEntity<PortfolioResponseDTO> addPortfolioProject(
             @AuthenticationPrincipal User user,
-            @RequestPart("file")                     MultipartFile file,
-            @RequestParam("mediaType")               String mediaType,
-            @RequestParam(value = "caption",          required = false) String caption,
-            @RequestParam(value = "serviceCategory",  required = false) String serviceCategory)
+            @Valid @ModelAttribute CreatePortfolioDTO request,
+            @RequestParam(value = "photos", required = false) List<MultipartFile> photos,
+            @RequestParam(value = "video", required = false) MultipartFile video)
             throws Exception {
 
-        PortfolioDTO saved = providerProfileService.addPortfolioItem(
-                user.getId(), file, caption, serviceCategory, mediaType);
+        PortfolioResponseDTO saved = providerProfileService.addPortfolioProject(
+                user.getId(), request, photos, video);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     /**
-     * PATCH /api/providers/me/portfolio/{itemId}/caption
-     * Update just the caption of an existing portfolio item.
+     * DELETE /api/providers/me/portfolio/{projectId}
      */
-    @PatchMapping("/me/portfolio/{itemId}/caption")
+    @DeleteMapping("/me/portfolio/{projectId}")
     @PreAuthorize("hasRole('PROVIDER')")
-    public ResponseEntity<PortfolioDTO> updateCaption(
+    public ResponseEntity<Void> deletePortfolioProject(
             @AuthenticationPrincipal User user,
-            @PathVariable Long itemId,
-            @RequestParam String caption) {
+            @PathVariable Long projectId) {
 
-        return ResponseEntity.ok(
-                providerProfileService.updatePortfolioCaption(user.getId(), itemId, caption));
-    }
-
-    /**
-     * DELETE /api/providers/me/portfolio/{itemId}
-     */
-    @DeleteMapping("/me/portfolio/{itemId}")
-    @PreAuthorize("hasRole('PROVIDER')")
-    public ResponseEntity<Void> deletePortfolioItem(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long itemId) {
-
-        providerProfileService.deletePortfolioItem(user.getId(), itemId);
+        providerProfileService.deletePortfolioProject(user.getId(), projectId);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * PATCH /api/providers/me/portfolio/{itemId}/primary
-     * Set this item as the primary (featured) portfolio item.
-     */
-    @PatchMapping("/me/portfolio/{itemId}/primary")
-    @PreAuthorize("hasRole('PROVIDER')")
-    public ResponseEntity<PortfolioDTO> setPrimary(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long itemId) {
-
-        return ResponseEntity.ok(
-                providerProfileService.setPrimaryPortfolioItem(user.getId(), itemId));
-    }
+    // NOTE: the old caption-update and "set primary" endpoints
+    // (PATCH .../portfolio/{itemId}/caption, PATCH .../portfolio/{itemId}/primary)
+    // are removed — Portfolio has no `caption` or `isPrimary` field in the
+    // current schema. If you want either back, decide where it belongs
+    // (project-level isPrimary on Portfolio, or a cover-photo flag on
+    // PortfolioMedia) and I'll add the entity field, service method, and
+    // this endpoint together.
 
     // ─────────────────────────────────────────────────────────────────────────
     // REVIEWS — customer writes a review (ROLE_CUSTOMER)
