@@ -22,6 +22,7 @@ public class ProviderProfileDTO {
 
     private ServiceCategory primaryService;
     private String          otherService;
+    private String certifiedCategories;
     private Integer         experienceYears;
 
     private Boolean isVerified;

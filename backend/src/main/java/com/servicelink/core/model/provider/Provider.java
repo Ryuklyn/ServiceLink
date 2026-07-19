@@ -48,6 +48,9 @@ public class Provider {
     @Column(name = "primary_service", nullable = false)
     private ServiceCategory primaryService;
 
+    @Column(name = "certified_categories", columnDefinition = "TEXT")
+    private String certifiedCategories;
+
     @Column(columnDefinition = "TEXT")
     private String otherService;
 

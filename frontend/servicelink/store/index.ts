@@ -4,6 +4,7 @@ import kycReducer from "./slices/kycSlice";
 import onboardingReducer from "./slices/onboardingSlice";
 import authFlowReducer from "./slices/authFlowSlice";
 import providerProfileReducer from "./slices/providerProfileSlice";
+import providerServicesReducer from "@/store/slices/providerServicesSlice";
 import providerOnboardingReducer from "./slices/providerOnboardingSlice";
 import providerSubscriptionReducer from "./slices/providerSubscriptionSlice";
 
@@ -16,6 +17,7 @@ export const store = configureStore({
         providerProfile: providerProfileReducer,
         providerOnboarding: providerOnboardingReducer,
         providerSubscription: providerSubscriptionReducer,
+        providerServices: providerServicesReducer,
         // booking: bookingReducer,      ← पछि थप्ने
         // notification: notificationReducer, ← पछि थप्ने
     },

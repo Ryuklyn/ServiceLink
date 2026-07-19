@@ -16,6 +16,8 @@ import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.storage.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -134,6 +136,7 @@ public class KycService {
         provider.setCoveredDistricts(submission.getSecondaryDistricts()); // already JSON-as-text
         provider.setProfilePictureUrl(submission.getProfilePhotoUrl());
         provider.setTravelRadiusKm(parseTravelRadiusKm(submission.getTravelRadius()));
+        provider.setCertifiedCategories(buildCertifiedCategories(submission));
 
         // Approval is what makes a provider verified and active — set explicitly here
         // rather than relying on syncFromKyc(), since these are approval-outcome flags,
@@ -206,6 +209,15 @@ public class KycService {
             log.warn("Could not parse travelRadiusKm from value '{}'", travelRadius);
             return null;
         }
+    }
+
+    private String buildCertifiedCategories(KycSubmission submission) {
+        Set<String> categories = new LinkedHashSet<>();
+        if (submission.getPrimaryService() != null) {
+            categories.add(submission.getPrimaryService());
+        }
+        categories.addAll(kycMapper.fromJson(submission.getAdditionalServices()));
+        return String.join(",", categories);
     }
 
     public void rejectKyc(String identifier, String reviewNotes) {

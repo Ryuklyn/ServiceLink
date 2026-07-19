@@ -36,6 +36,7 @@ public class ProviderMapper {
                 .profilePictureUrl(p.getProfilePictureUrl())
                 .primaryService(p.getPrimaryService())
                 .otherService(p.getOtherService())
+                .certifiedCategories(p.getCertifiedCategories())
                 .experienceYears(p.getExperienceYears())
                 .isVerified(p.getIsVerified())
                 .isActive(p.getIsActive())

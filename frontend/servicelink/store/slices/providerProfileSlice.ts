@@ -4,6 +4,61 @@ import api from "@/utils/axios";
 // ─── Types ────────────────────────────────────────────────────────────────────
 // Mirrors ProviderProfileDTO / UpdateProviderProfileDTO on the backend.
 
+export interface ProviderServiceSummary {
+    id: number;
+    catalogId: number;
+    subServiceName: string;
+    category: string;
+    pricingUnit: string;
+    customPrice: number;
+    effectiveDuration?: string | null;
+    isAvailable: boolean;
+}
+
+
+// export interface ProviderProfile {
+//     id: number;
+//     fullName: string;
+//     phone?: string | null;
+//     businessName?: string | null;
+//     bio?: string | null;
+//     profilePictureUrl?: string | null;
+//     email?: string | null;
+//
+//     primaryService?: string;
+//     otherService?: string | null;
+//     experienceYears?: number | null;
+//
+//     isVerified?: boolean;
+//     isActive?: boolean;
+//     isOnline?: boolean;
+//     hasCompletedOnboarding: boolean;
+//
+//     baseDistrict?: string | null;
+//     serviceAreaText?: string | null;
+//     coveredDistricts?: string | null; // comma-separated, per UpdateProviderProfileDTO
+//     latitude?: number | null;
+//     longitude?: number | null;
+//     travelRadiusKm?: number | null;
+//
+//     averageRating?: number;
+//     totalReviews?: number;
+//     totalJobs?: number;
+//     avgResponseMinutes?: number | null;
+//
+//     punctualityScore?: number | null;
+//     qualityScore?: number | null;
+//     communicationScore?: number | null;
+//     valueScore?: number | null;
+//
+//     memberSince?: string | null;
+//
+//     // services?: unknown[];
+//     services?: ProviderServiceSummary[];
+//     portfolio?: unknown[];
+//     recentReviews?: unknown[];
+// }
+
 export interface ProviderProfile {
     id: number;
     fullName: string;
@@ -15,6 +70,7 @@ export interface ProviderProfile {
 
     primaryService?: string;
     otherService?: string | null;
+    certifiedCategories?: string | null;
     experienceYears?: number | null;
 
     isVerified?: boolean;
@@ -41,7 +97,7 @@ export interface ProviderProfile {
 
     memberSince?: string | null;
 
-    services?: unknown[];
+    services?: ProviderServiceSummary[];
     portfolio?: unknown[];
     recentReviews?: unknown[];
 }
