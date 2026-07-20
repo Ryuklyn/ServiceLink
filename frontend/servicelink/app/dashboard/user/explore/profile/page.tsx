@@ -96,12 +96,13 @@ function mapBackendToProviderData(data: any): ProviderData {
           text: r.comment ?? "",
           date: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "",
         })) ?? [],
-    portfolio:
-        data.portfolio?.map((p: any) => ({
-          label: p.caption ?? p.serviceCategory ?? "Work Sample",
-          gradient: "from-blue-500 to-cyan-500",
-          mediaUrl: p.mediaUrl ?? "",
-        })) ?? [],
+    // portfolio:
+    //     data.portfolio?.map((p: any) => ({
+    //       label: p.caption ?? p.serviceCategory ?? "Work Sample",
+    //       gradient: "from-blue-500 to-cyan-500",
+    //       mediaUrl: p.mediaUrl ?? "",
+    //     })) ?? [],
+    portfolio: data.portfolio ?? [],
   };
 }
 

@@ -20,12 +20,13 @@ import ReferralStep from "./ReferralStep";
 const STEP_ORDER = ["welcome", "services", "referral"] as const;
 
 interface OnboardingWizardProps {
-    category: string;
+    // category: string;
+    categories: string[];
     /** Called once the parent should re-check hasCompletedOnboarding (layout owns that fetch). */
     onComplete: () => void;
 }
 
-export default function OnboardingWizard({ category, onComplete }: OnboardingWizardProps) {
+export default function OnboardingWizard({ categories, onComplete }: OnboardingWizardProps) {
     const dispatch = useDispatch<AppDispatch>();
     const { currentStep, status, loadingStatus, finishing } = useSelector(
         (s: RootState) => s.providerOnboarding,
@@ -95,7 +96,8 @@ export default function OnboardingWizard({ category, onComplete }: OnboardingWiz
                         )}
                         {currentStep === "services" && (
                             <SubServicesStep
-                                category={category}
+                                // category={category}
+                                categories={categories}
                                 onNext={handleServicesNext}
                                 onBack={() => dispatch(goBack())}
                             />

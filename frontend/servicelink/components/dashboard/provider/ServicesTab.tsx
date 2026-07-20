@@ -18,6 +18,7 @@ import {
     HelpCircle,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { toast } from "react-toastify";
 import { fetchProviderProfile } from "@/store/slices/providerProfileSlice";
 import {
     fetchCatalog,
@@ -163,6 +164,57 @@ export default function ServicesTab() {
         return { enabled, total: items.length };
     };
 
+    // const handleSave = async () => {
+    //     const payload: ServiceSelectionPayload[] = [];
+    //     let missingPrice = false;
+    //
+    //     Object.values(byCategory).forEach((items) => {
+    //         items?.forEach((item) => {
+    //             const sel = selections[item.id];
+    //             if (!sel) return;
+    //             if (sel.enabled && (sel.price.trim() === "" || Number.isNaN(Number(sel.price)))) {
+    //                 missingPrice = true;
+    //             }
+    //             payload.push({
+    //                 catalogId: item.id,
+    //                 isAvailable: sel.enabled,
+    //                 customPrice: sel.enabled ? Number(sel.price) || 0 : 0,
+    //             });
+    //         });
+    //     });
+    //
+    //     console.log("SAVE PAYLOAD:", payload);
+    //
+    //     if (missingPrice) {
+    //         setPriceWarning("Set a price for every enabled service before saving.");
+    //         return;
+    //     }
+    //     setPriceWarning(null);
+    //
+    //     try {
+    //         await dispatch(saveServicesBatch(payload)).unwrap();
+    //         const refreshed = await dispatch(fetchProviderProfile()).unwrap();
+    //
+    //         // Force re-sync local selections from the just-saved server truth.
+    //         // The population effect above skips any catalogId already present
+    //         // in `selections`, so without this, toggles/prices shown after
+    //         // Save would keep reflecting stale local state instead of what
+    //         // actually got persisted to the backend.
+    //         setSelections((prev) => {
+    //             const next = { ...prev };
+    //             refreshed?.services?.forEach((s: any) => {
+    //                 next[s.catalogId] = {
+    //                     enabled: s.isAvailable,
+    //                     price: String(s.customPrice),
+    //                 };
+    //             });
+    //             return next;
+    //         });
+    //     } catch {
+    //         // error is already captured in redux state via saveServicesBatch.rejected
+    //     }
+    // };
+
     const handleSave = async () => {
         const payload: ServiceSelectionPayload[] = [];
         let missingPrice = false;
@@ -184,11 +236,37 @@ export default function ServicesTab() {
 
         if (missingPrice) {
             setPriceWarning("Set a price for every enabled service before saving.");
+            toast.warn("Set a price for every enabled service before saving.");
             return;
         }
         setPriceWarning(null);
-        await dispatch(saveServicesBatch(payload));
-        dispatch(fetchProviderProfile());
+
+        const enabledCount = payload.filter((p) => p.isAvailable).length;
+
+        try {
+            await dispatch(saveServicesBatch(payload)).unwrap();
+            const refreshed = await dispatch(fetchProviderProfile()).unwrap();
+
+            // Force re-sync local selections from the just-saved server truth.
+            setSelections((prev) => {
+                const next = { ...prev };
+                refreshed?.services?.forEach((s: any) => {
+                    next[s.catalogId] = {
+                        enabled: s.isAvailable,
+                        price: String(s.customPrice),
+                    };
+                });
+                return next;
+            });
+
+            toast.success(
+                enabledCount > 0
+                    ? `Saved — ${enabledCount} service${enabledCount > 1 ? "s" : ""} now enabled.`
+                    : "Saved — all services are currently disabled.",
+            );
+        } catch (err: any) {
+            toast.error(err ?? "Failed to save services. Please try again.");
+        }
     };
 
     const activeCatalogItems: ServiceCatalogItem[] = useMemo(
@@ -455,9 +533,6 @@ export default function ServicesTab() {
                     className="rounded-lg bg-[#e8683f] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#d95c34] disabled:opacity-50"
                 >
                     {saving ? "Saving…" : "Save Changes"}
-                </button>
-                <button className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-[#1e3a8a] hover:bg-slate-50">
-                    Preview Public Profile
                 </button>
             </div>
         </div>

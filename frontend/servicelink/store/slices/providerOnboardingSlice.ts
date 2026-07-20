@@ -16,7 +16,8 @@ interface ProviderOnboardingState {
     currentStep: OnboardingStep;
     history: OnboardingStep[];
     status: OnboardingStatus | null;
-    catalog: CatalogItem[];
+    // catalog: CatalogItem[];
+    catalogByCategory: Record<string, CatalogItem[]>;
     selections: Record<number, ProviderServiceSelection>;
     hasSeenOnboarding: boolean; // persisted flag - true once wizard is fully finished
     loadingStatus: boolean;
@@ -31,7 +32,8 @@ const initialState: ProviderOnboardingState = {
     currentStep: "welcome",
     history: ["welcome"],
     status: null,
-    catalog: [],
+    // catalog: [],
+    catalogByCategory: {},
     selections: {},
     hasSeenOnboarding: false,
     loadingStatus: false,
@@ -58,12 +60,14 @@ export const fetchOnboardingStatus = createAsyncThunk<
 });
 
 export const fetchCatalog = createAsyncThunk<
-CatalogItem[],
+    { category: string; items: CatalogItem[] },
     string,
 { rejectValue: string }
 >("providerOnboarding/fetchCatalog", async (category, { rejectWithValue }) => {
     try {
-        return await onboardingApi.getCatalog(category);
+        // return await onboardingApi.getCatalog(category);
+        const items = await onboardingApi.getCatalog(category);
+        return { category, items };
     } catch (err: any) {
         return rejectWithValue(
             err?.response?.data?.message ?? err?.message ?? "Couldn't load services for your category.",
@@ -192,8 +196,12 @@ const providerOnboardingSlice = createSlice({
                 state.loadingCatalog = true;
                 state.error = null;
             })
-            .addCase(fetchCatalog.fulfilled, (state, action: PayloadAction<CatalogItem[]>) => {
-                state.catalog = action.payload;
+            // .addCase(fetchCatalog.fulfilled, (state, action: PayloadAction<CatalogItem[]>) => {
+            //     state.catalog = action.payload;
+            //     state.loadingCatalog = false;
+            // })
+            .addCase(fetchCatalog.fulfilled, (state, action) => {
+                state.catalogByCategory[action.payload.category] = action.payload.items;
                 state.loadingCatalog = false;
             })
             .addCase(fetchCatalog.rejected, (state, action) => {

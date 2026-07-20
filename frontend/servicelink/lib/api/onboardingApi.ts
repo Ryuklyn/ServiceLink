@@ -1,14 +1,6 @@
 import api from "@/utils/axios";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-// Mirrors backend OnboardingStatusDTO
-// export interface OnboardingStatus {
-//     hasCompletedOnboarding: boolean;
-//     hasAtLeastOneService: boolean;
-//     trialDaysRemaining: number;
-//     referralCode: string;
-// }
-
 export interface OnboardingStatus {
     hasCompletedOnboarding: boolean;
     hasProfilePicture: boolean;

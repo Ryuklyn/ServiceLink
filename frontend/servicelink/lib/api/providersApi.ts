@@ -19,6 +19,20 @@ export interface ServiceCatalogItem {
     isActive: boolean;
 }
 
+// Matches backend ProviderServiceDTO — this is what comes back inside
+// ProviderProfileDTO.services (from /providers/me, /providers/{id}, etc.),
+// NOT the same shape as ServiceCatalogItem (catalog) or ServiceSelectionPayload (save request).
+export interface ProviderServiceDTO {
+    id: number;
+    catalogId: number;
+    subServiceName: string;
+    category: ServiceCategoryKey;
+    pricingUnit: PricingUnit;
+    customPrice: number;
+    effectiveDuration: string | null;
+    isAvailable: boolean;
+}
+
 // Matches ProviderServiceSelectionDTO exactly — no customDuration field exists there.
 export interface ServiceSelectionPayload {
     catalogId: number;

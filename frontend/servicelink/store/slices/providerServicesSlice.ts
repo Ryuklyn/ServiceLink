@@ -108,6 +108,7 @@ import {
     ServiceCatalogItem,
     ServiceCategoryKey,
     ServiceSelectionPayload,
+    ProviderServiceDTO,
 } from "@/lib/api/providersApi";
 
 export type { ServiceCatalogItem, ServiceCategoryKey, ServiceSelectionPayload };

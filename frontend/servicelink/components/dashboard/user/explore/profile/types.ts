@@ -1,3 +1,5 @@
+import type { PortfolioProject } from "@/types/portfolio";
+
 export interface ProviderService {
   name: string;
   duration: string;
@@ -18,10 +20,10 @@ export interface ProviderReview {
   date: string;
 }
 
-export interface PortfolioItem {
-  label: string;
-  gradient: string;
-}
+// export interface PortfolioItem {
+//   label: string;
+//   gradient: string;
+// }
 
 export interface ProviderData {
   id: string;
@@ -61,5 +63,6 @@ export interface ProviderData {
   coverageCenter: { lat: number; lng: number };
   services: ProviderService[]; // <-- Harnesses our upgraded ProviderService schema layout
   providerReviews: ProviderReview[];
-  portfolio: PortfolioItem[];
+  // portfolio: PortfolioItem[];
+  portfolio: PortfolioProject[];
 }
