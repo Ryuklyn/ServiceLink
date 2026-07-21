@@ -5,9 +5,6 @@ import {
     Camera, Phone, Mail, CalendarDays, ShieldCheck, ClipboardEdit,
     MapPin, Pencil, X, Save, Monitor, Sun, Moon, Zap, Star,
 } from "lucide-react";
-// import { MapContainer, TileLayer, Marker, useMap, Circle } from "react-leaflet";
-// import L from "leaflet";
-// import "leaflet/dist/leaflet.css";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     fetchProviderProfile,
@@ -31,22 +28,6 @@ const MapComponent = dynamic(
 
 type Theme = "system" | "light" | "dark";
 type Language = "en" | "ne";
-
-// const customMarkerIcon = L.icon({
-//     iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-//     shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-//     iconSize: [25, 41],
-//     iconAnchor: [12, 41],
-// });
-//
-// function MapRecenter({ center }: { center: [number, number] }) {
-//     const map = useMap();
-//     useEffect(() => {
-//         setTimeout(() => map.invalidateSize(), 100);
-//         map.setView(center, map.getZoom());
-//     }, [map, center]);
-//     return null;
-// }
 
 // NOTE: backend (ProviderProfileDTO) currently only exposes a single
 // isVerified boolean — no per-check timestamps. These stay static until
