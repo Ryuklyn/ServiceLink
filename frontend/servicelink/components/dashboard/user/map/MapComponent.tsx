@@ -1,9 +1,16 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { Circle } from "react-leaflet";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+
+interface MapComponentProps {
+  center: [number, number];
+  radius?: number;
+  interactive?: boolean;
+}
 
 // Fix Leaflet's marker asset paths within NextJS bundle optimization architectures
 const customMarkerIcon = L.icon({
@@ -25,22 +32,28 @@ function MapRecenter({ center }: { center: [number, number] }) {
   return null;
 }
 
-export default function MapComponent() {
+export default function MapComponent({
+                                       center,
+                                       radius = 0,
+                                       interactive = false,
+                                     }: MapComponentProps) {
   // Approximate coordinates matching your target operational region (Kathmandu Valley area)
-  const providerPosition: [number, number] = [27.6915, 85.342];
+  // const providerPosition: [number, number] = [27.6915, 85.342];
 
   return (
-    <MapContainer
-      center={providerPosition}
-      zoom={14}
-      className="w-full h-full"
-      scrollWheelZoom={false}
-    >
+      <MapContainer
+          center={center}
+          zoom={14}
+          className="w-full h-full"
+          scrollWheelZoom={interactive}
+          dragging={interactive}
+          zoomControl={interactive}
+      >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <Marker position={providerPosition} icon={customMarkerIcon}>
+      <Marker position={center} icon={customMarkerIcon}>
         <Popup>
           <div className="text-xs">
             <p className="font-bold">Ram Electrical Services</p>
@@ -48,7 +61,7 @@ export default function MapComponent() {
           </div>
         </Popup>
       </Marker>
-      <MapRecenter center={providerPosition} />
+      <MapRecenter center={center} />
     </MapContainer>
   );
 }

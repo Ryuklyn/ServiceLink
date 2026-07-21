@@ -7,6 +7,7 @@ import providerProfileReducer from "./slices/providerProfileSlice";
 import providerServicesReducer from "@/store/slices/providerServicesSlice";
 import providerOnboardingReducer from "./slices/providerOnboardingSlice";
 import providerSubscriptionReducer from "./slices/providerSubscriptionSlice";
+import providerAvailabilityReducer from "./slices/providerAvailabilitySlice";
 
 export const store = configureStore({
     reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
         providerOnboarding: providerOnboardingReducer,
         providerSubscription: providerSubscriptionReducer,
         providerServices: providerServicesReducer,
+        providerAvailability:providerAvailabilityReducer,
         // booking: bookingReducer,      ← पछि थप्ने
         // notification: notificationReducer, ← पछि थप्ने
     },

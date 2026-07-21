@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,10 +9,12 @@ import {
   CalendarDays,
   X,
 } from "lucide-react";
+import api from "@/utils/axios";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AvailabilityCalendarProps {
+  providerId: string | number;
   onDateChange?: (date: Date) => void;
   onPeriodChange?: (period: "morning" | "afternoon" | "evening" | null) => void;
 }
@@ -22,6 +24,20 @@ interface DaySlot {
   period: "morning" | "afternoon" | "evening";
   available: boolean;
 }
+
+// Shape returned by GET /providers/{id}/availability
+interface BackendAvailabilitySlot {
+  date: string; // yyyy-MM-dd
+  period: "MORNING" | "AFTERNOON" | "EVENING";
+  isAvailable: boolean;
+}
+
+const ALL_PERIODS: DaySlot["period"][] = ["morning", "afternoon", "evening"];
+const PERIOD_TO_BACKEND: Record<DaySlot["period"], BackendAvailabilitySlot["period"]> = {
+  morning: "MORNING",
+  afternoon: "AFTERNOON",
+  evening: "EVENING",
+};
 
 // ─── Nepali BS Calendar Conversion (simplified Vikram Sambat) ─────────────────
 const BS_MONTHS = [
@@ -50,44 +66,6 @@ function adToBS(adDate: Date): { day: number; month: number; year: number; dayNa
 
   const dayName = NEPALI_DAY_NAMES[bsDay] ?? String(bsDay);
   return { day: bsDay, month: bsMonth, year: bsYear, dayName };
-}
-
-// ─── Mock Slot Data Generator ──────────────────────────────────────────────────
-const SLOT_PRESETS: DaySlot[][] = [
-  [
-    { id: "m", period: "morning",   available: true  },
-    { id: "a", period: "afternoon", available: true  },
-    { id: "e", period: "evening",   available: true  },
-  ],
-  [
-    { id: "m", period: "morning",   available: true  },
-    { id: "a", period: "afternoon", available: true  },
-    { id: "e", period: "evening",   available: false },
-  ],
-  [
-    { id: "m", period: "morning",   available: true  },
-    { id: "a", period: "afternoon", available: false },
-    { id: "e", period: "evening",   available: false },
-  ],
-  [
-    { id: "m", period: "morning",   available: false },
-    { id: "a", period: "afternoon", available: false },
-    { id: "e", period: "evening",   available: false },
-  ],
-  [
-    { id: "m", period: "morning",   available: false },
-    { id: "a", period: "afternoon", available: true  },
-    { id: "e", period: "evening",   available: true  },
-  ],
-];
-
-function getSlotsForDate(date: Date): DaySlot[] {
-  const d = date.getDate();
-  if (d % 7 === 0) return SLOT_PRESETS[3];
-  if (d % 5 === 0) return SLOT_PRESETS[2];
-  if (d % 3 === 0) return SLOT_PRESETS[4];
-  if (d % 2 === 0) return SLOT_PRESETS[1];
-  return SLOT_PRESETS[0];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -119,17 +97,24 @@ function sameDay(a: Date, b: Date): boolean {
   );
 }
 
+// Timezone-safe yyyy-MM-dd — date.toISOString() converts to UTC first, which
+// can shift the date backward for UTC+ zones like Nepal (UTC+5:45) around
+// local midnight. Always derive from local getters instead.
 function isoKey(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 const TIME_SLOT_DESCRIPTORS = {
   morning:   { label: "Morning",   time: "8:00 AM - 12:00 PM", icon: Sun    },
-  afternoon: { label: "Afternoon", time: "12:00 PM - 5:00 PM", icon: Sunset },
-  evening:   { label: "Evening",   time: "5:00 PM - 8:00 PM",  icon: Moon   },
+  afternoon: { label: "Afternoon", time: "12:00 PM - 4:00 PM", icon: Sunset },
+  evening:   { label: "Evening",   time: "4:00 PM - 8:00 PM",  icon: Moon   },
 };
 
 export default function AvailabilityCalendar({
+                                               providerId,
                                                onDateChange,
                                                onPeriodChange,
                                              }: AvailabilityCalendarProps) {
@@ -140,12 +125,59 @@ export default function AvailabilityCalendar({
   const [selectedSlotPeriod, setSelectedSlotPeriod] = useState<"morning"|"afternoon"|"evening"|null>(null);
   const [showFullCalendar, setShowFullCalendar]     = useState(false);
   const [calNavDate, setCalNavDate]                 = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [slotsByDate, setSlotsByDate]               = useState<Record<string, BackendAvailabilitySlot[]>>({});
+
+  const fetchRange = async (start: Date, end: Date) => {
+    try {
+      const { data } = await api.get<BackendAvailabilitySlot[]>(
+          `/providers/${providerId}/availability`,
+          { params: { start: isoKey(start), end: isoKey(end) } },
+      );
+      setSlotsByDate((prev) => {
+        const next = { ...prev };
+        for (const row of data) {
+          const existing = (next[row.date] ?? []).filter((s) => s.period !== row.period);
+          next[row.date] = [...existing, row];
+        }
+        return next;
+      });
+    } catch {
+      // Read-only booking view — a fetch failure just falls back to the
+      // "available by default" behavior below, no toast needed here.
+    }
+  };
+
+  // Week view range
+  useEffect(() => {
+    fetchRange(weekStart, addDays(weekStart, 6));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart, providerId]);
+
+  // Full-calendar month range
+  useEffect(() => {
+    const monthStart = new Date(calNavDate.getFullYear(), calNavDate.getMonth(), 1);
+    const monthEnd = new Date(calNavDate.getFullYear(), calNavDate.getMonth() + 1, 0);
+    fetchRange(monthStart, monthEnd);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calNavDate, providerId]);
+
+  // Same name/signature as the old mock generator — every existing call site
+  // below (weekDays.map, currentSlots, calendarGrid.map) works unchanged.
+  // A date/period with no fetched row defaults to available, matching the
+  // provider-side "available by default" behavior.
+  const getSlotsForDate = (date: Date): DaySlot[] => {
+    const rows = slotsByDate[isoKey(date)];
+    return ALL_PERIODS.map((period) => {
+      const row = rows?.find((r) => r.period === PERIOD_TO_BACKEND[period]);
+      return { id: period[0], period, available: row ? row.isAvailable : true };
+    });
+  };
 
   const weekDays = useMemo(() =>
           Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
       [weekStart]);
 
-  const currentSlots = useMemo(() => getSlotsForDate(selectedDate), [selectedDate]);
+  const currentSlots = useMemo(() => getSlotsForDate(selectedDate), [selectedDate, slotsByDate]);
   const availableCount = currentSlots.filter((s) => s.available).length;
 
   const selectDate = (date: Date) => {

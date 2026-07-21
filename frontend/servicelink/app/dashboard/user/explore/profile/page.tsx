@@ -194,7 +194,12 @@ export default function ProviderPage() {
               selectedServices={selectedServices}
           />
 
+          {/*<AvailabilityCalendar*/}
+          {/*    onDateChange={setSelectedDate}*/}
+          {/*    onPeriodChange={setSelectedPeriod}*/}
+          {/*/>*/}
           <AvailabilityCalendar
+              providerId={provider.id}
               onDateChange={setSelectedDate}
               onPeriodChange={setSelectedPeriod}
           />

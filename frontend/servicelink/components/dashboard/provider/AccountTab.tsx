@@ -5,9 +5,9 @@ import {
     Camera, Phone, Mail, CalendarDays, ShieldCheck, ClipboardEdit,
     MapPin, Pencil, X, Save, Monitor, Sun, Moon, Zap, Star,
 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, useMap, Circle } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+// import { MapContainer, TileLayer, Marker, useMap, Circle } from "react-leaflet";
+// import L from "leaflet";
+// import "leaflet/dist/leaflet.css";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     fetchProviderProfile,
@@ -15,24 +15,38 @@ import {
     uploadProviderPicture,
 } from "@/store/slices/providerProfileSlice";
 
+import dynamic from "next/dynamic";
+
+const MapComponent = dynamic(
+    () => import("@/components/dashboard/user/map/MapComponent"),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                Loading map...
+            </div>
+        ),
+    }
+);
+
 type Theme = "system" | "light" | "dark";
 type Language = "en" | "ne";
 
-const customMarkerIcon = L.icon({
-    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-});
-
-function MapRecenter({ center }: { center: [number, number] }) {
-    const map = useMap();
-    useEffect(() => {
-        setTimeout(() => map.invalidateSize(), 100);
-        map.setView(center, map.getZoom());
-    }, [map, center]);
-    return null;
-}
+// const customMarkerIcon = L.icon({
+//     iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+//     shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+//     iconSize: [25, 41],
+//     iconAnchor: [12, 41],
+// });
+//
+// function MapRecenter({ center }: { center: [number, number] }) {
+//     const map = useMap();
+//     useEffect(() => {
+//         setTimeout(() => map.invalidateSize(), 100);
+//         map.setView(center, map.getZoom());
+//     }, [map, center]);
+//     return null;
+// }
 
 // NOTE: backend (ProviderProfileDTO) currently only exposes a single
 // isVerified boolean — no per-check timestamps. These stay static until
@@ -338,16 +352,11 @@ export default function AccountTab() {
                             </div>
 
                             <div className="h-28 w-full rounded-xl overflow-hidden border border-slate-100 relative z-0 shadow-inner">
-                                <MapContainer center={coordinates} zoom={11} className="w-full h-full" zoomControl={false} dragging={false} scrollWheelZoom={false}>
-                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                    <Marker position={coordinates} icon={customMarkerIcon} />
-                                    <Circle
-                                        center={coordinates}
-                                        radius={(profile?.travelRadiusKm ?? 10) * 1000}
-                                        pathOptions={{ color: "#e8683f", fillColor: "#e8683f", fillOpacity: 0.15 }}
-                                    />
-                                    <MapRecenter center={coordinates} />
-                                </MapContainer>
+                                <MapComponent
+                                    center={coordinates}
+                                    radius={profile?.travelRadiusKm ?? 10}
+                                    interactive={false}
+                                />
                             </div>
                         </div>
                     </div>
@@ -424,12 +433,11 @@ export default function AccountTab() {
                                     </div>
 
                                     <div className="h-56 md:h-full min-h-[220px] md:col-span-2 rounded-xl overflow-hidden border border-slate-100 relative z-0">
-                                        <MapContainer center={coordinates} zoom={12} className="w-full h-full">
-                                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                            <Marker position={coordinates} icon={customMarkerIcon} />
-                                            <Circle center={coordinates} radius={tempRadius * 1000} pathOptions={{ color: "#e8683f", fillColor: "#e8683f", fillOpacity: 0.15 }} />
-                                            <MapRecenter center={coordinates} />
-                                        </MapContainer>
+                                        <MapComponent
+                                            center={coordinates}
+                                            radius={tempRadius}
+                                            interactive={true}
+                                        />
                                     </div>
                                 </div>
 
