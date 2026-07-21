@@ -50,4 +50,10 @@ public class AppointmentSummaryDTO {
     private AppointmentStatus status;
     private Integer           totalPrice;
     private String            address;
+
+    // ── Customer snapshot — needed by the provider's booking list ──────────
+    private String customerName;
+    private String customerPhone;
+    private String customerProfilePictureUrl;
+
 }

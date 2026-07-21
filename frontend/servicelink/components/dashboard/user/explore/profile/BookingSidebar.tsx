@@ -3,11 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "react-toastify";
+import axios from "axios";
 import {
     MessageCircle, Phone, Mic, Upload, CheckCircle2,
     MapPin, Sun, Sunset, Moon, X, Navigation, Loader2,
     Calendar, ShieldCheck, MousePointerClick, Video, Image,
 } from "lucide-react";
+import type { Map as LeafletMap } from "leaflet";
 import { ProviderData } from "./types";
 import BookingDetailModal from "./BookingDetailsModal";
 import api from "@/utils/axios";
@@ -57,6 +59,12 @@ interface AppointmentResponse {
     attachedAudioUrl: string | null;
 }
 
+// ProviderData doesn't declare `specialties` — kept as an optional extension
+// rather than `as any`, so the cast stays type-checked.
+interface ProviderWithSpecialties extends ProviderData {
+    specialties?: string[];
+}
+
 const PERIOD_LABELS: Record<string, { label: string; time: string; icon: React.ElementType }> = {
     morning:   { label: "Morning",   time: "8–12 AM",  icon: Sun    },
     afternoon: { label: "Afternoon", time: "12–5 PM",  icon: Sunset },
@@ -88,6 +96,19 @@ function formatDateForBackend(date: Date | undefined): string {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day   = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+}
+
+/** Type-safe extraction from an unknown catch value — replaces `catch (err: any)`. */
+function extractBookingError(err: unknown): { status: number; message: string } {
+    if (axios.isAxiosError(err)) {
+        const data = err.response?.data as { message?: string } | undefined;
+        return {
+            status: err.response?.status ?? 0,
+            message: data?.message ?? err.message ?? "Booking failed. Please try again.",
+        };
+    }
+    if (err instanceof Error) return { status: 0, message: err.message };
+    return { status: 0, message: "Booking failed. Please try again." };
 }
 
 export default function BookingSidebar({
@@ -123,11 +144,31 @@ export default function BookingSidebar({
     };
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const mapRef       = useRef<any>(null);
+    const mapRef        = useRef<LeafletMap | null>(null);
 
-    useEffect(() => { if (externalIssue  !== undefined) setTaskSummary(externalIssue); }, [externalIssue]);
-    useEffect(() => { if (externalDate   !== undefined) setLocalDate(externalDate);    }, [externalDate]);
-    useEffect(() => { setLocalPeriod(externalPeriod ?? null); }, [externalPeriod]);
+    // ── Sync local editable state from parent props ────────────────────────
+    // Previously done via useEffect(() => setState(...), [prop]) — that
+    // pattern triggers react-hooks/set-state-in-effect (extra render +
+    // possible cascading updates). Instead we compare against the last-seen
+    // prop value in a ref and adjust state during render itself, which React
+    // explicitly supports and does not schedule an extra commit for.
+    const prevIssueRef = useRef(externalIssue);
+    if (externalIssue !== undefined && externalIssue !== prevIssueRef.current) {
+        prevIssueRef.current = externalIssue;
+        setTaskSummary(externalIssue);
+    }
+
+    const prevDateRef = useRef(externalDate);
+    if (externalDate !== undefined && externalDate !== prevDateRef.current) {
+        prevDateRef.current = externalDate;
+        setLocalDate(externalDate);
+    }
+
+    const prevPeriodRef = useRef(externalPeriod);
+    if (externalPeriod !== prevPeriodRef.current) {
+        prevPeriodRef.current = externalPeriod;
+        setLocalPeriod(externalPeriod ?? null);
+    }
 
     useEffect(() => {
         return () => { if (media) URL.revokeObjectURL(media.previewUrl); };
@@ -172,23 +213,27 @@ export default function BookingSidebar({
                 setMarkerPos([lat, lng]);
                 await reverseGeocode(lat, lng);
                 setIsGeoLoading(false);
-                if (mapRef.current) mapRef.current.setView([lat, lng], 16);
+                mapRef.current?.setView([lat, lng], 16);
             },
             () => { setIsGeoLoading(false); alert("Unable to detect location."); },
             { enableHighAccuracy: true }
         );
     };
 
+    // Dynamic import instead of require() — also avoids the SSR/window issue
+    // the same way the require() call did, without the lint violation.
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            const L = require("leaflet");
-            delete (L.Icon.Default.prototype as any)._getIconUrl;
+        let cancelled = false;
+        import("leaflet").then((L) => {
+            if (cancelled) return;
+            delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
             L.Icon.Default.mergeOptions({
                 iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
                 iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
                 shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
             });
-        }
+        });
+        return () => { cancelled = true; };
     }, []);
 
     const validateBooking = (): string | null => {
@@ -268,9 +313,8 @@ export default function BookingSidebar({
             toast.success("Appointment booked successfully!", { position: "top-right" });
             setIsModalOpen(true);
 
-        } catch (err: any) {
-            const status  = err?.response?.status ?? err?.status ?? 0;
-            const message = err?.response?.data?.message ?? err?.message ?? "Booking failed. Please try again.";
+        } catch (err: unknown) {
+            const { status, message } = extractBookingError(err);
 
             if (status === 401) {
                 toast.error("Please log in as a customer to book.", { position: "top-right" });
@@ -294,15 +338,14 @@ export default function BookingSidebar({
     const estimatedMax = services.reduce((s, svc) => s + svc.priceMax, 0);
     const dateDisplay  = formatDateDisplay(localDate);
     const periodInfo   = localPeriod ? PERIOD_LABELS[localPeriod] : null;
+    const specialtiesLabel = (provider as ProviderWithSpecialties).specialties?.join(", ") ?? "Certified Local Expert";
 
     return (
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col gap-0 overflow-hidden w-full max-w-sm sm:max-w-md lg:max-w-sm mx-auto">
             {/* Header Title Stack */}
             <div className="px-4 sm:px-5 pt-5 pb-4 border-b border-gray-100">
                 <h2 className="font-bold text-gray-900 text-lg leading-tight">Book This Provider</h2>
-                <p className="text-xs text-gray-400 mt-0.5 truncate">
-                    {(provider as any).specialties?.join(", ") ?? "Certified Local Expert"}
-                </p>
+                <p className="text-xs text-gray-400 mt-0.5 truncate">{specialtiesLabel}</p>
             </div>
 
             <div className="flex flex-col gap-0 divide-y divide-gray-100">
@@ -311,7 +354,7 @@ export default function BookingSidebar({
                 <div className="px-4 sm:px-5 py-3.5 sm:py-4">
                     <p className="text-xs font-semibold text-gray-500 mb-2">Selected Services</p>
                     {hasServices ? (
-                        <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto pr-0.5">
+                        <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto pr-0.5">
                             {services.map((svc) => (
                                 <div key={svc.name} className="flex items-center justify-between gap-3 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
                                     <span className="text-sm font-medium text-gray-800 truncate">{svc.name}</span>
@@ -412,6 +455,7 @@ export default function BookingSidebar({
                             </div>
                             <div className="relative rounded-xl overflow-hidden border border-gray-100 bg-gray-50 h-24 flex items-center justify-center">
                                 {media.type === "image" ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
                                     <img src={media.previewUrl} alt="preview" className="w-full h-full object-cover" />
                                 ) : (
                                     <video src={media.previewUrl} className="w-full h-full object-cover" muted playsInline />
@@ -475,7 +519,11 @@ export default function BookingSidebar({
                     </button>
                     {showMap && (
                         <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 h-44 w-full">
-                            <MapContainer center={markerPos} zoom={15} style={{ height: "100%", width: "100%" }} whenReady={(mapInstance: any) => { mapRef.current = mapInstance.target; }}>
+                            {/* MapContainer forwards `ref` to the underlying Leaflet Map instance
+                                in react-leaflet v4/v5 — this replaces the old `whenReady`
+                                callback (which no longer accepts an argument, causing the
+                                TS2769 overload mismatch) and removes the `any` typing. */}
+                            <MapContainer ref={mapRef} center={markerPos} zoom={15} style={{ height: "100%", width: "100%" }}>
                                 <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                 <Marker position={markerPos} eventHandlers={{ click: async (e) => { const { lat, lng } = e.latlng; setMarkerPos([lat, lng]); await reverseGeocode(lat, lng); } }} />
                             </MapContainer>

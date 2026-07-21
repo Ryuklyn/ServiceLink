@@ -103,4 +103,10 @@ public class AppointmentResponseDTO {
     private LocalDateTime     startedAt;
     private LocalDateTime     completedAt;
     private LocalDateTime     cancelledAt;
+
+    // ── Customer Snapshot ─────────────────────────────────────────────────────
+    private String customerName;
+    private String customerPhone;
+    private String customerEmail;
+    private String customerProfilePictureUrl;
 }

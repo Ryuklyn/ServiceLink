@@ -14,6 +14,8 @@ import com.servicelink.core.model.appointment.AppointmentStatus;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.ProviderService;
 import com.servicelink.core.model.provider.ServiceCatalog;
+import com.servicelink.core.model.user.User;
+import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.appointment.ProviderServiceRepository;
@@ -28,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,6 +44,11 @@ public class AppointmentService {
     private final ServiceCatalogRepository catalogRepo;
     private final AppointmentMapper mapper;
     private final AppointmentPricingService pricingService;
+    private final UserRepository userRepo;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CUSTOMER-FACING
+    // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional
     public AppointmentResponseDTO book(Long customerId, AppointmentRequestDTO req) {
@@ -88,7 +97,8 @@ public class AppointmentService {
         Appointment saved = appointmentRepo.save(appointment);
         log.info("Appointment {} created for customer {} and provider {}", saved.getId(), customerId, provider.getId());
 
-        return mapper.toResponseDTO(saved, providerService);
+        User customer = userRepo.findById(customerId).orElse(null);
+        return mapper.toResponseDTO(saved, providerService, customer);
     }
 
     @Transactional(readOnly = true)
@@ -98,7 +108,8 @@ public class AppointmentService {
                 ? appointmentRepo.findByCustomerIdWithDetails(customerId, pageable)
                 : appointmentRepo.findByCustomerIdAndStatusWithDetails(customerId, status, pageable);
 
-        return appointments.map(mapper::toSummaryDTO);
+        User customer = userRepo.findById(customerId).orElse(null);
+        return appointments.map(a -> mapper.toSummaryDTO(a, customer));
     }
 
     @Transactional(readOnly = true)
@@ -106,7 +117,8 @@ public class AppointmentService {
         Appointment appointment = appointmentRepo.findByIdAndCustomerId(appointmentId, customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
 
-        return mapper.toResponseDTO(appointment, resolveProviderService(appointment));
+        User customer = userRepo.findById(customerId).orElse(null);
+        return mapper.toResponseDTO(appointment, resolveProviderService(appointment), customer);
     }
 
     @Transactional
@@ -118,59 +130,9 @@ public class AppointmentService {
         applyStatusTransition(appointment, AppointmentStatus.CANCELLED, customerId, reason);
 
         log.info("Appointment {} cancelled by customer {}", appointmentId, customerId);
-        return mapper.toResponseDTO(appointmentRepo.save(appointment), resolveProviderService(appointment));
-    }
 
-    @Transactional(readOnly = true)
-    public Page<AppointmentSummaryDTO> getProviderAppointments(
-            Long providerUserId, AppointmentStatus status, Pageable pageable) {
-        Long providerId = resolveProviderIdForUser(providerUserId);
-        Page<Appointment> appointments = status == null
-                ? appointmentRepo.findByProviderIdWithDetails(providerId, pageable)
-                : appointmentRepo.findByProviderIdAndStatusWithDetails(providerId, status, pageable);
-
-        return appointments.map(mapper::toSummaryDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public AppointmentResponseDTO getProviderAppointmentDetail(Long providerUserId, Long appointmentId) {
-        Long providerId = resolveProviderIdForUser(providerUserId);
-        Appointment appointment = appointmentRepo.findByIdAndProviderId(appointmentId, providerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
-
-        return mapper.toResponseDTO(appointment, resolveProviderService(appointment));
-    }
-
-    @Transactional(readOnly = true)
-    public List<AppointmentSummaryDTO> getProviderUpcomingJobs(Long providerUserId) {
-        Long providerId = resolveProviderIdForUser(providerUserId);
-
-        return appointmentRepo.findUpcomingByProvider(providerId, LocalDate.now()).stream()
-                .map(mapper::toSummaryDTO)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<AppointmentSummaryDTO> getProviderDayView(Long providerUserId, LocalDate date) {
-        Long providerId = resolveProviderIdForUser(providerUserId);
-
-        return appointmentRepo.findByProviderAndDate(providerId, date).stream()
-                .map(mapper::toSummaryDTO)
-                .toList();
-    }
-
-    @Transactional
-    public AppointmentResponseDTO updateStatusByProvider(
-            Long providerUserId, Long appointmentId, AppointmentStatusUpdateDTO req) {
-        Long providerId = resolveProviderIdForUser(providerUserId);
-        Appointment appointment = appointmentRepo.findByIdAndProviderId(appointmentId, providerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
-
-        assertTransition(appointment, req.getStatus());
-        applyStatusTransition(appointment, req.getStatus(), providerId, req.getReason());
-
-        log.info("Appointment {} changed to {} by provider {}", appointmentId, req.getStatus(), providerId);
-        return mapper.toResponseDTO(appointmentRepo.save(appointment), resolveProviderService(appointment));
+        User customer = userRepo.findById(customerId).orElse(null);
+        return mapper.toResponseDTO(appointmentRepo.save(appointment), resolveProviderService(appointment), customer);
     }
 
     @Transactional(readOnly = true)
@@ -185,6 +147,70 @@ public class AppointmentService {
                 .build();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // PROVIDER-FACING
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public Page<AppointmentSummaryDTO> getProviderAppointments(
+            Long providerUserId, AppointmentStatus status, Pageable pageable) {
+        Long providerId = resolveProviderIdForUser(providerUserId);
+        Page<Appointment> appointments = status == null
+                ? appointmentRepo.findByProviderIdWithDetails(providerId, pageable)
+                : appointmentRepo.findByProviderIdAndStatusWithDetails(providerId, status, pageable);
+
+        Map<Long, User> customerMap = batchLoadCustomers(appointments.getContent());
+        return appointments.map(a -> mapper.toSummaryDTO(a, customerMap.get(a.getCustomerId())));
+    }
+
+    @Transactional(readOnly = true)
+    public AppointmentResponseDTO getProviderAppointmentDetail(Long providerUserId, Long appointmentId) {
+        Long providerId = resolveProviderIdForUser(providerUserId);
+        Appointment appointment = appointmentRepo.findByIdAndProviderId(appointmentId, providerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
+
+        User customer = userRepo.findById(appointment.getCustomerId()).orElse(null);
+        return mapper.toResponseDTO(appointment, resolveProviderService(appointment), customer);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentSummaryDTO> getProviderUpcomingJobs(Long providerUserId) {
+        Long providerId = resolveProviderIdForUser(providerUserId);
+        List<Appointment> appointments = appointmentRepo.findUpcomingByProvider(providerId, LocalDate.now());
+
+        Map<Long, User> customerMap = batchLoadCustomers(appointments);
+        return appointments.stream()
+                .map(a -> mapper.toSummaryDTO(a, customerMap.get(a.getCustomerId())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentSummaryDTO> getProviderDayView(Long providerUserId, LocalDate date) {
+        Long providerId = resolveProviderIdForUser(providerUserId);
+        List<Appointment> appointments = appointmentRepo.findByProviderAndDate(providerId, date);
+
+        Map<Long, User> customerMap = batchLoadCustomers(appointments);
+        return appointments.stream()
+                .map(a -> mapper.toSummaryDTO(a, customerMap.get(a.getCustomerId())))
+                .toList();
+    }
+
+    @Transactional
+    public AppointmentResponseDTO updateStatusByProvider(
+            Long providerUserId, Long appointmentId, AppointmentStatusUpdateDTO req) {
+        Long providerId = resolveProviderIdForUser(providerUserId);
+        Appointment appointment = appointmentRepo.findByIdAndProviderId(appointmentId, providerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
+
+        assertTransition(appointment, req.getStatus());
+        applyStatusTransition(appointment, req.getStatus(), providerId, req.getReason());
+
+        log.info("Appointment {} changed to {} by provider {}", appointmentId, req.getStatus(), providerId);
+
+        User customer = userRepo.findById(appointment.getCustomerId()).orElse(null);
+        return mapper.toResponseDTO(appointmentRepo.save(appointment), resolveProviderService(appointment), customer);
+    }
+
     @Transactional(readOnly = true)
     public AppointmentStatsDTO getProviderStats(Long providerUserId) {
         Long providerId = resolveProviderIdForUser(providerUserId);
@@ -197,6 +223,20 @@ public class AppointmentService {
                 .completed(appointmentRepo.countByProvider_IdAndStatus(providerId, AppointmentStatus.COMPLETED))
                 .cancelled(appointmentRepo.countByProvider_IdAndStatus(providerId, AppointmentStatus.CANCELLED))
                 .build();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PRIVATE HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Batch-loads all distinct customers for a list of appointments in a single query (avoids N+1). */
+    private Map<Long, User> batchLoadCustomers(List<Appointment> appointments) {
+        List<Long> customerIds = appointments.stream()
+                .map(Appointment::getCustomerId)
+                .distinct()
+                .toList();
+        return userRepo.findAllById(customerIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
     }
 
     private void assertTransition(Appointment appointment, AppointmentStatus next) {
