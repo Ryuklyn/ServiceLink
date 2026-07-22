@@ -150,9 +150,9 @@ export default function BookingsPage() {
   };
 
   return (
-      <div className="space-y-6 mx-auto p-4">
-        {/* Tabs */}
-        <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+      <div className="space-y-6 mx-auto p-2 sm:p-4 max-w-7xl">
+        {/* Tabs - Horizontal scrolling enabled for small mobile viewports */}
+        <div className="flex items-center gap-2 border-b border-gray-100 pb-3 overflow-x-auto no-scrollbar scroll-smooth -mx-2 px-2 sm:mx-0 sm:px-0">
           {(["Active", "Upcoming", "History"] as const).map((tab) => {
             const count =
                 tab === "Active"   ? activeList.length :
@@ -162,7 +162,7 @@ export default function BookingsPage() {
                 <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 ${
+                    className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 shrink-0 ${
                         isSelected
                             ? "bg-[#1e3a8a] text-white shadow-sm"
                             : "bg-gray-50 text-gray-600 hover:bg-gray-100"
@@ -182,7 +182,7 @@ export default function BookingsPage() {
         {/* Cards */}
         <div className="space-y-4">
           {filteredList.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-150 p-16 text-center shadow-sm">
+              <div className="bg-white rounded-2xl border border-gray-150 p-12 sm:p-16 text-center shadow-sm">
                 <p className="text-gray-400 text-sm font-medium">
                   No bookings found in this section.
                 </p>
@@ -207,19 +207,30 @@ export default function BookingsPage() {
                 return (
                     <div
                         key={appt.id}
-                        className={`bg-white rounded-2xl border-l-4 border-y border-r border-gray-200 shadow-sm p-6 transition-all duration-200 ${borderColors[tab]}`}
+                        className={`bg-white rounded-2xl border-l-4 border-y border-r border-gray-200 shadow-sm p-4 sm:p-6 transition-all duration-200 ${borderColors[tab]}`}
                     >
-                      {/* Top */}
+                      {/* Top section */}
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-gray-100">
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 bg-blue-50 text-[#1e3a8a] rounded-xl flex items-center justify-center text-sm font-bold shrink-0 border border-blue-100">
-                            {(appt.providerName ?? "?").slice(0, 2).toUpperCase()}
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          <div className="w-12 h-12 bg-blue-50 text-[#1e3a8a] rounded-xl flex items-center justify-center text-sm font-bold shrink-0 border border-blue-100 overflow-hidden relative">
+                            {appt.providerProfilePicture ? (
+                                <img
+                                    src={appt.providerProfilePicture}
+                                    alt={appt.providerName}
+                                    className="w-full h-full object-cover rounded-xl absolute inset-0"
+                                    onError={(e) => {
+                                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                                    }}
+                                />
+                            ) : (
+                                (appt.providerName ?? "?").slice(0, 2).toUpperCase()
+                            )}
                           </div>
-                          <div>
-                            <h3 className="font-bold text-gray-900 text-base tracking-tight">
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-gray-900 text-base tracking-tight truncate">
                               {appt.providerName}
                             </h3>
-                            <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                            <p className="text-xs text-gray-500 mt-0.5 font-medium truncate">
                               {appt.subServiceName}
                             </p>
                             <div className="mt-2">
@@ -244,18 +255,19 @@ export default function BookingsPage() {
                           </div>
                         </div>
 
-                        <div className="sm:text-right self-start sm:self-auto shrink-0 bg-gray-50/60 p-2.5 rounded-xl border border-gray-100 min-w-[120px]">
+                        {/* Price Display */}
+                        <div className="sm:text-right w-full sm:w-auto shrink-0 bg-gray-50/60 p-2.5 rounded-xl border border-gray-100 sm:min-w-[120px] flex sm:flex-col justify-between items-center sm:items-end gap-1">
                           <p className="text-base font-black text-[#1e3a8a]">
                             Rs. {(appt.totalPrice ?? 0).toLocaleString()}
                           </p>
-                          <span className="block text-[9px] font-bold text-gray-400 mt-0.5 uppercase tracking-wider">
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">
                       {appt.status === "COMPLETED" ? "Paid" : "Pay after service"}
                     </span>
                         </div>
                       </div>
 
-                      {/* Meta */}
-                      <div className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-gray-600 font-medium border-b border-gray-100">
+                      {/* Meta Details Row */}
+                      <div className="py-4 flex flex-wrap items-center gap-x-6 gap-y-2.5 text-xs text-gray-600 font-medium border-b border-gray-100">
                         <div className="flex items-center gap-2">
                           <Calendar size={15} className="text-gray-400 shrink-0" />
                           <span>{dateDisplay}</span>
@@ -264,15 +276,15 @@ export default function BookingsPage() {
                           <Clock size={15} className="text-gray-400 shrink-0" />
                           <span>{timeDisplay}</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0 max-w-full">
                           <MapPin size={15} className="text-gray-400 shrink-0" />
                           <span className="truncate">{appt.address}</span>
                         </div>
                       </div>
 
-                      {/* Bottom */}
-                      <div className="pt-4 grid grid-cols-1 md:grid-cols-12 gap-5 items-end">
-                        <div className="md:col-span-8 space-y-3">
+                      {/* Bottom / Actions Section */}
+                      <div className="pt-4 flex flex-col lg:flex-row lg:items-end justify-between gap-5">
+                        <div className="space-y-3 w-full lg:max-w-2xl">
                           <p className="text-[10px] text-gray-400 font-mono tracking-tight">
                             Booking Reference: BK-{appt.id}
                           </p>
@@ -284,7 +296,7 @@ export default function BookingsPage() {
                           )}
 
                           {tab === "Upcoming" && (
-                              <div className="space-y-2 max-w-2xl">
+                              <div className="space-y-2">
                                 {isLateWindow ? (
                                     <div className="bg-amber-50 text-amber-900 border border-amber-200 rounded-xl p-2.5 flex items-center gap-2 text-xs font-medium">
                                       <Clock size={14} className="text-amber-600 shrink-0" strokeWidth={2.5} />
@@ -296,7 +308,7 @@ export default function BookingsPage() {
                                       <span>Free window active. You can cancel or reschedule without fees.</span>
                                     </div>
                                 )}
-                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 flex flex-wrap items-center gap-2 text-xs">
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 flex flex-wrap items-center gap-1.5 text-xs">
                                   <div className="flex items-center gap-1 font-bold text-[#1e3a8a] text-[11px] uppercase tracking-wider mr-1">
                                     <Info size={13} className="text-[#1e3a8a] shrink-0" strokeWidth={2.5} />
                                     <span>Tiers:</span>
@@ -315,8 +327,8 @@ export default function BookingsPage() {
                           )}
                         </div>
 
-                        {/* Actions */}
-                        <div className="md:col-span-4 flex flex-row sm:flex-row md:flex-col justify-end gap-2 w-full">
+                        {/* Actions block — Stacked on mobile, side by side on tablets, packed nicely on larger layouts */}
+                        <div className="flex flex-col sm:flex-row lg:flex-col justify-end gap-2 w-full lg:w-72 shrink-0">
                           {tab === "Active" && (
                               <>
                                 <Link
@@ -350,7 +362,7 @@ export default function BookingsPage() {
                                               });
                                               setIsRescheduleModalOpen(true);
                                             }}
-                                            className="flex-1 px-3 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-xs rounded-xl transition-colors text-center"
+                                            className="flex-1 px-2 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center whitespace-nowrap"
                                         >
                                           Late Reschedule
                                         </button>
@@ -368,7 +380,7 @@ export default function BookingsPage() {
                                               });
                                               setIsCancelModalOpen(true);
                                             }}
-                                            className="flex-1 px-3 py-2.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 font-bold text-xs rounded-xl transition-colors text-center"
+                                            className="flex-1 px-2 py-2.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center whitespace-nowrap"
                                         >
                                           Late Cancel
                                         </button>
@@ -389,7 +401,7 @@ export default function BookingsPage() {
                                               });
                                               setIsRescheduleModalOpen(true);
                                             }}
-                                            className="flex-1 px-3 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors text-center"
+                                            className="flex-1 px-2 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
                                         >
                                           Reschedule
                                         </button>
@@ -407,7 +419,7 @@ export default function BookingsPage() {
                                               });
                                               setIsCancelModalOpen(true);
                                             }}
-                                            className="flex-1 px-3 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs rounded-xl transition-colors text-center"
+                                            className="flex-1 px-2 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
                                         >
                                           Cancel
                                         </button>
@@ -430,13 +442,13 @@ export default function BookingsPage() {
                                       <Star size={13} fill="white" /> Leave Review
                                     </Link>
                                 ) : (
-                                    <button className="px-4 py-2.5 border border-gray-200 text-gray-400 font-bold text-xs rounded-xl w-full cursor-default">
+                                    <button className="px-4 py-2.5 border border-gray-200 text-gray-400 font-bold text-xs rounded-xl w-full cursor-default text-center">
                                       Cancelled
                                     </button>
                                 )}
                                 <Link
                                     href={`/dashboard/user/explore/profile?id=${appt.id}`}
-                                    className="px-4 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 w-full"
+                                    className="px-4 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 w-full text-center"
                                 >
                                   <Eye size={13} /> Book Again
                                 </Link>
