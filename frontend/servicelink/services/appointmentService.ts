@@ -3,6 +3,7 @@ import api from "@/utils/axios";
 export interface AppointmentSummary {
     id: number;
     providerName: string;
+    providerId: number;
     providerProfilePicture: string | null;
     subServiceName: string;
     appointmentDate: string;

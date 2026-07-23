@@ -19,10 +19,6 @@ interface ProviderAvailabilityState {
     error: string | null;
 }
 
-// function isoDate(d: Date): string {
-//     return d.toISOString().split("T")[0];
-// }
-
 // Local, timezone-safe ISO formatter — same fix as AvailabilityTab.tsx.
 // toISOString() converts to UTC first, which shifts the date backward for
 // UTC+ zones like Nepal (UTC+5:45) during local midnight–5:45AM, causing

@@ -48,6 +48,7 @@ function formatDate(dateStr: string): string {
 
 interface SelectedBooking {
   id: string;
+  providerId: number;
   providerName: string;
   serviceName: string;
   dateDisplay: string;
@@ -352,6 +353,7 @@ export default function BookingsPage() {
                                             onClick={() => {
                                               setSelectedBooking({
                                                 id: String(appt.id),
+                                                providerId: appt.providerId,
                                                 providerName: appt.providerName,
                                                 serviceName: appt.subServiceName,
                                                 dateDisplay, timeDisplay,
@@ -370,6 +372,7 @@ export default function BookingsPage() {
                                             onClick={() => {
                                               setSelectedBooking({
                                                 id: String(appt.id),
+                                                providerId: appt.providerId,
                                                 providerName: appt.providerName,
                                                 serviceName: appt.subServiceName,
                                                 dateDisplay, timeDisplay,
@@ -391,6 +394,7 @@ export default function BookingsPage() {
                                             onClick={() => {
                                               setSelectedBooking({
                                                 id: String(appt.id),
+                                                providerId: appt.providerId,
                                                 providerName: appt.providerName,
                                                 serviceName: appt.subServiceName,
                                                 dateDisplay, timeDisplay,
@@ -409,6 +413,7 @@ export default function BookingsPage() {
                                             onClick={() => {
                                               setSelectedBooking({
                                                 id: String(appt.id),
+                                                providerId: appt.providerId,
                                                 providerName: appt.providerName,
                                                 serviceName: appt.subServiceName,
                                                 dateDisplay, timeDisplay,
@@ -469,6 +474,7 @@ export default function BookingsPage() {
                 onClose={() => { setIsRescheduleModalOpen(false); setSelectedBooking(null); }}
                 currentBooking={{
                   id: selectedBooking.id,
+                  providerId: selectedBooking.providerId,
                   date: selectedBooking.dateDisplay,
                   time: selectedBooking.timeDisplay,
                   provider: selectedBooking.providerName,
