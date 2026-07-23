@@ -63,6 +63,7 @@ public class AppointmentMapper {
 
         return AppointmentSummaryDTO.builder()
                 .id(appt.getId())
+                .providerId(appt.getProvider().getId())
                 .providerName(appt.getProvider().getFullName())
                 .providerProfilePicture(appt.getProvider().getProfilePictureUrl())
                 .subServiceName(appt.getServiceCatalog().getSubServiceName())

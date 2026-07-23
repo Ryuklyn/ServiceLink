@@ -185,4 +185,18 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("currentStatus") AppointmentStatus currentStatus,
             @Param("newStatus") AppointmentStatus newStatus,
             @Param("cutoffDate") LocalDate cutoffDate);
+
+    @Query("""
+        SELECT COUNT(a) > 0 FROM Appointment a
+        WHERE a.provider.id = :providerId
+          AND a.appointmentDate = :date
+          AND a.timeSlot = :slot
+          AND a.status <> 'CANCELLED'
+          AND a.id <> :excludeAppointmentId
+        """)
+    boolean isSlotTakenExcluding(
+            @Param("providerId") Long providerId,
+            @Param("date") LocalDate date,
+            @Param("slot") TimeSlot slot,
+            @Param("excludeAppointmentId") Long excludeAppointmentId);
 }

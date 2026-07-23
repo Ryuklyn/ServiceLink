@@ -11,4 +11,8 @@ public class ResourceNotFoundException extends AppException {
     public ResourceNotFoundException(String resourceName, Long id) {
         this(resourceName + " not found with id: " + id);
     }
+
+    public ResourceNotFoundException(String resourceName, String identifier) {
+        this(resourceName + " not found: " + identifier);
+    }
 }

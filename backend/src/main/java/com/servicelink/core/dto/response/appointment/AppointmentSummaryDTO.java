@@ -41,6 +41,7 @@ import java.time.LocalTime;
 public class AppointmentSummaryDTO {
 
     private Long              id;
+    private Long              providerId;
     private String            providerName;
     private String            providerProfilePicture;
     private String            subServiceName;
