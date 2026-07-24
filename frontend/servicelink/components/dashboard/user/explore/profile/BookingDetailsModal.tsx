@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   MapPin,
@@ -49,6 +50,14 @@ export default function BookingDetailsModal({
                                             }: BookingModalProps) {
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
 
+  // Portals need a real DOM node to render into, which only exists client-side
+  // (this component still runs once on the server for the initial "use client"
+  // render). Gate on `mounted` so we don't touch `document` during SSR.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -71,7 +80,7 @@ export default function BookingDetailsModal({
     return () => window.removeEventListener("keydown", handleKey);
   }, [lightbox, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const {
     services,
@@ -141,7 +150,7 @@ export default function BookingDetailsModal({
     setLightbox({ type: item.type, src: item.src });
   };
 
-  return (
+  const modalContent = (
       <>
         {/* ── Main Modal ── */}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 font-sans">
@@ -508,4 +517,6 @@ export default function BookingDetailsModal({
         )}
       </>
   );
+
+  return createPortal(modalContent, document.body);
 }

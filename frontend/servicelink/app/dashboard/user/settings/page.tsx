@@ -8,6 +8,7 @@ import { fetchUser, updateUserLocally } from "@/store/slices/userSlice";
 import AddPhoneModal from "@/components/dashboard/user/settings/AddPhoneModal";
 import EditProfileModal from "@/components/dashboard/user/settings/EditProfileModal";
 import AvatarMenu from "@/components/dashboard/user/settings/AvatarMenu";
+import api from "@/utils/axios";
 import {
   MapPin,
   Plus,
@@ -49,6 +50,14 @@ interface SavedProvider {
   rating: number;
 }
 
+// Matches RescheduleTokenBalanceDTO from GET /appointments/reschedule-tokens/me
+interface RescheduleTokenBalance {
+  year: number;
+  tokensTotal: number;
+  tokensUsed: number;
+  tokensRemaining: number;
+}
+
 export default function SettingsPage() {
 
   const dispatch = useAppDispatch();
@@ -58,11 +67,32 @@ export default function SettingsPage() {
   const [showAddPhoneModal, setShowAddPhoneModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 
+  // ── Flex Token Wallet — reschedule tokens are real; cancellation tokens
+  // have no backend yet (no CancelToken entity/endpoint exists), so that
+  // side stays static until that's built. ──
+  const [rescheduleTokens, setRescheduleTokens] = useState<RescheduleTokenBalance | null>(null);
+  const [tokensLoading, setTokensLoading] = useState(true);
+
   useEffect(() => {
     if (!user) {
       dispatch(fetchUser());
     }
   }, [dispatch, user]);
+
+  useEffect(() => {
+    api
+        .get<RescheduleTokenBalance>("/appointments/reschedule-tokens/me")
+        .then(({ data }) => setRescheduleTokens(data))
+        .catch((err) => {
+          console.error(
+              "Failed to fetch reschedule token balance:",
+              err?.response?.status,
+              err?.response?.data ?? err?.message,
+          );
+          setRescheduleTokens(null);
+        })
+        .finally(() => setTokensLoading(false));
+  }, []);
 
   // ── Address Mock States ──
   const [addresses, setAddresses] = useState<SavedAddress[]>([
@@ -312,6 +342,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Reschedule token — wired to GET /appointments/reschedule-tokens/me */}
             <div className="bg-[#f0f4ff]/60 border border-[#dbe4ff] rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-[#f0f4ff]/80">
               <div className="w-14 h-14 rounded-full bg-[#dbe4ff] flex items-center justify-center text-[#1e3a8a] shrink-0 shadow-2xs">
                 <Ticket size={24} className="rotate-45" />
@@ -321,17 +352,27 @@ export default function SettingsPage() {
                   Reschedule Flex Token
                 </h4>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-black text-[#1e3a8a]">3</span>
+                  <span className="text-2xl font-black text-[#1e3a8a]">
+                    {tokensLoading ? (
+                        <span className="inline-block w-6 h-6 bg-[#dbe4ff] rounded animate-pulse align-middle" />
+                    ) : (
+                        rescheduleTokens?.tokensRemaining ?? "—"
+                    )}
+                  </span>
                   <span className="text-[10px] text-gray-500 font-medium">
                   Available
                 </span>
                 </div>
                 <p className="text-[9px] text-gray-400 font-normal italic">
-                  3 emergency tokens allocated per year
+                  {rescheduleTokens
+                      ? `${rescheduleTokens.tokensTotal} emergency tokens allocated per year`
+                      : "Allocated per year"}
                 </p>
               </div>
             </div>
 
+            {/* Cancellation token — NOT wired yet: no CancelToken backend exists.
+                Left static intentionally until that entity/endpoint is built. */}
             <div className="bg-[#fff2ee]/60 border border-[#ffe3da] rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-[#fff2ee]/80">
               <div className="w-14 h-14 rounded-full bg-[#ffe3da] flex items-center justify-center text-[#e8683f] shrink-0 shadow-2xs">
                 <Ticket size={24} className="-rotate-45" />

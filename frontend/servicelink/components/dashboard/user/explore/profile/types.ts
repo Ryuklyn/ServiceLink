@@ -39,6 +39,7 @@ export interface ProviderData {
   verified: boolean;
   available: boolean;
   areas: string[];
+  phone: string;
 
   location?: string;
   categories?: string[];

@@ -9,10 +9,15 @@ import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.security.JwtService;
+import com.servicelink.core.service.appointment.RescheduleTokenService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Year;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -21,6 +26,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final RescheduleTokenService rescheduleTokenService;
 
     public AuthResponseDTO register(RegisterRequestDTO request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -53,6 +59,20 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Invalid credentials");
+        }
+
+        // Activate this year's reschedule-token balance on first login of the
+        // year — idempotent (getOrCreateForYear only inserts if missing), so
+        // this is a no-op on every login after the first. Customer-only:
+        // providers don't book/reschedule appointments, so they don't need it.
+        if (user.getRole() == Role.CUSTOMER) {
+            try {
+                rescheduleTokenService.getOrCreateForYear(user.getId(), Year.now().getValue());
+            } catch (Exception e) {
+                // Never block a login over token bookkeeping — log and move on;
+                // the reschedule-tokens/me endpoint will lazily create it later anyway.
+                log.error("Failed to activate reschedule tokens for user {} on login", user.getId(), e);
+            }
         }
 
         String accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());

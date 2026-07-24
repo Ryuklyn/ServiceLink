@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { toast } from "react-toastify";
 import axios from "axios";
 import {
-    MessageCircle, Phone, Mic, Upload, CheckCircle2,
+    Phone, Mic, Upload, CheckCircle2,
     MapPin, Sun, Sunset, Moon, X, Navigation, Loader2,
     Calendar, ShieldCheck, MousePointerClick, Video, Image,
 } from "lucide-react";
@@ -13,6 +13,7 @@ import type { Map as LeafletMap } from "leaflet";
 import { ProviderData } from "./types";
 import BookingDetailModal from "./BookingDetailsModal";
 import api from "@/utils/axios";
+import WhatsAppButton from "@/components/shared/WhatsAppButton";
 
 const MapContainer = dynamic(() => import("react-leaflet").then((m) => m.MapContainer), { ssr: false });
 const TileLayer    = dynamic(() => import("react-leaflet").then((m) => m.TileLayer),    { ssr: false });
@@ -63,6 +64,7 @@ interface AppointmentResponse {
 // rather than `as any`, so the cast stays type-checked.
 interface ProviderWithSpecialties extends ProviderData {
     specialties?: string[];
+    phone?: string;
 }
 
 const PERIOD_LABELS: Record<string, { label: string; time: string; icon: React.ElementType }> = {
@@ -146,12 +148,6 @@ export default function BookingSidebar({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mapRef        = useRef<LeafletMap | null>(null);
 
-    // ── Sync local editable state from parent props ────────────────────────
-    // Previously done via useEffect(() => setState(...), [prop]) — that
-    // pattern triggers react-hooks/set-state-in-effect (extra render +
-    // possible cascading updates). Instead we compare against the last-seen
-    // prop value in a ref and adjust state during render itself, which React
-    // explicitly supports and does not schedule an extra commit for.
     const prevIssueRef = useRef(externalIssue);
     if (externalIssue !== undefined && externalIssue !== prevIssueRef.current) {
         prevIssueRef.current = externalIssue;
@@ -339,6 +335,7 @@ export default function BookingSidebar({
     const dateDisplay  = formatDateDisplay(localDate);
     const periodInfo   = localPeriod ? PERIOD_LABELS[localPeriod] : null;
     const specialtiesLabel = (provider as ProviderWithSpecialties).specialties?.join(", ") ?? "Certified Local Expert";
+    const providerPhone    = (provider as ProviderWithSpecialties).phone ?? "";
 
     return (
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col gap-0 overflow-hidden w-full max-w-sm sm:max-w-md lg:max-w-sm mx-auto">
@@ -589,9 +586,11 @@ export default function BookingSidebar({
                         )}
                     </button>
                     <div className="flex gap-2 w-full">
-                        <button type="button" className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 truncate">
-                            <MessageCircle size={15} className="shrink-0" /> WhatsApp
-                        </button>
+                        {/* Reusable WhatsApp Button Integration — same component/pattern as ExploreSection */}
+                        <WhatsAppButton
+                            phone={providerPhone}
+                            message={`Hi ${provider.name}, I'd like to book your services on ServiceLink.`}
+                        />
                         <button type="button" className="flex-1 border border-gray-200 text-gray-700 font-semibold py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 truncate">
                             <Phone size={15} className="shrink-0" /> Call
                         </button>

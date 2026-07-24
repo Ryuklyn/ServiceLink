@@ -52,6 +52,7 @@ function mapBackendToProviderData(data: any): ProviderData {
     areas: data.coveredDistricts
         ? data.coveredDistricts.split(",").map((d: string) => d.trim())
         : [data.baseDistrict ?? "Kathmandu"],
+    phone: data.phone ?? "",
     location: `${data.baseDistrict ?? "Kathmandu"}, Nepal`,
     categories: [data.primaryService],
     avatarUrl: data.profilePictureUrl ?? "",

@@ -58,6 +58,22 @@ public class GlobalExceptionHandler {
                 "An unexpected error occurred. Please try again.");
     }
 
+    /**
+     * Catch-all for CHECKED exceptions (java.lang.Exception, not RuntimeException).
+     * Without this, a checked exception — e.g. IOException bubbling up from
+     * KhaltiGatewayService's HttpClient calls through a controller method
+     * declared `throws Exception` — falls through every handler above
+     * (RuntimeException.class does NOT match checked exceptions) and hits
+     * Spring's own default error handling instead of this class, which is why
+     * such failures show up as a bare 500 with no log line from this handler.
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        log.error("Unhandled checked exception: {}", ex.getMessage(), ex);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
+                "An unexpected error occurred. Please try again.");
+    }
+
     private static ResponseEntity<Map<String, Object>> build(
             HttpStatus status, String code, String message) {
         return build(status, code, message, null);
