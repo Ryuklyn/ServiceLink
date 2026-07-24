@@ -480,6 +480,7 @@ export default function BookingsPage() {
                   provider: selectedBooking.providerName,
                 }}
                 isLate={selectedBooking.hoursRemaining < 24}
+                onRescheduled={fetchAllAppointments}
             />
         )}
 
