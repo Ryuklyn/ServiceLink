@@ -65,6 +65,7 @@ public class AppointmentMapper {
                 .id(appt.getId())
                 .providerId(appt.getProvider().getId())
                 .providerName(appt.getProvider().getFullName())
+                .providerPhone(appt.getProvider().getPhone())
                 .providerProfilePicture(appt.getProvider().getProfilePictureUrl())
                 .subServiceName(appt.getServiceCatalog().getSubServiceName())
                 .appointmentDate(appt.getAppointmentDate())

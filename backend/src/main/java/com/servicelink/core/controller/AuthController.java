@@ -114,17 +114,27 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
+//    @GetMapping("/me")
+//    public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
+//
+//        if (auth == null || !auth.isAuthenticated()) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//        }
+//
+//        User user = (User) auth.getPrincipal();
+//
+//        return ResponseEntity.ok(userMapper.toResponseDTO(user));
+//    }
+@GetMapping("/me")
+public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
 
-        if (auth == null || !auth.isAuthenticated()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        User user = (User) auth.getPrincipal();
-
-        return ResponseEntity.ok(userMapper.toResponseDTO(user));
+    if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof User)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+
+    User user = (User) auth.getPrincipal();
+    return ResponseEntity.ok(userMapper.toResponseDTO(user));
+}
 
     @PutMapping("/me")
     public ResponseEntity<UserResponseDTO> updateMe(

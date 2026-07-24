@@ -589,6 +589,7 @@ export default function BookingSidebar({
                         {/* Reusable WhatsApp Button Integration — same component/pattern as ExploreSection */}
                         <WhatsAppButton
                             phone={providerPhone}
+                            providerId={provider.id}
                             message={`Hi ${provider.name}, I'd like to book your services on ServiceLink.`}
                         />
                         <button type="button" className="flex-1 border border-gray-200 text-gray-700 font-semibold py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 truncate">

@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import ReschedulingModal from "@/components/dashboard/user/bookings/ReschedulingModal";
 import CancellationModal from "@/components/dashboard/user/bookings/CancelationModal";
 import { appointmentService, AppointmentSummary } from "@/services/appointmentService";
+import WhatsAppButton from "@/components/shared/WhatsAppButton";
 
 // Map backend status to frontend tab
 type FrontendTab = "Active" | "Upcoming" | "History";
@@ -329,60 +330,40 @@ export default function BookingsPage() {
                         </div>
 
                         {/* Actions block — Stacked on mobile, side by side on tablets, packed nicely on larger layouts */}
-                        <div className="flex flex-col sm:flex-row lg:flex-col justify-end gap-2 w-full lg:w-72 shrink-0">
+                        <div className="flex flex-col sm:flex-row lg:flex-col justify-end gap-2 w-full lg:w-72 shrink-0 items-stretch sm:items-center lg:items-stretch">
+
                           {tab === "Active" && (
-                              <>
+                              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full">
                                 <Link
                                     href="/dashboard/user/bookings/track"
-                                    className="px-4 py-2.5 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm w-full text-center"
+                                    className="flex-1 px-4 py-2.5 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm text-center"
                                 >
                                   <MapPin size={13} /> Track Order
                                 </Link>
-                                <button className="px-4 py-2.5 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm w-full">
-                                  <MessageSquare size={13} fill="white" /> WhatsApp Support
-                                </button>
-                              </>
+                                <div className="flex-1 w-full flex justify-center items-center">
+                                  <WhatsAppButton
+                                      phone={appt.providerPhone}
+                                      providerId={appt.providerId}
+                                      message={`Hi ${appt.providerName}, I have a question about my booking (BK-${appt.id}).`}
+                                      className="w-full justify-center text-center" // यहाँ सेन्टर एलाइनमेन्ट थपिएको छ
+                                  />
+                                </div>
+                              </div>
                           )}
 
                           {tab === "Upcoming" && (
-                              <>
-                                <div className="flex gap-2 w-full">
+                              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full">
+                                <div className="flex gap-2 flex-1 w-full">
                                   {isLateWindow ? (
                                       <>
                                         <button
-                                            onClick={() => {
-                                              setSelectedBooking({
-                                                id: String(appt.id),
-                                                providerId: appt.providerId,
-                                                providerName: appt.providerName,
-                                                serviceName: appt.subServiceName,
-                                                dateDisplay, timeDisplay,
-                                                address: appt.address,
-                                                price: appt.totalPrice,
-                                                hoursRemaining,
-                                                status: appt.status,
-                                              });
-                                              setIsRescheduleModalOpen(true);
-                                            }}
+                                            onClick={() => setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status })}
                                             className="flex-1 px-2 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center whitespace-nowrap"
                                         >
                                           Late Reschedule
                                         </button>
                                         <button
-                                            onClick={() => {
-                                              setSelectedBooking({
-                                                id: String(appt.id),
-                                                providerId: appt.providerId,
-                                                providerName: appt.providerName,
-                                                serviceName: appt.subServiceName,
-                                                dateDisplay, timeDisplay,
-                                                address: appt.address,
-                                                price: appt.totalPrice,
-                                                hoursRemaining,
-                                                status: appt.status,
-                                              });
-                                              setIsCancelModalOpen(true);
-                                            }}
+                                            onClick={() => setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status })}
                                             className="flex-1 px-2 py-2.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center whitespace-nowrap"
                                         >
                                           Late Cancel
@@ -391,39 +372,13 @@ export default function BookingsPage() {
                                   ) : (
                                       <>
                                         <button
-                                            onClick={() => {
-                                              setSelectedBooking({
-                                                id: String(appt.id),
-                                                providerId: appt.providerId,
-                                                providerName: appt.providerName,
-                                                serviceName: appt.subServiceName,
-                                                dateDisplay, timeDisplay,
-                                                address: appt.address,
-                                                price: appt.totalPrice,
-                                                hoursRemaining,
-                                                status: appt.status,
-                                              });
-                                              setIsRescheduleModalOpen(true);
-                                            }}
+                                            onClick={() => setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status })}
                                             className="flex-1 px-2 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
                                         >
                                           Reschedule
                                         </button>
                                         <button
-                                            onClick={() => {
-                                              setSelectedBooking({
-                                                id: String(appt.id),
-                                                providerId: appt.providerId,
-                                                providerName: appt.providerName,
-                                                serviceName: appt.subServiceName,
-                                                dateDisplay, timeDisplay,
-                                                address: appt.address,
-                                                price: appt.totalPrice,
-                                                hoursRemaining,
-                                                status: appt.status,
-                                              });
-                                              setIsCancelModalOpen(true);
-                                            }}
+                                            onClick={() => setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status })}
                                             className="flex-1 px-2 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
                                         >
                                           Cancel
@@ -431,33 +386,38 @@ export default function BookingsPage() {
                                       </>
                                   )}
                                 </div>
-                                <button className="px-4 py-2.5 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm w-full">
-                                  <MessageSquare size={13} fill="white" /> WhatsApp Support
-                                </button>
-                              </>
+                                <div className="flex-1 w-full flex justify-center items-center">
+                                  <WhatsAppButton
+                                      phone={appt.providerPhone}
+                                      providerId={appt.providerId}
+                                      message={`Hi ${appt.providerName}, I have a question about my upcoming booking (BK-${appt.id}).`}
+                                      className="w-full justify-center text-center" // सेन्टर एलाइनमेन्ट फिक्स
+                                  />
+                                </div>
+                              </div>
                           )}
 
                           {tab === "History" && (
-                              <>
+                              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full">
                                 {appt.status === "COMPLETED" ? (
                                     <Link
                                         href="/dashboard/user/bookings/review"
-                                        className="px-4 py-2.5 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm w-full text-center"
+                                        className="flex-1 px-4 py-2.5 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm text-center"
                                     >
                                       <Star size={13} fill="white" /> Leave Review
                                     </Link>
                                 ) : (
-                                    <button className="px-4 py-2.5 border border-gray-200 text-gray-400 font-bold text-xs rounded-xl w-full cursor-default text-center">
+                                    <button className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-400 font-bold text-xs rounded-xl cursor-default text-center">
                                       Cancelled
                                     </button>
                                 )}
                                 <Link
                                     href={`/dashboard/user/explore/profile?id=${appt.id}`}
-                                    className="px-4 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 w-full text-center"
+                                    className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 text-center"
                                 >
                                   <Eye size={13} /> Book Again
                                 </Link>
-                              </>
+                              </div>
                           )}
                         </div>
                       </div>

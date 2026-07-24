@@ -1,12 +1,21 @@
-// components/shared/WhatsAppButton.tsx
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+import { Phone as PhoneIcon, X, Loader2 } from "lucide-react";
+import api from "@/utils/axios";
+
 interface WhatsAppButtonProps {
-    phone: string;
+    phone: string;                 // provider's WhatsApp number (recipient)
     message: string;
+    providerId?: string | number;  // ties the check/click-log to the right provider thread
     variant?: "solid" | "outline" | "icon-only";
     label?: string;
 }
+
+// TODO: point this at your actual "edit profile" route.
+const PROFILE_ROUTE = "/dashboard/user/settings";
 
 function buildWhatsAppLink(phone: string, message: string): string {
     const digits = phone.replace(/\D/g, "");
@@ -14,7 +23,6 @@ function buildWhatsAppLink(phone: string, message: string): string {
     return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
 }
 
-// Official WhatsApp SVG Icon Component
 function WhatsAppIcon({ className = "h-4 w-4" }: { className?: string }) {
     return (
         <svg
@@ -31,44 +39,112 @@ function WhatsAppIcon({ className = "h-4 w-4" }: { className?: string }) {
 export default function WhatsAppButton({
                                            phone,
                                            message,
+                                           providerId,
                                            variant = "solid",
                                            label = "WhatsApp",
                                        }: WhatsAppButtonProps) {
-    const handleClick = () => {
-        console.log("whatsapp_click", { phone, context: message.slice(0, 40) });
+    const router = useRouter();
+    const [isChecking, setIsChecking]         = useState(false);
+    const [showPhoneModal, setShowPhoneModal] = useState(false);
+
+    const handleClick = async () => {
+        if (isChecking) return;
+        setIsChecking(true);
+
+        try {
+            // Verifies the LOGGED-IN USER (not the provider) has a phone on file
+            // before opening the chat.
+            const { data } = await api.get<{ phoneNumber?: string | null }>("/auth/me");
+
+            if (!data.phoneNumber || !data.phoneNumber.trim()) {
+                setShowPhoneModal(true);
+                return;
+            }
+
+            console.log("whatsapp_click", { phone, providerId, context: message.slice(0, 40) });
+
+            const href = buildWhatsAppLink(phone, message);
+            window.open(href, "_blank", "noopener,noreferrer");
+        } catch {
+            toast.error("Couldn't verify your profile. Please try again.", { position: "top-right" });
+        } finally {
+            setIsChecking(false);
+        }
     };
 
-    const href = buildWhatsAppLink(phone, message);
+    const handleGoToProfile = () => {
+        setShowPhoneModal(false);
+        router.push(PROFILE_ROUTE);
+    };
 
-    if (variant === "icon-only") {
-        return (
-            <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleClick}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white hover:bg-[#20bd5a] transition-colors"
-                aria-label="WhatsApp"
-            >
-                <WhatsAppIcon className="h-4 w-4" />
-            </a>
-        );
-    }
+    const buttonClasses =
+        variant === "icon-only"
+            ? "flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white hover:bg-[#20bd5a] transition-colors disabled:opacity-60"
+            : variant === "solid"
+                ? "flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#20bd5a] transition-colors disabled:opacity-60"
+                : "flex items-center gap-2 rounded-lg border border-[#25D366] px-4 py-2.5 text-sm font-semibold text-[#25D366] hover:bg-[#25D366]/5 transition-colors disabled:opacity-60";
 
     return (
-        <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={handleClick}
-            className={
-                variant === "solid"
-                    ? "flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#20bd5a] transition-colors"
-                    : "flex items-center gap-2 rounded-lg border border-[#25D366] px-4 py-2.5 text-sm font-semibold text-[#25D366] hover:bg-[#25D366]/5 transition-colors"
-            }
-        >
-            <WhatsAppIcon className="h-4 w-4" />
-            {label}
-        </a>
+        <>
+            <button
+                type="button"
+                onClick={handleClick}
+                disabled={isChecking}
+                aria-label={variant === "icon-only" ? "WhatsApp" : undefined}
+                className={buttonClasses}
+            >
+                {isChecking ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                    <WhatsAppIcon className="h-4 w-4" />
+                )}
+                {variant !== "icon-only" && label}
+            </button>
+
+            {showPhoneModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                    <div className="w-full max-w-sm rounded-2xl bg-white shadow-lg overflow-hidden">
+                        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-50">
+                                    <PhoneIcon size={15} className="text-[#e8683f]" />
+                                </div>
+                                <h3 className="text-sm font-bold text-gray-900">Phone number required</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowPhoneModal(false)}
+                                className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+
+                        <div className="px-5 py-4">
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                Add a phone number to your profile so the provider can reach you on WhatsApp.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-2 px-5 pb-5">
+                            <button
+                                type="button"
+                                onClick={() => setShowPhoneModal(false)}
+                                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                I&apos;ll do it later
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleGoToProfile}
+                                className="flex-1 rounded-xl bg-[#1e3a8a] py-2.5 text-xs font-semibold text-white hover:bg-blue-800 transition-colors"
+                            >
+                                Go to profile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 }
