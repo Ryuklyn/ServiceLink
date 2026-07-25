@@ -107,6 +107,18 @@ function isoKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+// Real-time check: for TODAY only, a period whose end hour has already
+// passed the current clock time is no longer bookable, regardless of what
+// the backend availability says. (morning ends 12PM, afternoon 4PM, evening 8PM
+// — matches TIME_SLOT_DESCRIPTORS below.)
+function isPeriodElapsed(date: Date, period: DaySlot["period"]): boolean {
+  const now = new Date();
+  if (!sameDay(date, now)) return false;
+  const endHour = period === "morning" ? 12 : period === "afternoon" ? 16 : 20;
+  const periodEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), endHour, 0, 0, 0);
+  return now >= periodEnd;
+}
+
 const TIME_SLOT_DESCRIPTORS = {
   morning:   { label: "Morning",   time: "8:00 AM - 12:00 PM", icon: Sun    },
   afternoon: { label: "Afternoon", time: "12:00 PM - 4:00 PM", icon: Sunset },
@@ -164,12 +176,16 @@ export default function AvailabilityCalendar({
   // Same name/signature as the old mock generator — every existing call site
   // below (weekDays.map, currentSlots, calendarGrid.map) works unchanged.
   // A date/period with no fetched row defaults to available, matching the
-  // provider-side "available by default" behavior.
+  // provider-side "available by default" behavior. On top of the backend
+  // flag, a period that has already elapsed today is folded in as
+  // unavailable here so it disables everywhere downstream automatically
+  // (day dots, "hasAny" checks, and the time-slot list).
   const getSlotsForDate = (date: Date): DaySlot[] => {
     const rows = slotsByDate[isoKey(date)];
     return ALL_PERIODS.map((period) => {
       const row = rows?.find((r) => r.period === PERIOD_TO_BACKEND[period]);
-      return { id: period[0], period, available: row ? row.isAvailable : true };
+      const backendAvailable = row ? row.isAvailable : true;
+      return { id: period[0], period, available: backendAvailable && !isPeriodElapsed(date, period) };
     });
   };
 
@@ -343,13 +359,14 @@ export default function AvailabilityCalendar({
               const config        = TIME_SLOT_DESCRIPTORS[slot.period];
               const IconComponent = config.icon;
               const isSlotSelected = selectedSlotPeriod === slot.period;
+              const elapsed = isPeriodElapsed(selectedDate, slot.period);
 
               return (
                   <button
                       key={slot.id + isoKey(selectedDate)}
                       disabled={!slot.available}
                       onClick={() => selectSlot(slot)}
-                      className={`w-full flex items-center justify-between p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-200 border text-left gap-3 ${
+                      className={`w-full flex items-center justify-between p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-200 border text-left gap-3 relative ${
                           isSlotSelected
                               ? "bg-[#1e3a8a] border-[#1e3a8a] text-white shadow-md"
                               : slot.available
@@ -381,7 +398,10 @@ export default function AvailabilityCalendar({
                       </div>
                     </div>
 
-                    <div className="shrink-0">
+                    <div className="shrink-0 flex items-center gap-2">
+                      {!slot.available && elapsed && (
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Past</span>
+                      )}
                       {isSlotSelected ? (
                           <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white flex items-center justify-center">
                             <div className="w-1.5 h-1.5 rounded-full bg-white" />

@@ -26,19 +26,18 @@ public class KybService {
      private final OrganizationRepository oRepo;
      private final SupabaseStorageService supabaseStorageService;
      private final KybMapper kMapper;
+     private final BusinessRegistrationSessionService sessionService;
 
      @Transactional
      public KybResponse submitKyb(KybRequest request, MultipartFile documentFile) throws Exception{
           Organization organization = oRepo.findById(request.getOrganizationId())
                   .orElseThrow(() -> new RuntimeException("Organization is not found."));
 
-
           if (kRepo.findByOrganizationId(organization.getId()).isPresent()){
                throw new IllegalStateException("KYC for this application has already been submitted");
           }
 
           String documentUrl = null;
-
           if (documentFile != null && !documentFile.isEmpty()){
                documentUrl = supabaseStorageService.uploadFile(documentFile, KYB_DOCUMENTS_FOLDER);
           }
@@ -51,7 +50,10 @@ public class KybService {
                   .status(KybStatus.PENDING)
                   .build();
 
-          return kMapper.toResponse(kRepo.save(kyb));
+          KybVerification saved = kRepo.save(kyb);
+          sessionService.updateStep(organization.getId(), "VERIFICATION", null, null, saved.getId());
+
+          return kMapper.toResponse(saved);
      }
 
      public KybResponse getKybByOrganization(Long oragnizationId){

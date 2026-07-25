@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import api from "@/utils/axios";
@@ -26,7 +26,18 @@ export default function ReschedulePaymentCallbackPage() {
     const [status, setStatus] = useState<Status>("verifying");
     const [message, setMessage] = useState("");
 
+    // Guards against the verify call firing more than once for the same page
+    // load — React Strict Mode (dev) intentionally double-invokes effects,
+    // and `params`/`routeParams` can also change reference between renders.
+    // The verify endpoint isn't idempotent (a second call on an
+    // already-rescheduled booking errors out), so without this guard a
+    // second run can flip a genuinely successful payment to "failed" by
+    // overwriting the status set by the first call.
+    const hasVerifiedRef = useRef(false);
+
     useEffect(() => {
+        if (hasVerifiedRef.current) return;
+
         const appointmentId = routeParams?.appointmentId;
         const gateway = (routeParams?.gateway ?? "").toLowerCase();
 
@@ -51,11 +62,13 @@ export default function ReschedulePaymentCallbackPage() {
                     if (decoded.status && decoded.status !== "COMPLETE") {
                         setStatus("failed");
                         setMessage("Payment was not completed. Your booking was not rescheduled.");
+                        hasVerifiedRef.current = true;
                         return;
                     }
                 } catch {
                     setStatus("failed");
                     setMessage("Could not read the payment response from eSewa.");
+                    hasVerifiedRef.current = true;
                     return;
                 }
             }
@@ -67,6 +80,7 @@ export default function ReschedulePaymentCallbackPage() {
             if (khaltiStatus && khaltiStatus !== "Completed") {
                 setStatus("failed");
                 setMessage("Payment was not completed. Your booking was not rescheduled.");
+                hasVerifiedRef.current = true;
                 return;
             }
         }
@@ -74,8 +88,14 @@ export default function ReschedulePaymentCallbackPage() {
         if (!referenceId) {
             setStatus("failed");
             setMessage("Missing payment reference — could not confirm this payment.");
+            hasVerifiedRef.current = true;
             return;
         }
+
+        // Mark as verified BEFORE the request goes out (not just on success),
+        // so a Strict Mode remount firing mid-flight still can't send a
+        // second request for the same reference.
+        hasVerifiedRef.current = true;
 
         api
             .post(`/appointments/${appointmentId}/reschedule/payment/verify`, {

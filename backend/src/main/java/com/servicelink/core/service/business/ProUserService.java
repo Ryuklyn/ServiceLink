@@ -20,6 +20,7 @@ public class ProUserService {
     private final WorkspaceRepository workspaceRepository;
     private final ProUserMapper proUserMapper;
     private final PasswordEncoder passwordEncoder;
+    private final BusinessRegistrationSessionService businessRegistrationSessionService;
 
     @Transactional
     public ProUserResponse create(ProUserRequest request) {
@@ -48,6 +49,8 @@ public class ProUserService {
         // Create and save pro user
         ProUser proUser = proUserMapper.toEntity(request, workspace, hashedPassword);
         ProUser saved = proUserRepository.save(proUser);
+        businessRegistrationSessionService.updateStep(workspace.getOrganization().getId(), "ADMIN", workspace.getId(), saved.getId(), null);
+
 
         return proUserMapper.toResponse(saved);
     }

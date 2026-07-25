@@ -15,13 +15,16 @@ public class OrganizationService {
 
     private final OrganizationRepository oRepo;
     private final OrganizationMapper oMapper;
+    private final BusinessRegistrationSessionService sessionService;
 
     @Transactional
     public OrganizationResponse create(OrganizationRequest request){
         if (oRepo.existsByWorkEmail(request.getWorkEmail())) {
             throw new IllegalArgumentException("An organization with this email already exists.");
         }
+//        Organization saved = oRepo.save(oMapper.toEntity(request));
         Organization saved = oRepo.save(oMapper.toEntity(request));
+        sessionService.updateStep(saved.getId(), "ORGANIZATION", null, null, null);
         return oMapper.toResponse(saved);
     }
 

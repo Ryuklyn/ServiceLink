@@ -75,6 +75,7 @@ public class PaymentTransaction {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subscription_id", nullable = false)
     private ProviderSubscription subscription;
+//    private Subscription subscription;
 
     /** Internal reference shown to user: SLP-2026-019502 */
     @Column(nullable = false, unique = true, length = 100)

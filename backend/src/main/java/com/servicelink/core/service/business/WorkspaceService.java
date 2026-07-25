@@ -18,13 +18,16 @@ public class WorkspaceService {
     private final WorkspaceRepository wRepo;
     private final OrganizationRepository oRepo;
     private final WorkspaceMapper wMapper;
+    private final BusinessRegistrationSessionService sessionService;
 
     @Transactional
     public WorkspaceResponse create(WorkspaceRequest request){
         Organization organization = oRepo.findById(request.getOrganizationId())
                 .orElseThrow(() -> new RuntimeException("Organization is not found"));
 
+//        Workspace saved = wRepo.save(wMapper.toEntity(request, organization));
         Workspace saved = wRepo.save(wMapper.toEntity(request, organization));
+        sessionService.updateStep(organization.getId(), "WORKSPACE", saved.getId(), null, null);
         return wMapper.toResponse(saved);
     }
 

@@ -7,7 +7,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 interface MapComponentProps {
-  center: [number, number];
+    center?: [number, number];
   radius?: number;
   interactive?: boolean;
 }
@@ -33,7 +33,7 @@ function MapRecenter({ center }: { center: [number, number] }) {
 }
 
 export default function MapComponent({
-                                       center,
+                                         center = [27.7172, 85.324],
                                        radius = 0,
                                        interactive = false,
                                      }: MapComponentProps) {

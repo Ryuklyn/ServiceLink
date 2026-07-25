@@ -220,11 +220,27 @@ export default function ReschedulingModal({
     return `${MONTH_NAMES[viewMonth]} ${selectedDate}, ${viewYear}`;
   };
 
+  // endHour is used to detect whether "today"'s slot has already elapsed —
+  // matches the display windows shown to the user (8–12, 12–4, 4–7).
   const timePeriods = [
-    { id: "morning", label: "Morning", hours: "8:00 AM – 12:00 PM", icon: Sun },
-    { id: "afternoon", label: "Afternoon", hours: "12:00 PM – 4:00 PM", icon: Cloud },
-    { id: "evening", label: "Evening", hours: "4:00 PM – 7:00 PM", icon: Moon },
+    { id: "morning", label: "Morning", hours: "8:00 AM – 12:00 PM", icon: Sun, endHour: 12 },
+    { id: "afternoon", label: "Afternoon", hours: "12:00 PM – 4:00 PM", icon: Cloud, endHour: 16 },
+    { id: "evening", label: "Evening", hours: "4:00 PM – 7:00 PM", icon: Moon, endHour: 19 },
   ];
+
+  // Real-time check: if the selected date is today AND the current clock time
+  // is already past that period's end hour, the slot is no longer bookable —
+  // regardless of what the backend availability says.
+  const isPeriodElapsed = (day: number, endHour: number) => {
+    const isSelectedToday =
+        viewYear === today.getFullYear() &&
+        viewMonth === today.getMonth() &&
+        day === today.getDate();
+    if (!isSelectedToday) return false;
+    const now = new Date();
+    const periodEnd = new Date(viewYear, viewMonth, day, endHour, 0, 0, 0);
+    return now >= periodEnd;
+  };
 
   const handleResetAndClose = () => {
     onClose();
@@ -388,7 +404,11 @@ export default function ReschedulingModal({
             const todayFlag = isToday(day);
             const selected = selectedDate === day;
             const daySlots = getSlotsForDate(day);
-            const hasOpenSlot = daySlots.some((s) => s.available);
+            // A day still counts as having an open slot only if at least one
+            // of its periods is both available AND not already elapsed (for today).
+            const hasOpenSlot = daySlots.some(
+                (s) => s.available && !isPeriodElapsed(day, timePeriods.find((p) => p.id === s.period)!.endHour)
+            );
             const disabled = past || !hasOpenSlot;
 
             return (
@@ -404,7 +424,7 @@ export default function ReschedulingModal({
                       disabled
                           ? "text-gray-300 cursor-not-allowed"
                           : selected
-                              ? "bg-[#1e3a8a] text-white"
+                              ? "bg-blue-600 text-white"
                               : todayFlag
                                   ? "border border-[#1e3a8a] text-[#1e3a8a]"
                                   : "text-gray-700 hover:bg-gray-100"
@@ -436,26 +456,32 @@ export default function ReschedulingModal({
                 const isActive = selectedPeriod === period.id;
                 const slot = getSlotsForDate(selectedDate).find((s) => s.period === period.id);
                 const slotOpen = slot?.available ?? true;
+                const elapsed = isPeriodElapsed(selectedDate, period.endHour);
+                const disabled = !slotOpen || elapsed;
 
                 return (
                     <button
                         key={period.id}
                         type="button"
-                        disabled={!slotOpen}
+                        disabled={disabled}
                         onClick={() => setSelectedPeriod(period.id as PeriodKey)}
                         className={`p-1.5 rounded-xl border text-center flex flex-col items-center justify-center gap-0.5 transition-all relative ${
-                            !slotOpen
+                            disabled
                                 ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
                                 : isActive
-                                    ? "border-[#1e3a8a] bg-blue-50/30 font-bold"
+                                    ? "border-blue-600 bg-blue-600 text-white font-bold"
                                     : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                         }`}
                     >
-                      <PeriodIcon size={12} className={!slotOpen ? "text-gray-300" : isActive ? "text-[#1e3a8a]" : "text-gray-400"} />
+                      <PeriodIcon size={12} className={disabled ? "text-gray-300" : isActive ? "text-white" : "text-gray-400"} />
                       <span className="text-[10px] block">{period.label}</span>
-                      <span className="text-[7px] text-gray-400 block leading-tight">{period.hours}</span>
-                      {!slotOpen && (
-                          <span className="absolute top-1 right-1 text-[7px] font-bold text-red-400">Full</span>
+                      <span className={`text-[7px] block leading-tight ${isActive && !disabled ? "text-blue-100" : "text-gray-400"}`}>
+                        {period.hours}
+                      </span>
+                      {disabled && (
+                          <span className="absolute top-1 right-1 text-[7px] font-bold text-red-400">
+                            {elapsed && slotOpen ? "Past" : "Full"}
+                          </span>
                       )}
                     </button>
                 );
@@ -653,7 +679,7 @@ export default function ReschedulingModal({
                           value={reason}
                           onChange={(e) => setReason(e.target.value)}
                           placeholder="Tell us why you're rescheduling (optional)..."
-                          className="w-full text-[11px] p-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] bg-white placeholder-gray-400 h-14 resize-none font-medium"
+                          className="w-full text-[11px] p-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] bg-white text-slate-800 placeholder-slate-200 h-14 resize-none font-medium"
                       />
                     </div>
 

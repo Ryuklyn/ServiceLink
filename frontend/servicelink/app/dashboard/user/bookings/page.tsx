@@ -8,6 +8,7 @@ import Link from "next/link";
 import { toast } from "react-toastify";
 import ReschedulingModal from "@/components/dashboard/user/bookings/ReschedulingModal";
 import CancellationModal from "@/components/dashboard/user/bookings/CancelationModal";
+import BookingDetailModal from "@/components/dashboard/user/explore/profile/BookingDetailsModal";
 import { appointmentService, AppointmentSummary } from "@/services/appointmentService";
 import WhatsAppButton from "@/components/shared/WhatsAppButton";
 
@@ -47,6 +48,16 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function getInitials(name: string | undefined | null): string {
+  if (!name) return "?";
+  return name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("");
+}
+
 interface SelectedBooking {
   id: string;
   providerId: number;
@@ -68,6 +79,7 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<SelectedBooking | null>(null);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const fetchAllAppointments = useCallback(async () => {
     try {
@@ -203,8 +215,21 @@ export default function BookingsPage() {
                     0,
                     (apptDate.getTime() - now.getTime()) / (1000 * 60 * 60)
                 );
-                const isLateWindow = hoursRemaining < 24;
+
+                // "Late" tier (fees apply) requires BOTH:
+                //   1. Under 24h to the appointment
+                //   2. Provider has already accepted (CONFIRMED)
+                // If the provider hasn't accepted yet (still PENDING), late fees
+                // don't apply regardless of how close the appointment is —
+                // there's nothing locked-in yet for the customer to be penalized for.
+                const isProviderAccepted = appt.status === "CONFIRMED";
+                const isLateWindow = hoursRemaining < 24 && isProviderAccepted;
                 const isLocked     = appt.status === "IN_PROGRESS";
+
+                const openDetailModal = () => {
+                  setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                  setIsDetailModalOpen(true);
+                };
 
                 return (
                     <div
@@ -307,7 +332,11 @@ export default function BookingsPage() {
                                 ) : (
                                     <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-xl p-2.5 flex items-center gap-2 text-xs font-medium">
                                       <Clock size={14} className="text-emerald-600 shrink-0" strokeWidth={2.5} />
-                                      <span>Free window active. You can cancel or reschedule without fees.</span>
+                                      <span>
+                                        {!isProviderAccepted
+                                            ? "Awaiting provider confirmation. You can cancel or reschedule without fees."
+                                            : "Free window active. You can cancel or reschedule without fees."}
+                                      </span>
                                     </div>
                                 )}
                                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 flex flex-wrap items-center gap-1.5 text-xs">
@@ -316,13 +345,13 @@ export default function BookingsPage() {
                                     <span>Tiers:</span>
                                   </div>
                                   <span className="px-2 py-0.5 rounded-md bg-white text-emerald-800 border border-emerald-200 text-[10px] font-medium shadow-sm">
-                            24h+: <span className="font-bold text-emerald-600">Free</span>
+                            24h+ or unconfirmed: <span className="font-bold text-emerald-600">Free</span>
                           </span>
                                   <span className="px-2 py-0.5 rounded-md bg-white text-orange-800 border border-orange-200 text-[10px] font-medium shadow-sm">
-                            &lt; 24h Reschedule: <span className="font-bold text-[#e8683f]">Rs. 50</span>
+                            &lt; 24h Reschedule (confirmed): <span className="font-bold text-[#e8683f]">Rs. 50</span>
                           </span>
                                   <span className="px-2 py-0.5 rounded-md bg-white text-red-800 border border-red-200 text-[10px] font-medium shadow-sm">
-                            &lt; 24h Cancel: <span className="font-bold text-red-600">Rs. 100</span>
+                            &lt; 24h Cancel (confirmed): <span className="font-bold text-red-600">Rs. 100</span>
                           </span>
                                 </div>
                               </div>
@@ -333,20 +362,28 @@ export default function BookingsPage() {
                         <div className="flex flex-col sm:flex-row lg:flex-col justify-end gap-2 w-full lg:w-72 shrink-0 items-stretch sm:items-center lg:items-stretch">
 
                           {tab === "Active" && (
-                              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full">
+                              <div className="flex flex-col gap-2 w-full">
                                 <Link
                                     href="/dashboard/user/bookings/track"
-                                    className="flex-1 px-4 py-2.5 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm text-center"
+                                    className="w-full px-4 py-2.5 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm text-center"
                                 >
                                   <MapPin size={13} /> Track Order
                                 </Link>
-                                <div className="flex-1 w-full flex justify-center items-center">
-                                  <WhatsAppButton
-                                      phone={appt.providerPhone}
-                                      providerId={appt.providerId}
-                                      message={`Hi ${appt.providerName}, I have a question about my booking (BK-${appt.id}).`}
-                                      className="w-full justify-center text-center" // यहाँ सेन्टर एलाइनमेन्ट थपिएको छ
-                                  />
+                                <div className="flex flex-row gap-2 w-full">
+                                  <button
+                                      onClick={openDetailModal}
+                                      className="flex-1 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 text-center"
+                                  >
+                                    <Eye size={13} /> View
+                                  </button>
+                                  <div className="flex-1 flex justify-center items-center">
+                                    <WhatsAppButton
+                                        phone={appt.providerPhone}
+                                        providerId={appt.providerId}
+                                        message={`Hi ${appt.providerName}, I have a question about my booking (BK-${appt.id}).`}
+                                        className="w-full justify-center text-center" // यहाँ सेन्टर एलाइनमेन्ट थपिएको छ
+                                    />
+                                  </div>
                                 </div>
                               </div>
                           )}
@@ -357,13 +394,19 @@ export default function BookingsPage() {
                                   {isLateWindow ? (
                                       <>
                                         <button
-                                            onClick={() => setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status })}
+                                            onClick={() => {
+                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                                              setIsRescheduleModalOpen(true);
+                                            }}
                                             className="flex-1 px-2 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center whitespace-nowrap"
                                         >
                                           Late Reschedule
                                         </button>
                                         <button
-                                            onClick={() => setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status })}
+                                            onClick={() => {
+                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                                              setIsCancelModalOpen(true);
+                                            }}
                                             className="flex-1 px-2 py-2.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center whitespace-nowrap"
                                         >
                                           Late Cancel
@@ -372,13 +415,19 @@ export default function BookingsPage() {
                                   ) : (
                                       <>
                                         <button
-                                            onClick={() => setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status })}
+                                            onClick={() => {
+                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                                              setIsRescheduleModalOpen(true);
+                                            }}
                                             className="flex-1 px-2 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
                                         >
                                           Reschedule
                                         </button>
                                         <button
-                                            onClick={() => setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status })}
+                                            onClick={() => {
+                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                                              setIsCancelModalOpen(true);
+                                            }}
                                             className="flex-1 px-2 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
                                         >
                                           Cancel
@@ -386,13 +435,21 @@ export default function BookingsPage() {
                                       </>
                                   )}
                                 </div>
-                                <div className="flex-1 w-full flex justify-center items-center">
-                                  <WhatsAppButton
-                                      phone={appt.providerPhone}
-                                      providerId={appt.providerId}
-                                      message={`Hi ${appt.providerName}, I have a question about my upcoming booking (BK-${appt.id}).`}
-                                      className="w-full justify-center text-center" // सेन्टर एलाइनमेन्ट फिक्स
-                                  />
+                                <div className="flex flex-row gap-2 w-full">
+                                  <button
+                                      onClick={openDetailModal}
+                                      className="flex-1 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 text-center"
+                                  >
+                                    <Eye size={13} /> View
+                                  </button>
+                                  <div className="flex-1 flex justify-center items-center">
+                                    <WhatsAppButton
+                                        phone={appt.providerPhone}
+                                        providerId={appt.providerId}
+                                        message={`Hi ${appt.providerName}, I have a question about my upcoming booking (BK-${appt.id}).`}
+                                        className="w-full justify-center text-center" // सेन्टर एलाइनमेन्ट फिक्स
+                                    />
+                                  </div>
                                 </div>
                               </div>
                           )}
@@ -439,7 +496,7 @@ export default function BookingsPage() {
                   time: selectedBooking.timeDisplay,
                   provider: selectedBooking.providerName,
                 }}
-                isLate={selectedBooking.hoursRemaining < 24}
+                isLate={selectedBooking.hoursRemaining < 24 && selectedBooking.status === "CONFIRMED"}
                 onRescheduled={fetchAllAppointments}
             />
         )}
@@ -448,7 +505,7 @@ export default function BookingsPage() {
             <CancellationModal
                 isOpen={isCancelModalOpen}
                 onClose={() => { setIsCancelModalOpen(false); setSelectedBooking(null); }}
-                isLate={selectedBooking.hoursRemaining < 24}
+                isLate={selectedBooking.hoursRemaining < 24 && selectedBooking.status === "CONFIRMED"}
                 bookingData={{
                   id: selectedBooking.id,
                   providerName: selectedBooking.providerName,
@@ -459,6 +516,48 @@ export default function BookingsPage() {
                   price: selectedBooking.price,
                 }}
                 onConfirmCancel={handleCancelConfirm}
+            />
+        )}
+
+        {/* View modal — maps our list-page appointment shape onto BookingDetailsModal's
+            provider/bookingDetails props. Note: this modal was originally built for the
+            "just booked" confirmation flow, so a few fields (task photos/audio/video,
+            live task summary) simply aren't available for an existing list-page booking
+            and are passed as empty/undefined. The footer's Edit/Reschedule/Cancel buttons
+            in that component have no onClick wired up yet — say the word if you want them
+            hooked into the same reschedule/cancel modals used elsewhere on this page. */}
+        {selectedBooking && isDetailModalOpen && (
+            <BookingDetailModal
+                isOpen={isDetailModalOpen}
+                onClose={() => { setIsDetailModalOpen(false); setSelectedBooking(null); }}
+                provider={{
+                  initials: getInitials(selectedBooking.providerName),
+                  name: selectedBooking.providerName,
+                  specialty: selectedBooking.serviceName,
+                  categories: [],
+                }}
+                bookingDetails={{
+                  services: [
+                    {
+                      name: selectedBooking.serviceName,
+                      priceMin: selectedBooking.price,
+                      priceMax: selectedBooking.price,
+                    },
+                  ],
+                  taskSummary: selectedBooking.serviceName,
+                  dateDisplay: selectedBooking.dateDisplay,
+                  timeDisplay: selectedBooking.timeDisplay,
+                  estimatedMin: selectedBooking.price,
+                  estimatedMax: selectedBooking.price,
+                  address: selectedBooking.address,
+                  photos: [],
+                  appointmentIds: [Number(selectedBooking.id)],
+                  appointmentStatus: selectedBooking.status,
+                  totalPrice: selectedBooking.price,
+                  attachedImgUrl: null,
+                  attachedVideoUrl: null,
+                  attachedAudioUrl: null,
+                }}
             />
         )}
       </div>

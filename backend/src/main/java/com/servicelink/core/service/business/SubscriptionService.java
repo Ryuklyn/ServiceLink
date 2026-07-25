@@ -4,6 +4,7 @@ import com.servicelink.core.dto.request.business.SubscriptionRequest;
 import com.servicelink.core.dto.response.business.SubscriptionResponse;
 import com.servicelink.core.model.business.Subscription;
 import com.servicelink.core.model.business.Workspace;
+import com.servicelink.core.repository.business.OrganizationRepository;
 import com.servicelink.core.repository.business.SubscriptionRepository;
 import com.servicelink.core.repository.business.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final BusinessRegistrationSessionService sessionService;
 
     // Simple sequential ref counter — replace with DB sequence in production
     private static final AtomicLong REF_COUNTER = new AtomicLong(19502L);
@@ -45,7 +47,10 @@ public class SubscriptionService {
                 .trialEndsAt(LocalDateTime.now().plusDays(14))
                 .build();
 
-        return toResponse(subscriptionRepository.save(sub));
+        Subscription saved = subscriptionRepository.save(sub);
+        sessionService.clearSession(workspace.getOrganization().getId());
+
+        return toResponse(saved);
     }
 
     public SubscriptionResponse findByWorkspace(Long workspaceId) {

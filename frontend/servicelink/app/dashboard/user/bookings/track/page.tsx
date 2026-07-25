@@ -124,7 +124,7 @@ export default function BookingTrackingPage() {
             </span>
           </div>
           <div className="h-72 w-full relative z-10">
-            <MapComponent />
+            <MapComponent center={[27.6947, 85.341]} interactive={false} />
           </div>
         </section>
 

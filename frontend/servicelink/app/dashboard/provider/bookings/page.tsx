@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
     SlidersHorizontal, Calendar, Clock, MapPin, Mail, Phone, Copy, Play,
     MessageCircle, PhoneCall, CheckCircle, XCircle, Wrench, ArrowRight,
-    ArrowLeft, Pause, ChevronDown, Loader2, Search as SearchIcon,
+    ArrowLeft, Pause, ChevronDown, Loader2, Search as SearchIcon, RefreshCcw,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -44,6 +44,19 @@ import {
  * PENDING/CONFIRMED/IN_PROGRESS/COMPLETED/CANCELLED. "Confirmed" is
  * labeled "Accepted" here purely for copy parity with the design, the
  * underlying status is still CONFIRMED.
+ *
+ * ── RESCHEDULE FIELDS (NOT YET ON THE BACKEND) ──────────────────────────
+ * The reschedule-aware UI below (badges, before/after banner, contextual
+ * Approve/Decline copy) reads three optional fields that do NOT exist on
+ * AppointmentSummaryDTO / AppointmentResponseDTO today:
+ *   - previousAppointmentDate?: string | null   (yyyy-MM-dd, pre-reschedule)
+ *   - previousTimeSlot?: string | null          (MORNING/AFTERNOON/EVENING, pre-reschedule)
+ *   - rescheduledAt?: string | null             (ISO timestamp, for display/sort if needed)
+ * Until the backend/DTO/mapper populate these on a rescheduled appointment,
+ * `wasRescheduled()` below always returns false and this UI simply never
+ * renders — it degrades gracefully rather than guessing. Cast to `any` is
+ * used at the read sites specifically because these fields aren't in the
+ * current generated/shared type from providerBookingsSlice.
  * ─────────────────────────────────────────────────────────────────────────
  */
 
@@ -78,6 +91,7 @@ const groupLabelColor = (s: string): string => {
 
 const TAB_FILTERS = [
     { label: "All", key: "ALL" },
+    { label: "Rescheduled", key: "RESCHEDULED" },
     { label: "Pending", key: "PENDING" },
     { label: "Accepted", key: "CONFIRMED" },
     { label: "In Progress", key: "IN_PROGRESS" },
@@ -114,6 +128,14 @@ function formatDate(iso: string): { display: string; weekday: string } {
         display: d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
         weekday: d.toLocaleDateString("en-US", { weekday: "long" }),
     };
+}
+
+// See the "RESCHEDULE FIELDS" note in the header comment — this reads
+// optional fields the backend doesn't expose yet, so it's a no-op (always
+// false) until previousAppointmentDate/previousTimeSlot are added upstream.
+function wasRescheduled(b: Record<string, any> | undefined | null): boolean {
+    if (!b) return false;
+    return Boolean(b.previousAppointmentDate || b.previousTimeSlot);
 }
 
 const steps = [
@@ -172,6 +194,7 @@ export default function BookingsPage() {
 
     const counts: Record<string, number> = {
         ALL: items.length,
+        RESCHEDULED: items.filter(wasRescheduled).length,
         PENDING: items.filter((b) => b.status === "PENDING").length,
         CONFIRMED: items.filter((b) => b.status === "CONFIRMED").length,
         IN_PROGRESS: items.filter((b) => b.status === "IN_PROGRESS").length,
@@ -195,7 +218,9 @@ export default function BookingsPage() {
     }, [items, search]);
 
     const filtered = useMemo(() => {
-        return activeFilter === "ALL" ? searched : searched.filter((b) => b.status === activeFilter);
+        if (activeFilter === "ALL") return searched;
+        if (activeFilter === "RESCHEDULED") return searched.filter(wasRescheduled);
+        return searched.filter((b) => b.status === activeFilter);
     }, [searched, activeFilter]);
 
     // Working sort: newest/oldest by appointment date, or highest earnings by price
@@ -212,12 +237,16 @@ export default function BookingsPage() {
         return list;
     }, [filtered, sortKey]);
 
+    // For the RESCHEDULED filter, group by status same as everywhere else so
+    // it slots into the existing grouped-list layout without a special case.
+    const groupSource = activeFilter === "RESCHEDULED" ? sorted : sorted;
     const groups = (["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as BackendAppointmentStatus[])
-        .map((status) => ({ groupLabel: status, items: sorted.filter((b) => b.status === status) }))
+        .map((status) => ({ groupLabel: status, items: groupSource.filter((b) => b.status === status) }))
         .filter((g) => g.items.length > 0);
 
     const selectedSummary = items.find((b) => b.id === selectedId);
     const selectedDetail = selectedId != null ? detailsById[selectedId] : undefined;
+    const selectedRescheduled = wasRescheduled(selectedSummary);
 
     // Client-side proxy for "total bookings with this customer" — there is
     // no backend aggregate for this yet, so we count matches in the
@@ -306,12 +335,13 @@ export default function BookingsPage() {
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                             activeFilter === key ? "text-white" : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
                         }`}
-                        style={activeFilter === key ? { backgroundColor: "#1e3a8a" } : {}}
+                        style={activeFilter === key ? { backgroundColor: key === "RESCHEDULED" ? "#b45309" : "#1e3a8a" } : {}}
                     >
+                        {key === "RESCHEDULED" && <RefreshCcw size={12} />}
                         {label}
                         <span
                             className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${activeFilter === key ? "bg-white" : "bg-gray-100 text-gray-500"}`}
-                            style={activeFilter === key ? { color: "#1e3a8a" } : {}}
+                            style={activeFilter === key ? { color: key === "RESCHEDULED" ? "#b45309" : "#1e3a8a" } : {}}
                         >
                             {counts[key]}
                         </span>
@@ -337,12 +367,13 @@ export default function BookingsPage() {
                             <div className="p-2 space-y-2">
                                 {groupItems.map((b) => {
                                     const { display, weekday } = formatDate(b.appointmentDate);
+                                    const rescheduled = wasRescheduled(b);
                                     return (
                                         <div
                                             key={b.id}
                                             onClick={() => handleSelectBooking(b.id)}
                                             className={`rounded-lg p-2.5 cursor-pointer transition-colors border ${
-                                                selectedId === b.id ? "bg-orange-100 border-orange-200" : "border-transparent hover:bg-gray-50"
+                                                selectedId === b.id ? "bg-orange-100 border-orange-200" : rescheduled ? "border-amber-200 bg-amber-50/40 hover:bg-amber-50" : "border-transparent hover:bg-gray-50"
                                             }`}
                                         >
                                             <div className="flex items-start gap-2.5">
@@ -362,6 +393,13 @@ export default function BookingsPage() {
                                                         </p>
                                                     </div>
                                                     <p className="text-xs text-gray-500 mt-0.5 truncate">{b.subServiceName}</p>
+
+                                                    {rescheduled && (
+                                                        <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                                                            <RefreshCcw size={9} /> {b.status === "PENDING" ? "Awaiting your approval" : "Rescheduled"}
+                                                        </span>
+                                                    )}
+
                                                     <div className="flex items-center gap-1 mt-1.5 text-xs text-gray-400">
                                                         <Calendar size={10} /> {display} · {weekday}
                                                     </div>
@@ -454,6 +492,11 @@ export default function BookingsPage() {
                                                 <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusBadgeStyle(selectedSummary.status)}`}>
                                                     {statusLabel(selectedSummary.status)}
                                                 </span>
+                                                {selectedRescheduled && (
+                                                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                                        <RefreshCcw size={11} /> Rescheduled
+                                                    </span>
+                                                )}
                                             </div>
                                             {detailStatus === "loading" && !selectedDetail ? (
                                                 <p className="text-xs text-gray-400 flex items-center gap-1 mt-1"><Loader2 size={11} className="animate-spin" /> Loading contact info…</p>
@@ -496,6 +539,38 @@ export default function BookingsPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Reschedule before/after banner — only renders once the backend
+                                exposes previousAppointmentDate/previousTimeSlot (see header note) */}
+                            {selectedRescheduled && (
+                                <div className="px-4 sm:px-6 pb-5">
+                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 sm:p-4 flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+                                            <RefreshCcw size={14} className="text-amber-700" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-bold text-amber-800 mb-1.5">
+                                                {selectedSummary.status === "PENDING"
+                                                    ? "Customer requested a new time — needs your approval"
+                                                    : "This booking's time was changed by the customer"}
+                                            </p>
+                                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                                                {(selectedSummary as any).previousAppointmentDate && (
+                                                    <span className="text-amber-600/70 line-through font-medium">
+                                                        {formatDate((selectedSummary as any).previousAppointmentDate).display}
+                                                        {(selectedSummary as any).previousTimeSlot &&
+                                                            ` · ${TIME_SLOT_LABELS[(selectedSummary as any).previousTimeSlot]?.label ?? (selectedSummary as any).previousTimeSlot}`}
+                                                    </span>
+                                                )}
+                                                <ArrowRight size={12} className="text-amber-500 shrink-0" />
+                                                <span className="text-amber-900 font-bold">
+                                                    {formatDate(selectedSummary.appointmentDate).display} · {TIME_SLOT_LABELS[selectedSummary.timeSlot]?.label}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Schedule bar */}
                             <div className="px-4 sm:px-6 pb-5">
@@ -641,20 +716,26 @@ export default function BookingsPage() {
                                     <div className="flex flex-wrap gap-3">
                                         {selectedSummary.status === "PENDING" && (
                                             <>
+                                                {/* Copy adapts when this PENDING is a reschedule request rather
+                                                    than a brand-new booking — same CONFIRMED/CANCELLED transition
+                                                    under the hood, since the backend doesn't yet support a
+                                                    distinct "reject reschedule, keep original slot" transition.
+                                                    Worth adding server-side if declining a reschedule shouldn't
+                                                    cancel the whole booking. */}
                                                 <button
                                                     onClick={() => doTransition("CONFIRMED")}
                                                     disabled={updatingId === selectedSummary.id}
                                                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border-2 disabled:opacity-50"
                                                     style={{ borderColor: "#16a34a", color: "#16a34a" }}
                                                 >
-                                                    <CheckCircle size={15} /> Accept Job
+                                                    <CheckCircle size={15} /> {selectedRescheduled ? "Approve New Time" : "Accept Job"}
                                                 </button>
                                                 <button
-                                                    onClick={() => doTransition("CANCELLED", "Declined by provider")}
+                                                    onClick={() => doTransition("CANCELLED", selectedRescheduled ? "Reschedule declined by provider" : "Declined by provider")}
                                                     disabled={updatingId === selectedSummary.id}
                                                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 disabled:opacity-50"
                                                 >
-                                                    <XCircle size={15} /> Decline
+                                                    <XCircle size={15} /> {selectedRescheduled ? "Decline New Time" : "Decline"}
                                                 </button>
                                             </>
                                         )}
