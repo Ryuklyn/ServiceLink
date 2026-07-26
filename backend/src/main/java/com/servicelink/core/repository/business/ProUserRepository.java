@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface ProUserRepository extends JpaRepository<ProUser, Long> {
 
     Optional<ProUser> findByWorkspaceId(Long workspaceId);
+    Optional<ProUser> findByUser_Id(Long userId);
 }

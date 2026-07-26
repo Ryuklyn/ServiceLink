@@ -1,5 +1,6 @@
 package com.servicelink.core.model.business;
 
+import com.servicelink.core.model.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,8 +22,8 @@ public class ProUser {
     @Column(nullable = false, length = 150)
     private String fullName;
 
-    @Column(nullable = false, length = 255)
-    private String password; // BCrypt hashed
+//    @Column(nullable = false, length = 255)
+//    private String password; // BCrypt hashed
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workspace_id", nullable = false, unique = true)
@@ -32,6 +33,10 @@ public class ProUser {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
 
     @PrePersist
     protected void onCreate() {

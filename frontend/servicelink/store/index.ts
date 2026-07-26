@@ -9,6 +9,7 @@ import providerOnboardingReducer from "./slices/providerOnboardingSlice";
 import providerSubscriptionReducer from "./slices/providerSubscriptionSlice";
 import providerAvailabilityReducer from "./slices/providerAvailabilitySlice";
 import providerBookingsReducer from "./slices/providerBookingsSlice";
+import proSessionReducer from "@/store/slices/proSessionSlice";
 
 export const store = configureStore({
     reducer: {
@@ -22,9 +23,9 @@ export const store = configureStore({
         providerServices: providerServicesReducer,
         providerAvailability:providerAvailabilityReducer,
         providerBookings: providerBookingsReducer,
+        proSession: proSessionReducer,
     },
 });
 
-// Types - TypeScript को लागि
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

@@ -4,7 +4,7 @@ import com.servicelink.core.service.UserService;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.servicelink.core.dto.ResetPasswordDTO;
-import com.servicelink.core.dto.request.LoginRequestDTO;
+import com.servicelink.core.dto.auth.LoginRequestDTO;
 import com.servicelink.core.dto.request.OtpRequestDto;
 import com.servicelink.core.dto.request.RegisterRequestDTO;
 import com.servicelink.core.dto.response.AuthResponseDTO;
