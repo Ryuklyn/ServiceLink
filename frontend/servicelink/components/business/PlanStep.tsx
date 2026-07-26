@@ -87,17 +87,11 @@ export default function PlanStep({
 
   const selectedPlan = PLANS.find((p) => p.id === selectedPlanId) ?? PLANS[0];
 
-  // ─────────────────────────────────────────────────────
-  // Start trial — no payment collected at signup.
-  // Backend already defaults Subscription.subscriptionStatus
-  // to TRIAL and sets trialEndsAt = now + 14 days.
-  // ─────────────────────────────────────────────────────
   const startTrial = async () => {
     if (selectedPlan.custom) {
       toast.error("Enterprise plan requires manual contact");
       return;
     }
-
     if (!workspaceId) {
       toast.error(
           "Workspace ID not found - please go back and complete previous steps",
@@ -116,23 +110,26 @@ export default function PlanStep({
 
       onContinue(selectedPlan);
     } catch (error: any) {
+      const message: string =
+          error?.response?.data?.message ?? error?.message ?? "";
+
+      // Resuming a session that already completed this step hits
+      // SubscriptionService's "already exists" guard — treat that as
+      // success rather than blocking the user with an error toast.
+      if (message.toLowerCase().includes("already exists")) {
+        onContinue(selectedPlan);
+        return;
+      }
+
       console.error("Start Trial Error:", error);
-      toast.error(
-          error?.response?.data?.message ??
-          error?.message ??
-          "Failed to start trial",
-      );
+      toast.error(message || "Failed to start trial");
     } finally {
       setLoading(false);
     }
   };
 
-  // ─────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────
   return (
       <div className="w-full">
-        {/* Header */}
         <div className="mb-8 flex items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e8edf8]">
             <Sparkles size={22} className="text-[#1e3a8a]" />
@@ -150,7 +147,6 @@ export default function PlanStep({
           </div>
         </div>
 
-        {/* Plan cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {PLANS.map((plan) => {
             const isSelected = selectedPlanId === plan.id;
@@ -224,10 +220,8 @@ export default function PlanStep({
           })}
         </div>
 
-        {/* Divider */}
         <div className="my-7 border-t border-gray-200" />
 
-        {/* Footer */}
         <div className="flex items-center justify-between">
           <button
               onClick={onBack}

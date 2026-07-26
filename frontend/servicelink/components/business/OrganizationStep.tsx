@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Building2, ChevronDown } from "lucide-react";
 import api from "@/utils/axios";
 import { toast } from "react-toastify";
@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 interface OrganizationStepProps {
   onContinue: (orgId: string, organizationName: string) => void;
   onBack: () => void;
+  organizationId: string | null; // present when resuming a previous session
 }
 
 type OrganizationFormData = {
@@ -27,17 +28,34 @@ const INITIAL_FORM: OrganizationFormData = {
 };
 
 export default function OrganizationStep({
-  onContinue,
-  onBack,
-}: OrganizationStepProps) {
+                                           onContinue,
+                                           onBack,
+                                           organizationId,
+                                         }: OrganizationStepProps) {
   const [formData, setFormData] = useState<OrganizationFormData>(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
 
-  // ─────────────────────────────────────────────────────
-  // Handlers
-  // ─────────────────────────────────────────────────────
+  // Resume: prefill from the DB if this organization already exists
+  useEffect(() => {
+    if (!organizationId) return;
+    api
+        .get(`/business/organization/${organizationId}`)
+        .then((res) => {
+          setFormData({
+            companyName: res.data.companyName ?? "",
+            businessType: res.data.businessType ?? "",
+            companySize: res.data.companySize ?? "",
+            workEmail: res.data.workEmail ?? "",
+            contactNumber: res.data.contactNumber ?? "",
+          });
+        })
+        .catch(() => {
+          // resume lookup failed — non-fatal, form just stays blank
+        });
+  }, [organizationId]);
+
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -48,9 +66,15 @@ export default function OrganizationStep({
       toast.error("Company name is required");
       return;
     }
-
     if (!formData.businessType) {
       toast.error("Business type is required");
+      return;
+    }
+
+    // Already created in a previous pass through this step (Back button or
+    // resume) — nothing new to submit, just move forward.
+    if (organizationId) {
+      onContinue(organizationId, formData.companyName.trim());
       return;
     }
 
@@ -64,181 +88,158 @@ export default function OrganizationStep({
       }
 
       onContinue(String(response.data.id), formData.companyName.trim());
-    } catch (error) {
+    } catch (error: any) {
       console.error("Create Organization Error:", error);
-      toast.error("Failed to create organization");
+      toast.error(
+          error?.response?.data?.message ?? "Failed to create organization",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // ─────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────
   return (
-    <div className="w-full">
-      {/* Header */}
-      <div className="flex items-start gap-4 mb-8">
-        <div className="w-12 h-12 rounded-full bg-[#e8edf8] flex items-center justify-center shrink-0">
-          <Building2 size={22} className="text-[#1e3a8a]" />
-        </div>
-
-        <div>
-          <p className="text-[#e8683f] text-sm font-semibold uppercase tracking-wide mb-1">
-            Step 1 of 5
-          </p>
-
-          <h1 className="text-[28px] font-extrabold text-[#1e3a8a] leading-tight">
-            Tell us about your organization
-          </h1>
-
-          <p className="text-gray-500 text-sm mt-1">
-            Just the essentials — you can refine the rest later.
-          </p>
-        </div>
-      </div>
-
-      {/* Form */}
-      <div className="space-y-5">
-        {/* Row 1 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {/* Company Name */}
-          <div>
-            <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
-              Company name <span className="text-red-500">*</span>
-            </label>
-
-            <input
-              type="text"
-              name="companyName"
-              value={formData.companyName}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
-              placeholder="Enter Company Name"
-            />
+      <div className="w-full">
+        <div className="flex items-start gap-4 mb-8">
+          <div className="w-12 h-12 rounded-full bg-[#e8edf8] flex items-center justify-center shrink-0">
+            <Building2 size={22} className="text-[#1e3a8a]" />
           </div>
-
-          {/* Business Type */}
           <div>
-            <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
-              Business type <span className="text-red-500">*</span>
-            </label>
+            <p className="text-[#e8683f] text-sm font-semibold uppercase tracking-wide mb-1">
+              Step 1 of 5
+            </p>
+            <h1 className="text-[28px] font-extrabold text-[#1e3a8a] leading-tight">
+              Tell us about your organization
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">
+              Just the essentials — you can refine the rest later.
+            </p>
+          </div>
+        </div>
 
-            <div className="relative">
-              <select
-                name="businessType"
-                value={formData.businessType}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition bg-white"
-              >
-                <option value="">Select organization type</option>
-                <option value="OFFICE">Office / Corporate</option>
-                <option value="HOTEL">Hotel / Hospitality</option>
-                <option value="RESTAURANT">Restaurant / Cafe</option>
-                <option value="APARTMENT">Apartment / Housing</option>
-                <option value="HOSPITAL">Hospital / Clinic</option>
-                <option value="SCHOOL">School / College</option>
-                <option value="RETAIL">Retail Store / Supermarket</option>
-                <option value="FACILITY_MANAGEMENT">Facility Management</option>
-                <option value="PROPERTY_MANAGEMENT">Property Management</option>
-                <option value="CONSTRUCTION">Construction</option>
-                <option value="FACTORY">Factory / Warehouse</option>
-                <option value="OTHER">Other</option>
-              </select>
-
-              <ChevronDown
-                size={16}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
+                Company name <span className="text-red-500">*</span>
+              </label>
+              <input
+                  type="text"
+                  name="companyName"
+                  value={formData.companyName}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
+                  placeholder="Enter Company Name"
               />
             </div>
-          </div>
-        </div>
 
-        {/* Row 2 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {/* Company Size */}
-          <div>
-            <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
-              Company size <span className="text-red-500">*</span>
-            </label>
-
-            <div className="relative">
-              <select
-                name="companySize"
-                value={formData.companySize}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition bg-white"
-              >
-                <option value="">Choose size</option>
-                <option value="SIZE_1_10">1–10 employees</option>
-                <option value="SIZE_11_50">11–50 employees</option>
-                <option value="SIZE_51_200">51–200 employees</option>
-                <option value="SIZE_201_1000">201–1000 employees</option>
-                <option value="SIZE_1000_PLUS">1000+ employees</option>
-              </select>
-
-              <ChevronDown
-                size={16}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-              />
+            <div>
+              <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
+                Business type <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                    name="businessType"
+                    value={formData.businessType}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition bg-white"
+                >
+                  <option value="">Select organization type</option>
+                  <option value="OFFICE">Office / Corporate</option>
+                  <option value="HOTEL">Hotel / Hospitality</option>
+                  <option value="RESTAURANT">Restaurant / Cafe</option>
+                  <option value="APARTMENT">Apartment / Housing</option>
+                  <option value="HOSPITAL">Hospital / Clinic</option>
+                  <option value="SCHOOL">School / College</option>
+                  <option value="RETAIL">Retail Store / Supermarket</option>
+                  <option value="FACILITY_MANAGEMENT">Facility Management</option>
+                  <option value="PROPERTY_MANAGEMENT">Property Management</option>
+                  <option value="CONSTRUCTION">Construction</option>
+                  <option value="FACTORY">Factory / Warehouse</option>
+                  <option value="OTHER">Other</option>
+                </select>
+                <ChevronDown
+                    size={16}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Work Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
+                Company size <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                    name="companySize"
+                    value={formData.companySize}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition bg-white"
+                >
+                  <option value="">Choose size</option>
+                  <option value="SIZE_1_10">1–10 employees</option>
+                  <option value="SIZE_11_50">11–50 employees</option>
+                  <option value="SIZE_51_200">51–200 employees</option>
+                  <option value="SIZE_201_1000">201–1000 employees</option>
+                  <option value="SIZE_1000_PLUS">1000+ employees</option>
+                </select>
+                <ChevronDown
+                    size={16}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
+                Work email <span className="text-red-500">*</span>
+              </label>
+              <input
+                  type="email"
+                  name="workEmail"
+                  value={formData.workEmail}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
+                  placeholder="ops@company.com"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
-              Work email <span className="text-red-500">*</span>
+              Contact number <span className="text-red-500">*</span>
             </label>
-
             <input
-              type="email"
-              name="workEmail"
-              value={formData.workEmail}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
-              placeholder="ops@company.com"
+                type="tel"
+                name="contactNumber"
+                value={formData.contactNumber}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
+                placeholder="Enter Contact No."
             />
           </div>
         </div>
 
-        {/* Contact Number */}
-        <div>
-          <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
-            Contact number <span className="text-red-500">*</span>
-          </label>
+        <div className="border-t border-gray-200 my-7" />
 
-          <input
-            type="tel"
-            name="contactNumber"
-            value={formData.contactNumber}
-            onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#e8683f]/40 focus:border-[#e8683f] transition placeholder-gray-400"
-            placeholder="Enter Contact No."
-          />
+        <div className="flex items-center justify-between">
+          <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 font-medium transition"
+          >
+            <span>←</span> Back
+          </button>
+          <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex items-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold px-7 py-3 rounded-lg transition disabled:opacity-50"
+          >
+            {loading ? "Submitting..." : "Continue"}
+            <span>→</span>
+          </button>
         </div>
       </div>
-
-      {/* Divider */}
-      <div className="border-t border-gray-200 my-7" />
-
-      {/* Footer Actions */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 font-medium transition"
-        >
-          <span>←</span> Back
-        </button>
-
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="flex items-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold px-7 py-3 rounded-lg transition disabled:opacity-50"
-        >
-          {loading ? "Submitting..." : "Continue"}
-          <span>→</span>
-        </button>
-      </div>
-    </div>
   );
 }

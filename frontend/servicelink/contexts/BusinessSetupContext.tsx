@@ -3,25 +3,20 @@
 import React, { createContext, useState, useEffect, ReactNode } from "react";
 
 export interface BusinessSetupData {
-  // Step 1: Organization
   organizationId: number | null;
   organizationName: string | null;
 
-  // Step 2: Workspace
   workspaceId: number | null;
   workspaceName: string | null;
 
-  // Step 3: ProUser (Admin)
   proUserId: number | null;
   proUserName: string | null;
 
-  // Step 4: Verification (KYB)
   kybId: number | null;
   kybStatus: string | null;
 
-  // Step 5: Plan & Payment
   subscriptionId: number | null;
-  planType: string | null; // STARTER, GROWTH, ENTERPRISE
+  planType: string | null;
   amountNpr: number | null;
   paymentReferenceId: string | null;
   paymentStatus: string | null;
@@ -56,7 +51,7 @@ const defaultData: BusinessSetupData = {
 };
 
 export const BusinessSetupContext = createContext<
-  BusinessSetupContextType | undefined
+    BusinessSetupContextType | undefined
 >(undefined);
 
 interface BusinessSetupProviderProps {
@@ -64,57 +59,45 @@ interface BusinessSetupProviderProps {
 }
 
 export const BusinessSetupProvider: React.FC<BusinessSetupProviderProps> = ({
-  children,
-}) => {
-  const [data, setData] = useState<BusinessSetupData>(() => {
+                                                                              children,
+                                                                            }) => {
+  // Start with plain defaults — localStorage/sessionStorage are browser-only
+  // and don't exist during Next.js's server render pass.
+  const [data, setData] = useState<BusinessSetupData>(defaultData);
+
+  // Load persisted data — runs client-side only, after mount.
+  useEffect(() => {
     const stored =
-      localStorage.getItem("businessSetup") ||
-      sessionStorage.getItem("businessSetupDraft");
+        localStorage.getItem("businessSetup") ||
+        sessionStorage.getItem("businessSetupDraft");
     if (stored) {
       try {
-        return JSON.parse(stored);
+        setData(JSON.parse(stored));
       } catch (error) {
         console.error("Failed to parse stored business setup:", error);
       }
     }
-    return defaultData;
-  });
+  }, []);
 
-  // Save to localStorage whenever data changes
+  // Persist on every change.
   useEffect(() => {
     localStorage.setItem("businessSetup", JSON.stringify(data));
   }, [data]);
 
   const setOrganization = (id: number, name: string) => {
-    setData((prev) => ({
-      ...prev,
-      organizationId: id,
-      organizationName: name,
-    }));
+    setData((prev) => ({ ...prev, organizationId: id, organizationName: name }));
   };
 
   const setWorkspace = (id: number, name: string) => {
-    setData((prev) => ({
-      ...prev,
-      workspaceId: id,
-      workspaceName: name,
-    }));
+    setData((prev) => ({ ...prev, workspaceId: id, workspaceName: name }));
   };
 
   const setProUser = (id: number, name: string) => {
-    setData((prev) => ({
-      ...prev,
-      proUserId: id,
-      proUserName: name,
-    }));
+    setData((prev) => ({ ...prev, proUserId: id, proUserName: name }));
   };
 
   const setKyb = (id: number, status: string) => {
-    setData((prev) => ({
-      ...prev,
-      kybId: id,
-      kybStatus: status,
-    }));
+    setData((prev) => ({ ...prev, kybId: id, kybStatus: status }));
   };
 
   const setSubscription = (id: number, planType: string, amount: number) => {
@@ -147,7 +130,7 @@ export const BusinessSetupProvider: React.FC<BusinessSetupProviderProps> = ({
     if (data.proUserId === null) return 3;
     if (data.kybId === null) return 4;
     if (data.subscriptionId === null) return 5;
-    return 6; // Complete
+    return 6;
   };
 
   const value: BusinessSetupContextType = {
@@ -163,8 +146,8 @@ export const BusinessSetupProvider: React.FC<BusinessSetupProviderProps> = ({
   };
 
   return (
-    <BusinessSetupContext.Provider value={value}>
-      {children}
-    </BusinessSetupContext.Provider>
+      <BusinessSetupContext.Provider value={value}>
+        {children}
+      </BusinessSetupContext.Provider>
   );
 };
