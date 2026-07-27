@@ -254,7 +254,7 @@ export default function BusinessSignInPage() {
                 <span className="text-sm text-gray-600">Remember me</span>
               </label>
               <Link
-                  href="/forgot-password"
+                  href="/login/business/forget-password"
                   className="text-sm font-semibold text-[#e8683f] hover:text-[#d95a2f] transition"
               >
                 Forgot Password?
@@ -275,13 +275,13 @@ export default function BusinessSignInPage() {
               <div className="flex-1 h-px bg-gray-200" />
             </div>
 
-            <button
-                type="button"
+            <Link
+                href="/login/business/otp"
                 className="w-full flex items-center justify-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-[#1e3a8a] text-sm font-semibold py-3.5 rounded-lg transition mb-7"
             >
               <MessageCircle size={16} className="text-gray-500" />
               Continue with OTP
-            </button>
+            </Link>
 
             <p className="text-center text-sm text-gray-400 mb-1">
               Don't have an organization account?
