@@ -14,7 +14,7 @@ export interface ProJwtClaims {
  * interceptor uses to attach the Authorization header.
  */
 export function getProClaims(): ProJwtClaims | null {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     if (!token) return null;
 
     try {

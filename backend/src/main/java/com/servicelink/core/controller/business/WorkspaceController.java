@@ -28,8 +28,4 @@ public class WorkspaceController {
         return ResponseEntity.ok(workspaceService.findById(id));
     }
 
-//    @GetMapping
-//    public ResponseEntity<List<WorkspaceResponse>> getAll(){
-//        return ResponseEntity.ok(workspaceService.findAll());
-//    }
 }

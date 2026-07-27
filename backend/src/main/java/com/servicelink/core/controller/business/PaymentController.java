@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-
 import java.util.Base64;
 
 @Slf4j
@@ -36,11 +35,23 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(subscriptionService.create(request));
     }
 
+    // Get Subscription by workspace — used by the dashboard to show the
+    // real plan tier (Starter/Growth/Enterprise) in the sidebar badge.
+    // Returns 404 (not 500) when a workspace hasn't reached the Plan step yet.
+    @GetMapping("/subscription/workspace/{workspaceId}")
+    public ResponseEntity<SubscriptionResponse> getSubscriptionByWorkspace(@PathVariable Long workspaceId) {
+        try {
+            return ResponseEntity.ok(subscriptionService.findByWorkspace(workspaceId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
     //Initiate Payment - returns gatewayRedirectUrl
     @PostMapping("/initiate")
     public ResponseEntity<PaymentInitiateResponse> initiate(
             @Valid @RequestBody PaymentInitiateRequest request
-            ) throws Exception{
+    ) throws Exception{
         return ResponseEntity.ok(paymentService.initiatePayment(request));
     }
 
@@ -100,5 +111,5 @@ public class PaymentController {
         log.info("Manual verify requested: ref={}", request.getReferenceId());
         return ResponseEntity.ok(paymentService.verifyAndComplete(request));
     }
-    
+
 }

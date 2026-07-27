@@ -43,7 +43,8 @@ export default function ProNavbar() {
     const handleLogout = () => {
         // Adjust "token" to match whatever key your axios interceptor reads —
         // same key used in utils/jwt.ts's getProClaims().
-        localStorage.removeItem("token");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
         dispatch(clearProSession());
         setMenuOpen(false);
         router.push("/login/business");

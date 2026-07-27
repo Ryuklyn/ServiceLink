@@ -96,7 +96,7 @@ function BusinessRegisterContent() {
     // Redis session server-side; clear the client-side resume pointer too.
     localStorage.removeItem(RESUME_KEY);
     resetSetup();
-    router.push("/dashboard/business");
+    router.push("/login/business");
   };
 
   if (resuming) {

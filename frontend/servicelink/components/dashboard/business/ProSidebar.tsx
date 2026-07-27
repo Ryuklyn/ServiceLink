@@ -57,8 +57,14 @@ function getInitials(name: string | null): string {
 export default function ProSidebar() {
     const pathname = usePathname();
     const dispatch = useDispatch<AppDispatch>();
-    const { fullName, organizationName, businessType, planType, status } =
-        useSelector((state: RootState) => state.proSession);
+    const {
+        fullName,
+        organizationName,
+        businessType,
+        planType,
+        subscriptionStatus,
+        status,
+    } = useSelector((state: RootState) => state.proSession);
 
     // Fetch once on mount — ProNavbar reads the same store slice, so it
     // doesn't need to dispatch this itself.
@@ -70,6 +76,16 @@ export default function ProSidebar() {
 
     const initials = getInitials(fullName);
     const icon = businessType ? BUSINESS_TYPE_ICON[businessType] ?? "🏢" : "🏢";
+
+    // Everyone starts on TRIAL regardless of which plan they picked — only
+    // once the subscription is actually active/paid does the real plan name
+    // become meaningful to show.
+    const planBadgeText =
+        subscriptionStatus === "TRIAL"
+            ? "Trial"
+            : planType
+                ? `${planType.charAt(0)}${planType.slice(1).toLowerCase()} Plan`
+                : "...";
 
     return (
         <aside className="w-56 bg-[#1a2340] flex flex-col h-full shrink-0">
@@ -132,7 +148,7 @@ export default function ProSidebar() {
                     <p className="text-gray-400 text-xs">Admin</p>
                 </div>
                 <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-semibold">
-          {planType ? `${planType} Plan` : "..."}
+          {planBadgeText}
         </span>
             </div>
         </aside>

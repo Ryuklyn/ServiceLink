@@ -92,7 +92,7 @@ public class AuthService {
                 .token(accessToken)
                 .refreshToken(refreshToken)
                 .email(user.getEmail())
-                .fullName(profile != null ? profile.getFullName() : null)
+                .fullName(profile != null ? profile.getFullName() : user.getFullName())
                 .profileImage(profile != null ? profile.getProfileImage() : null)
                 .requiresProfileImage(profile == null || profile.getProfileImage() == null)
                 .build();

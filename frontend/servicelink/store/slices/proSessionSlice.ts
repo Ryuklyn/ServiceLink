@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/utils/axios";
-// import { getProClaims } from "@/utils/jwt";
 
 interface ProSessionState {
     fullName: string | null;
@@ -10,6 +9,8 @@ interface ProSessionState {
     organizationName: string | null;
     businessType: string | null;
     planType: string | null;
+    subscriptionStatus: string | null; // TRIAL | ACTIVE | ... (whatever SubscriptionStatus has)
+    trialEndsAt: string | null;
     status: "idle" | "loading" | "succeeded" | "failed";
     error: string | null;
 }
@@ -22,20 +23,31 @@ const initialState: ProSessionState = {
     organizationName: null,
     businessType: null,
     planType: null,
+    subscriptionStatus: null,
+    trialEndsAt: null,
     status: "idle",
     error: null,
 };
 
 export const fetchProSession = createAsyncThunk("proSession/fetch", async () => {
-    const meRes = await api.get("/business/pro-user/me"); // Authorization header via your existing interceptor
+    const meRes = await api.get("/business/pro-user/me");
     const workspaceRes = await api.get(`/business/workspace/${meRes.data.workspaceId}`);
     const orgRes = await api.get(`/business/organization/${workspaceRes.data.organizationId}`);
 
     let planType: string | null = null;
+    let subscriptionStatus: string | null = null;
+    let trialEndsAt: string | null = null;
+
     try {
-        const subRes = await api.get(`/business/payment/subscription/workspace/${meRes.data.workspaceId}`);
+        const subRes = await api.get(
+            `/business/payment/subscription/workspace/${meRes.data.workspaceId}`,
+        );
         planType = subRes.data.planType ?? null;
-    } catch {}
+        subscriptionStatus = subRes.data.status ?? null;
+        trialEndsAt = subRes.data.trialEndsAt ?? null;
+    } catch {
+        // No subscription yet — badge falls back to a neutral state
+    }
 
     return {
         fullName: meRes.data.fullName,
@@ -45,8 +57,11 @@ export const fetchProSession = createAsyncThunk("proSession/fetch", async () => 
         organizationName: orgRes.data.companyName,
         businessType: orgRes.data.businessType,
         planType,
+        subscriptionStatus,
+        trialEndsAt,
     };
 });
+
 const proSessionSlice = createSlice({
     name: "proSession",
     initialState,

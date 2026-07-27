@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { getProClaims } from "@/utils/jwt";
 import {
   Mail,
   Lock,
@@ -52,16 +53,32 @@ export default function BusinessSignInPage() {
     try {
       setLoading(true);
 
+      // const response = await api.post("/auth/login", { email, password });
+      // const { token, role, fullName } = response.data;
+      //
+      // if (role !== "PRO") {
+      //   toast.error("This account is not registered as a business account");
+      //   return;
+      // }
+      //
+      // // Same key utils/jwt.ts's getProClaims() reads — keep in sync.
+      // localStorage.setItem("token", token);
       const response = await api.post("/auth/login", { email, password });
-      const { token, role, fullName } = response.data;
+      const { token, refreshToken, fullName } = response.data;
 
-      if (role !== "PRO") {
+      localStorage.setItem("accessToken", token);
+      localStorage.setItem("refreshToken", refreshToken);
+
+      const claims = getProClaims();
+      if (claims?.role !== "PRO") {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
         toast.error("This account is not registered as a business account");
         return;
       }
 
-      // Same key utils/jwt.ts's getProClaims() reads — keep in sync.
-      localStorage.setItem("token", token);
+      // toast.success(`Welcome back, ${fullName ?? "there"}`);
+      // router.push("/dashboard/business");
 
       toast.success(`Welcome back, ${fullName}`);
       router.push("/dashboard/business");
