@@ -10,6 +10,7 @@ import providerSubscriptionReducer from "./slices/providerSubscriptionSlice";
 import providerAvailabilityReducer from "./slices/providerAvailabilitySlice";
 import providerBookingsReducer from "./slices/providerBookingsSlice";
 import proSessionReducer from "@/store/slices/proSessionSlice";
+import uiReducer from "@/store/slices/uiSlice";
 
 export const store = configureStore({
     reducer: {
@@ -24,6 +25,7 @@ export const store = configureStore({
         providerAvailability:providerAvailabilityReducer,
         providerBookings: providerBookingsReducer,
         proSession: proSessionReducer,
+        ui:uiReducer,
     },
 });
 

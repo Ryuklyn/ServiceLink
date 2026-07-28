@@ -2,6 +2,7 @@ package com.servicelink.core.service.business;
 
 import com.servicelink.core.dto.request.business.AcceptInviteRequest;
 import com.servicelink.core.dto.request.business.InviteTeamMemberRequest;
+import com.servicelink.core.dto.request.business.UpdateTeamMemberRequest;
 import com.servicelink.core.dto.response.AuthResponseDTO;
 import com.servicelink.core.dto.response.business.InviteDetailsResponse;
 import com.servicelink.core.dto.response.business.TeamMemberResponse;
@@ -275,5 +276,36 @@ public class TeamMemberService {
                 .invitedAt(m.getInvitedAt())
                 .lastActiveAt(m.getLastActiveAt())
                 .build();
+    }
+
+    @Transactional
+    public TeamMemberResponse updateMember(Long workspaceId, Long memberId, UpdateTeamMemberRequest request) {
+        TeamMember member = getOwnedMember(workspaceId, memberId);
+
+        if (member.getRole() == TeamRole.ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot edit the workspace admin");
+        }
+
+        TeamRole role;
+        try {
+            role = TeamRole.valueOf(request.getRole().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid role: " + request.getRole());
+        }
+        if (role == TeamRole.ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin role is reserved for the workspace owner");
+        }
+
+        member.setFullName(request.getFullName());
+        member.setRole(role);
+        teamMemberRepository.save(member);
+
+        // Keep the linked User account's name in sync once they've accepted
+        if (member.getUser() != null) {
+            member.getUser().setFullName(request.getFullName());
+            userRepository.save(member.getUser());
+        }
+
+        return toResponse(member);
     }
 }

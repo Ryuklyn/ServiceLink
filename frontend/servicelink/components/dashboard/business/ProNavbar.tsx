@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { Search, Bell, ChevronDown, LogOut, Settings } from "lucide-react";
+import { Search, Bell, ChevronDown, LogOut, Settings, Menu } from "lucide-react";
 import type { AppDispatch, RootState } from "@/store"; // adjust to your store path
 import { clearProSession } from "@/store/slices/proSessionSlice";
+import { toggleSidebar } from "@/store/slices/uiSlice";
 
 function getInitials(name: string | null): string {
     if (!name) return "..";
@@ -17,11 +18,17 @@ function getInitials(name: string | null): string {
         .join("");
 }
 
+function formatRole(role: string | null): string {
+    if (!role) return "...";
+    return role.charAt(0) + role.slice(1).toLowerCase();
+}
+
 export default function ProNavbar() {
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
-    const { fullName } = useSelector((state: RootState) => state.proSession);
+    const { fullName, role } = useSelector((state: RootState) => state.proSession);
     const initials = getInitials(fullName);
+    const roleLabel = formatRole(role);
 
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -51,14 +58,27 @@ export default function ProNavbar() {
     };
 
     return (
-        <header className="bg-white border-b border-gray-200 h-14 flex items-center justify-between px-6 shrink-0">
-            <h1 className="text-xl font-bold text-gray-800">Dashboard</h1>
-            <div className="flex items-center gap-4">
-                <button className="text-gray-500 hover:text-gray-700">
+        <header className="bg-white border-b border-gray-200 h-14 flex items-center justify-between px-3 sm:px-6 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                {/* Mobile-only hamburger — opens the off-canvas sidebar */}
+                <button
+                    onClick={() => dispatch(toggleSidebar())}
+                    className="md:hidden text-gray-500 hover:text-gray-700 -ml-1 p-1.5 rounded-md hover:bg-gray-100 shrink-0"
+                    aria-label="Toggle menu"
+                >
+                    <Menu size={20} />
+                </button>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">
+                    Dashboard
+                </h1>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                <button className="hidden sm:block text-gray-500 hover:text-gray-700">
                     <Search size={20} />
                 </button>
                 <button className="relative text-gray-500 hover:text-gray-700">
-                    <Bell size={20} />
+                    <Bell size={18} className="sm:w-5 sm:h-5" />
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                 </button>
 
@@ -67,18 +87,19 @@ export default function ProNavbar() {
                         onClick={() => setMenuOpen((prev) => !prev)}
                         className="flex items-center gap-2 cursor-pointer"
                     >
-                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
                             {initials}
                         </div>
-                        <div className="text-right">
-                            <p className="text-sm font-semibold text-gray-800 leading-none">
+                        {/* Name/role column collapses on narrow screens — avatar + chevron still work */}
+                        <div className="text-right hidden sm:block">
+                            <p className="text-sm font-semibold text-gray-800 leading-none truncate max-w-[10rem]">
                                 {fullName ?? "Loading..."}
                             </p>
-                            <p className="text-xs text-gray-500">Admin</p>
+                            <p className="text-xs text-gray-500">{roleLabel}</p>
                         </div>
                         <ChevronDown
                             size={16}
-                            className={`text-gray-400 transition-transform ${
+                            className={`hidden sm:block text-gray-400 transition-transform ${
                                 menuOpen ? "rotate-180" : ""
                             }`}
                         />
@@ -86,6 +107,13 @@ export default function ProNavbar() {
 
                     {menuOpen && (
                         <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
+                            {/* Name shows here too, so it's visible even when collapsed in the bar */}
+                            <div className="sm:hidden px-4 py-2 border-b border-gray-100">
+                                <p className="text-sm font-semibold text-gray-800 truncate">
+                                    {fullName ?? "Loading..."}
+                                </p>
+                                <p className="text-xs text-gray-500">{roleLabel}</p>
+                            </div>
                             <button
                                 onClick={() => {
                                     setMenuOpen(false);

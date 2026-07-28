@@ -1,15 +1,18 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/utils/axios";
 
+export type WorkspaceRole = "ADMIN" | "MANAGER" | "STAFF" | "FINANCE";
+
 interface ProSessionState {
     fullName: string | null;
+    role: WorkspaceRole | null; // ← naya: this user's role IN THIS WORKSPACE
     workspaceId: number | null;
     workspaceName: string | null;
     organizationId: number | null;
     organizationName: string | null;
     businessType: string | null;
     planType: string | null;
-    subscriptionStatus: string | null; // TRIAL | ACTIVE | ... (whatever SubscriptionStatus has)
+    subscriptionStatus: string | null;
     trialEndsAt: string | null;
     status: "idle" | "loading" | "succeeded" | "failed";
     error: string | null;
@@ -17,6 +20,7 @@ interface ProSessionState {
 
 const initialState: ProSessionState = {
     fullName: null,
+    role: null,
     workspaceId: null,
     workspaceName: null,
     organizationId: null,
@@ -29,38 +33,55 @@ const initialState: ProSessionState = {
     error: null,
 };
 
-export const fetchProSession = createAsyncThunk("proSession/fetch", async () => {
-    const meRes = await api.get("/business/pro-user/me");
-    const workspaceRes = await api.get(`/business/workspace/${meRes.data.workspaceId}`);
-    const orgRes = await api.get(`/business/organization/${workspaceRes.data.organizationId}`);
+export const fetchProSession = createAsyncThunk(
+    "proSession/fetch",
+    async (_, { rejectWithValue }) => {
+        let me: { fullName: string; role: WorkspaceRole; workspaceId: number };
+        try {
+            const meRes = await api.get("/business/pro-user/me");
+            me = meRes.data;
+        } catch {
+            return rejectWithValue("Could not load your profile. Please try logging in again.");
+        }
 
-    let planType: string | null = null;
-    let subscriptionStatus: string | null = null;
-    let trialEndsAt: string | null = null;
+        let workspace: any, org: any;
+        try {
+            const workspaceRes = await api.get(`/business/workspace/${me.workspaceId}`);
+            workspace = workspaceRes.data;
+            const orgRes = await api.get(`/business/organization/${workspace.organizationId}`);
+            org = orgRes.data;
+        } catch {
+            return rejectWithValue("Could not load workspace details.");
+        }
 
-    try {
-        const subRes = await api.get(
-            `/business/payment/subscription/workspace/${meRes.data.workspaceId}`,
-        );
-        planType = subRes.data.planType ?? null;
-        subscriptionStatus = subRes.data.status ?? null;
-        trialEndsAt = subRes.data.trialEndsAt ?? null;
-    } catch {
-        // No subscription yet — badge falls back to a neutral state
-    }
+        let planType: string | null = null;
+        let subscriptionStatus: string | null = null;
+        let trialEndsAt: string | null = null;
+        try {
+            const subRes = await api.get(
+                `/business/payment/subscription/workspace/${me.workspaceId}`,
+            );
+            planType = subRes.data.planType ?? null;
+            subscriptionStatus = subRes.data.status ?? null;
+            trialEndsAt = subRes.data.trialEndsAt ?? null;
+        } catch {
+            // No subscription yet — badge falls back to a neutral state
+        }
 
-    return {
-        fullName: meRes.data.fullName,
-        workspaceId: workspaceRes.data.id,
-        workspaceName: workspaceRes.data.name,
-        organizationId: orgRes.data.id,
-        organizationName: orgRes.data.companyName,
-        businessType: orgRes.data.businessType,
-        planType,
-        subscriptionStatus,
-        trialEndsAt,
-    };
-});
+        return {
+            fullName: me.fullName,
+            role: me.role,
+            workspaceId: workspace.id,
+            workspaceName: workspace.name,
+            organizationId: org.id,
+            organizationName: org.companyName,
+            businessType: org.businessType,
+            planType,
+            subscriptionStatus,
+            trialEndsAt,
+        };
+    },
+);
 
 const proSessionSlice = createSlice({
     name: "proSession",
