@@ -5,8 +5,10 @@ import com.servicelink.core.dto.request.business.InviteTeamMemberRequest;
 import com.servicelink.core.dto.response.AuthResponseDTO;
 import com.servicelink.core.dto.response.business.InviteDetailsResponse;
 import com.servicelink.core.dto.response.business.TeamMemberResponse;
+import com.servicelink.core.model.business.TeamMember;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.repository.business.ProUserRepository;
+import com.servicelink.core.repository.business.TeamMemberRepository;
 import com.servicelink.core.service.business.TeamMemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,23 +27,20 @@ public class TeamMemberController {
 
     private final TeamMemberService teamMemberService;
     private final ProUserRepository proUserRepository;
+    private final TeamMemberRepository teamMemberRepository; // ← naya dependency
 
-//    private Long currentWorkspaceId(Authentication auth) {
-//        if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof User user)) {
-//            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-//        }
-//        return proUserRepository.findByUser_Id(user.getId())
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No workspace found"))
-//                .getId();
-//    }
     private Long currentWorkspaceId(Authentication auth) {
         if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof User user)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
+
+        // Case 1: workspace owner (has a ProUser record)
         return proUserRepository.findByUser_Id(user.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No workspace found"))
-                .getWorkspace()
-                .getId();
+                .map(proUser -> proUser.getWorkspace().getId())
+                // Case 2: invited team member (no ProUser, but has a TeamMember record)
+                .orElseGet(() -> teamMemberRepository.findByUser_Id(user.getId())
+                        .map(TeamMember::getWorkspaceId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No workspace found")));
     }
 
     @GetMapping

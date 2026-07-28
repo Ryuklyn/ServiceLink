@@ -60,9 +60,9 @@ public class SecurityConfig {
                         )
                 )
 
-//                // ---------------------------------------------------------
-//                // Authorization Rules
-//                // ---------------------------------------------------------
+                // ---------------------------------------------------------
+                // Authorization Rules
+                // ---------------------------------------------------------
 
                 .authorizeHttpRequests(auth -> auth
 
@@ -92,9 +92,40 @@ public class SecurityConfig {
                                 "/api/kyc/**"
                         ).permitAll()
 
+                        // =====================================================
+                        // BUSINESS — TEAM INVITE (public, no-login flow only)
+                        // These two are the ONLY /api/business/** routes that
+                        // should be reachable without a JWT — a person clicking
+                        // an email invite link isn't logged in yet. Everything
+                        // else under /api/business/** requires authentication.
+                        // Declared BEFORE the generic /api/business/** rule
+                        // below so these specific matches win.
+                        // =====================================================
+                        .requestMatchers(
+                                HttpMethod.GET, "/api/business/team/invite/*"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST, "/api/business/team/accept-invite"
+                        ).permitAll()
+
+                        // TODO: if ProUser registration / KYB submission lives
+                        // under /api/business/** and must be reachable before
+                        // login (e.g. "/api/business/pro-user/create"), add its
+                        // specific matcher here too — do NOT blanket-permit
+                        // the whole /api/business/** prefix again.
+                        //
+                        // Example:
+                        // .requestMatchers(HttpMethod.POST, "/api/business/pro-user/create").permitAll()
+
+                        // =====================================================
+                        // BUSINESS — everything else requires authentication
+                        // (team list/invite/remove/resend, pro-user profile,
+                        // subscription, etc.)
+                        // =====================================================
                         .requestMatchers(
                                 "/api/business/**"
-                        ).permitAll()
+                        ).authenticated()
 
                         // Provider PIN auth (POST — OTP-adjacent, not method-restricted)
                         .requestMatchers(

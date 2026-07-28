@@ -10,4 +10,5 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     Optional<TeamMember> findByInviteToken(String token);
     Optional<TeamMember> findByWorkspaceIdAndEmail(Long workspaceId, String email);
     boolean existsByWorkspaceIdAndEmail(Long workspaceId, String email);
+    Optional<TeamMember> findByUser_Id(Long userId); // ← naya
 }

@@ -7,22 +7,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Centralized exception handler.
- * All errors return the same JSON shape so the frontend can reliably read them:
- * {
- *   "status":  422,
- *   "code":    "INVALID_OTP",
- *   "message": "Invalid or expired OTP",
- *   "timestamp": "2026-05-03T..."
- * }
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -39,6 +30,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AppException.class)
     public ResponseEntity<Map<String, Object>> handleAppException(AppException ex) {
         return build(ex.getStatus(), ex.getErrorCode(), ex.getMessage(), ex.getDetails());
+    }
+
+    /**
+     * ResponseStatusException carries its own intended HTTP status (e.g. 403,
+     * 404, 409, 410) — thrown all over the controller/service layer via
+     * `new ResponseStatusException(HttpStatus.FORBIDDEN, "No workspace found")`.
+     * Because it's a RuntimeException, it would otherwise be swallowed by the
+     * generic RuntimeException handler below and reported as a 500. This
+     * handler must exist so the real status/reason reaches the client.
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        String reason = ex.getReason() != null ? ex.getReason() : status.getReasonPhrase();
+        return build(status, status.name(), reason);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -58,15 +64,6 @@ public class GlobalExceptionHandler {
                 "An unexpected error occurred. Please try again.");
     }
 
-    /**
-     * Catch-all for CHECKED exceptions (java.lang.Exception, not RuntimeException).
-     * Without this, a checked exception — e.g. IOException bubbling up from
-     * KhaltiGatewayService's HttpClient calls through a controller method
-     * declared `throws Exception` — falls through every handler above
-     * (RuntimeException.class does NOT match checked exceptions) and hits
-     * Spring's own default error handling instead of this class, which is why
-     * such failures show up as a bare 500 with no log line from this handler.
-     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         log.error("Unhandled checked exception: {}", ex.getMessage(), ex);

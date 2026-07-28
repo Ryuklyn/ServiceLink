@@ -5,6 +5,7 @@ import com.servicelink.core.dto.request.business.InviteTeamMemberRequest;
 import com.servicelink.core.dto.response.AuthResponseDTO;
 import com.servicelink.core.dto.response.business.InviteDetailsResponse;
 import com.servicelink.core.dto.response.business.TeamMemberResponse;
+import com.servicelink.core.model.auth.AuthProvider;
 import com.servicelink.core.model.business.InviteStatus;
 import com.servicelink.core.model.business.ProUser;
 import com.servicelink.core.model.business.TeamMember;
@@ -227,8 +228,10 @@ public class TeamMemberService {
         User user = userRepository.findByEmail(member.getEmail())
                 .orElseGet(() -> {
                     User u = new User();
+                    u.setFullName(member.getFullName());
                     u.setEmail(member.getEmail());
                     u.setRole(Role.PRO);
+                    u.setProvider(AuthProvider.LOCAL);
                     return u;
                 });
         user.setPassword(passwordEncoder.encode(request.getPassword()));
