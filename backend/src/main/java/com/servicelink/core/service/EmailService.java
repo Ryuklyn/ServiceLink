@@ -54,6 +54,32 @@ public class EmailService {
         send(to, subject, body, "OTP");
     }
 
+    // ─── Team invite email ───────────────────────────────────────────────────
+
+    @Async
+    public void sendTeamInviteEmail(String to, String fullName, String orgName, String inviteLink) {
+        String subject = "You've been invited to join " + orgName + " on ServiceLink";
+        String displayName = (fullName == null || fullName.isBlank()) ? "there" : fullName;
+
+        String body = wrapTemplate(
+                "Team Invitation",
+                "You're invited, " + displayName + ".",
+                orgName + " has invited you to join their workspace on ServiceLink.",
+                """
+                <p style="font-size:14px; line-height:1.6; color:#44403c; margin:0 0 8px;">
+                  Click the button below to set your password and get started. This invitation
+                  link will expire in 7 days.
+                </p>
+                <p style="font-size:13px; color:#78716c; margin:16px 0 0;">
+                  If you weren't expecting this invitation, you can safely ignore this email.
+                </p>
+                """,
+                "Set Your Password", inviteLink
+        );
+
+        send(to, subject, body, "Team invite (org: " + orgName + ")");
+    }
+
     // ─── KYC confirmation email (submitted, under review) ──────────────────────
 
     @Async

@@ -46,13 +46,13 @@ export default function BusinessOtpLoginPage() {
         e?.preventDefault();
 
         if (!email.trim()) {
-            toast.error("Please enter your work email or phone");
+            toast.error("Please enter your work email");
             return;
         }
 
         try {
             setLoading(true);
-            await api.post("/auth/otp/request", { email });
+            await api.post("/auth/business/send-email-otp", { email: email.trim() });
             setStep("verify");
             toast.success("OTP sent successfully");
         } catch (error: any) {
@@ -64,6 +64,7 @@ export default function BusinessOtpLoginPage() {
             setLoading(false);
         }
     };
+
 
     const handleOtpChange = (index: number, value: string) => {
         if (!/^[0-9]?$/.test(value)) return;
@@ -98,11 +99,11 @@ export default function BusinessOtpLoginPage() {
         try {
             setLoading(true);
 
-            const response = await api.post("/auth/otp/verify", {
-                email,
+            const response = await api.post("/auth/business/login/verify-email-otp", {
+                email: email.trim(),
                 otp: code,
             });
-            const { token, refreshToken, fullName } = response.data;
+            const { token, refreshToken } = response.data;
 
             localStorage.setItem("accessToken", token);
             localStorage.setItem("refreshToken", refreshToken);
@@ -115,7 +116,7 @@ export default function BusinessOtpLoginPage() {
                 return;
             }
 
-            toast.success(`Welcome back, ${fullName ?? "there"}`);
+            toast.success("Welcome back!");
             router.push("/dashboard/business");
         } catch (error: any) {
             console.error("OTP verify error:", error);
@@ -128,7 +129,7 @@ export default function BusinessOtpLoginPage() {
     const handleResend = async () => {
         try {
             setResending(true);
-            await api.post("/auth/otp/request", { email });
+            await api.post("/auth/business/send-email-otp", { email: email.trim() });
             setOtp(Array(OTP_LENGTH).fill(""));
             inputsRef.current[0]?.focus();
             toast.success("OTP resent successfully");

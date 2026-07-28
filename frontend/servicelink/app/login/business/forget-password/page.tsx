@@ -48,15 +48,20 @@ export default function BusinessForgotPasswordPage() {
         try {
             setLoading(true);
 
-            await api.post("/auth/forgot-password", { email });
+            await api.post("/auth/business/send-email-otp", {
+                email: email.trim(),
+            });
 
-            setSent(true);
-            toast.success("Reset instructions sent to your email");
+            toast.success("OTP sent successfully");
+
+            router.push(
+                `/login/business/forget-password/verify?email=${encodeURIComponent(email.trim())}`,
+            );
         } catch (error: any) {
-            console.error("Forgot password error:", error);
+            console.error("Send OTP error:", error);
             toast.error(
                 error?.response?.data?.message ??
-                "Could not send reset instructions. Please try again.",
+                "Could not send OTP. Please try again.",
             );
         } finally {
             setLoading(false);

@@ -47,7 +47,9 @@ public class ProUserService {
         String email = workspace.getOrganization().getWorkEmail();
 
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("A user account with this email already exists");
+            throw new IllegalArgumentException(
+                    "This email is already registered with a different account type. " +
+                            "Please use a different email address to register your business.");
         }
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
     Building2,
     Users,
@@ -20,11 +20,13 @@ import {
     Mail,
     FileText,
 } from "lucide-react";
+import api from "@/utils/axios";
+import { toast } from "react-toastify";
 
 const NAVY = "#1e3a8a";
 const ORANGE = "#e8683f";
 
-// ---------- Mock data, mirroring the reference screens ----------
+// ---------- Mock data (Organization Profile / Subscription / Notifications) ----------
 
 const initialOrgProfile = {
     name: "Hotel Annapurna",
@@ -38,14 +40,6 @@ const initialOrgProfile = {
 };
 
 const ALL_SERVICE_OPTIONS = ["HVAC", "Electrical", "Cleaning", "Plumbing", "Security", "Pest Control"];
-
-const initialTeamMembers = [
-    { id: "t1", name: "Rajesh Shrestha", role: "Admin", email: "rajesh@hotelannapurna.com", lastActive: "2 hours ago", inviteStatus: "Accepted" },
-    { id: "t2", name: "Priya Sharma", role: "Staff", email: "priya@hotelannapurna.com", lastActive: "30 minutes ago", inviteStatus: "Accepted" },
-    { id: "t3", name: "Arun KC", role: "Finance", email: "arun@hotelannapurna.com", lastActive: "Yesterday", inviteStatus: "Accepted" },
-    { id: "t4", name: "Sunita Paudel", role: "Staff", email: "sunita@hotelannapurna.com", lastActive: "1 hour ago", inviteStatus: "Accepted" },
-    { id: "t5", name: "Mohan Thapa", role: "Manager", email: "mohan@hotelannapurna.com", lastActive: "Invite sent 3 days ago", inviteStatus: "Pending" },
-];
 
 const PERMISSION_ROWS = [
     { action: "Create job tickets", Admin: true, Manager: true, Staff: true, Finance: false },
@@ -131,6 +125,33 @@ const TABS = [
     { key: "notifications", label: "Notifications", icon: Bell },
 ];
 
+// ---------- Team Members: real API types ----------
+
+type ApiInviteStatus = "PENDING" | "ACCEPTED";
+type ApiTeamRole = "ADMIN" | "MANAGER" | "STAFF" | "FINANCE";
+
+interface TeamMemberResponse {
+    id: number;
+    fullName: string;
+    email: string;
+    role: ApiTeamRole;
+    inviteStatus: ApiInviteStatus;
+    invitedAt: string | null;
+    lastActiveAt: string | null;
+}
+
+const roleDisplay: Record<ApiTeamRole, string> = {
+    ADMIN: "Admin",
+    MANAGER: "Manager",
+    STAFF: "Staff",
+    FINANCE: "Finance",
+};
+
+const inviteStatusDisplay: Record<ApiInviteStatus, string> = {
+    PENDING: "Pending",
+    ACCEPTED: "Accepted",
+};
+
 const getRoleBadgeStyles = (role: string) => {
     if (role === "Admin") return "bg-slate-100 text-slate-700";
     if (role === "Manager") return "bg-blue-50 text-[#1e3a8a]";
@@ -144,10 +165,31 @@ const getInviteStatusStyles = (status: string) => {
     return "bg-slate-100 text-slate-600";
 };
 
+function timeAgo(iso: string | null): string {
+    if (!iso) return "—";
+    const then = new Date(iso).getTime();
+    const diffMs = Date.now() - then;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return "Yesterday";
+    return `${days} days ago`;
+}
+
+function formatLastActive(m: TeamMemberResponse): string {
+    if (m.inviteStatus === "PENDING") {
+        return `Invite sent ${timeAgo(m.invitedAt)}`;
+    }
+    return timeAgo(m.lastActiveAt);
+}
+
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState("profile");
 
-    // ----- Organization Profile state -----
+    // ----- Organization Profile state (mock, unwired) -----
     const [orgProfile, setOrgProfile] = useState(initialOrgProfile);
     const [newService, setNewService] = useState("");
     const [showServiceInput, setShowServiceInput] = useState(false);
@@ -164,38 +206,87 @@ export default function SettingsPage() {
         setShowServiceInput(false);
     };
 
-    // ----- Team Members state -----
-    const [teamMembers, setTeamMembers] = useState(initialTeamMembers);
+    // ----- Team Members state (wired to backend) -----
+    const [teamMembers, setTeamMembers] = useState<TeamMemberResponse[]>([]);
+    const [loadingTeam, setLoadingTeam] = useState(false);
     const [showPermissions, setShowPermissions] = useState(false);
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [inviteForm, setInviteForm] = useState({ email: "", name: "", role: "Manager" });
+    const [inviting, setInviting] = useState(false);
+    const [resendingId, setResendingId] = useState<number | null>(null);
+    const [removingId, setRemovingId] = useState<number | null>(null);
 
-    const handleSendInvitation = () => {
+    const fetchTeamMembers = useCallback(async () => {
+        try {
+            setLoadingTeam(true);
+            const { data } = await api.get<TeamMemberResponse[]>("/business/team");
+            setTeamMembers(data);
+        } catch (error: any) {
+            console.error("Fetch team members error:", error);
+            toast.error(error?.response?.data?.message ?? "Could not load team members");
+        } finally {
+            setLoadingTeam(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeTab === "team") {
+            fetchTeamMembers();
+        }
+    }, [activeTab, fetchTeamMembers]);
+
+    const handleSendInvitation = async () => {
         if (!inviteForm.email || !inviteForm.name) return;
-        const newMember = {
-            id: `t${teamMembers.length + 1}`,
-            name: inviteForm.name,
-            role: inviteForm.role,
-            email: inviteForm.email,
-            lastActive: "Invite sent just now",
-            inviteStatus: "Pending",
-        };
-        setTeamMembers([...teamMembers, newMember]);
-        setIsInviteOpen(false);
-        setInviteForm({ email: "", name: "", role: "Manager" });
+
+        try {
+            setInviting(true);
+            const { data } = await api.post<TeamMemberResponse>("/business/team/invite", {
+                fullName: inviteForm.name,
+                email: inviteForm.email,
+                role: inviteForm.role.toUpperCase(),
+            });
+
+            setTeamMembers((prev) => [...prev, data]);
+            toast.success("Invitation sent successfully");
+            setIsInviteOpen(false);
+            setInviteForm({ email: "", name: "", role: "Manager" });
+        } catch (error: any) {
+            console.error("Invite team member error:", error);
+            toast.error(error?.response?.data?.message ?? "Could not send invitation");
+        } finally {
+            setInviting(false);
+        }
     };
 
-    const removeMember = (id: string) => {
-        setTeamMembers((prev) => prev.filter((m) => m.id !== id));
+    const removeMember = async (id: number) => {
+        try {
+            setRemovingId(id);
+            await api.delete(`/business/team/${id}`);
+            setTeamMembers((prev) => prev.filter((m) => m.id !== id));
+            toast.success("Member removed");
+        } catch (error: any) {
+            console.error("Remove member error:", error);
+            toast.error(error?.response?.data?.message ?? "Could not remove member");
+        } finally {
+            setRemovingId(null);
+        }
     };
 
-    const resendInvite = (id: string) => {
-        setTeamMembers((prev) =>
-            prev.map((m) => (m.id === id ? { ...m, lastActive: "Invite sent just now" } : m))
-        );
+    const resendInvite = async (id: number) => {
+        try {
+            setResendingId(id);
+            const { data } = await api.post<TeamMemberResponse>(`/business/team/${id}/resend`);
+            setTeamMembers((prev) => prev.map((m) => (m.id === id ? data : m)));
+            toast.success("Invite resent successfully");
+        } catch (error: any) {
+            console.error("Resend invite error:", error);
+            toast.error(error?.response?.data?.message ?? "Could not resend invite");
+        } finally {
+            setResendingId(null);
+        }
     };
 
-    // ----- Notifications state -----
+    // ----- Notifications state (mock, unwired) -----
     const [notifications, setNotifications] = useState(initialNotifications);
 
     const toggleNotification = (id: string) => {
@@ -230,7 +321,7 @@ export default function SettingsPage() {
                 })}
             </div>
 
-            {/* ================= ORGANIZATION PROFILE ================= */}
+            {/* ================= ORGANIZATION PROFILE (mock, unwired) ================= */}
             {activeTab === "profile" && (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
                     <div>
@@ -417,7 +508,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            {/* ================= TEAM MEMBERS ================= */}
+            {/* ================= TEAM MEMBERS (wired) ================= */}
             {activeTab === "team" && (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
                     <div className="flex items-center justify-between p-6 pb-4">
@@ -432,76 +523,90 @@ export default function SettingsPage() {
                         </button>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                            <tr className="border-b border-gray-100 text-left">
-                                <th className="py-3 pl-6 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Name</th>
-                                <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Role</th>
-                                <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Email</th>
-                                <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Last Active</th>
-                                <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Invite Status</th>
-                                <th className="py-3 pr-6 font-semibold text-slate-400 text-xs uppercase tracking-wide text-right">Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {teamMembers.map((m, idx) => (
-                                <tr
-                                    key={m.id}
-                                    className={`border-b border-gray-50 hover:bg-slate-50/60 transition-colors ${
-                                        idx === teamMembers.length - 1 ? "border-b-0" : ""
-                                    }`}
-                                >
-                                    <td className="py-3.5 pl-6 pr-4 font-bold text-slate-900">{m.name}</td>
-                                    <td className="py-3.5 pr-4">
-                                            <span
-                                                className={`text-xs font-bold px-2.5 py-1 rounded-full ${getRoleBadgeStyles(m.role)}`}
-                                                style={m.role === "Finance" ? { color: ORANGE } : undefined}
-                                            >
-                                                {m.role}
-                                            </span>
-                                    </td>
-                                    <td className="py-3.5 pr-4 font-medium" style={{ color: NAVY }}>
-                                        {m.email}
-                                    </td>
-                                    <td className="py-3.5 pr-4 text-slate-500 font-medium">{m.lastActive}</td>
-                                    <td className="py-3.5 pr-4">
-                                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${getInviteStatusStyles(m.inviteStatus)}`}>
-                                                {m.inviteStatus}
-                                            </span>
-                                    </td>
-                                    <td className="py-3.5 pr-6">
-                                        <div className="flex items-center justify-end gap-2">
-                                            {m.inviteStatus === "Pending" && (
-                                                <button
-                                                    onClick={() => resendInvite(m.id)}
-                                                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
-                                                >
-                                                    Resend Invite
-                                                </button>
-                                            )}
-                                            <button
-                                                className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
-                                                aria-label={`Edit ${m.name}`}
-                                            >
-                                                <Pencil size={13} className="text-slate-400" />
-                                            </button>
-                                            <button
-                                                onClick={() => removeMember(m.id)}
-                                                className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-red-50 transition-colors"
-                                                aria-label={`Remove ${m.name}`}
-                                            >
-                                                <Trash2 size={13} className="text-slate-400 hover:text-red-500" />
-                                            </button>
-                                        </div>
-                                    </td>
+                    {loadingTeam ? (
+                        <div className="py-16 text-center text-sm text-slate-400 font-medium">Loading team members...</div>
+                    ) : teamMembers.length === 0 ? (
+                        <div className="py-16 text-center text-sm text-slate-400 font-medium">No team members yet.</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                <tr className="border-b border-gray-100 text-left">
+                                    <th className="py-3 pl-6 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Name</th>
+                                    <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Role</th>
+                                    <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Email</th>
+                                    <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Last Active</th>
+                                    <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Invite Status</th>
+                                    <th className="py-3 pr-6 font-semibold text-slate-400 text-xs uppercase tracking-wide text-right">Actions</th>
                                 </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                {teamMembers.map((m, idx) => {
+                                    const roleLabel = roleDisplay[m.role];
+                                    const statusLabel = inviteStatusDisplay[m.inviteStatus];
+                                    return (
+                                        <tr
+                                            key={m.id}
+                                            className={`border-b border-gray-50 hover:bg-slate-50/60 transition-colors ${
+                                                idx === teamMembers.length - 1 ? "border-b-0" : ""
+                                            }`}
+                                        >
+                                            <td className="py-3.5 pl-6 pr-4 font-bold text-slate-900">{m.fullName}</td>
+                                            <td className="py-3.5 pr-4">
+                                                    <span
+                                                        className={`text-xs font-bold px-2.5 py-1 rounded-full ${getRoleBadgeStyles(roleLabel)}`}
+                                                        style={roleLabel === "Finance" ? { color: ORANGE } : undefined}
+                                                    >
+                                                        {roleLabel}
+                                                    </span>
+                                            </td>
+                                            <td className="py-3.5 pr-4 font-medium" style={{ color: NAVY }}>
+                                                {m.email}
+                                            </td>
+                                            <td className="py-3.5 pr-4 text-slate-500 font-medium">{formatLastActive(m)}</td>
+                                            <td className="py-3.5 pr-4">
+                                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${getInviteStatusStyles(statusLabel)}`}>
+                                                        {statusLabel}
+                                                    </span>
+                                            </td>
+                                            <td className="py-3.5 pr-6">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {m.inviteStatus === "PENDING" && (
+                                                        <button
+                                                            onClick={() => resendInvite(m.id)}
+                                                            disabled={resendingId === m.id}
+                                                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap disabled:opacity-50"
+                                                        >
+                                                            {resendingId === m.id ? "Resending..." : "Resend Invite"}
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                                                        aria-label={`Edit ${m.fullName}`}
+                                                    >
+                                                        <Pencil size={13} className="text-slate-400" />
+                                                    </button>
+                                                    {m.role !== "ADMIN" && (
+                                                        <button
+                                                            onClick={() => removeMember(m.id)}
+                                                            disabled={removingId === m.id}
+                                                            className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-red-50 transition-colors disabled:opacity-50"
+                                                            aria-label={`Remove ${m.fullName}`}
+                                                        >
+                                                            <Trash2 size={13} className="text-slate-400 hover:text-red-500" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
-                    {/* View role permissions collapsible */}
+                    {/* View role permissions collapsible — untouched, mock table */}
                     <div className="border-t border-gray-100">
                         <button
                             onClick={() => setShowPermissions(!showPermissions)}
@@ -549,7 +654,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            {/* ================= SUBSCRIPTION ================= */}
+            {/* ================= SUBSCRIPTION (mock, unwired) ================= */}
             {activeTab === "subscription" && (
                 <div className="space-y-6">
                     {/* Usage card */}
@@ -658,7 +763,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            {/* ================= NOTIFICATIONS ================= */}
+            {/* ================= NOTIFICATIONS (mock, unwired) ================= */}
             {activeTab === "notifications" && (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                     <h2 className="text-lg font-bold text-slate-900 mb-5">Notification Preferences</h2>
@@ -688,7 +793,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            {/* ================= INVITE TEAM MEMBER MODAL ================= */}
+            {/* ================= INVITE TEAM MEMBER MODAL (wired) ================= */}
             {isInviteOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl relative flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -710,7 +815,8 @@ export default function SettingsPage() {
                                     placeholder="colleague@yourorg.com"
                                     value={inviteForm.email}
                                     onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                                    className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                    disabled={inviting}
+                                    className="w-full text-slate-900 placeholder:text-slate-400 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] disabled:opacity-50"
                                 />
                             </div>
                             <div>
@@ -720,7 +826,8 @@ export default function SettingsPage() {
                                     placeholder="e.g. Priya Sharma"
                                     value={inviteForm.name}
                                     onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })}
-                                    className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                    disabled={inviting}
+                                    className="w-full text-slate-900 placeholder:text-slate-400  rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] disabled:opacity-50"
                                 />
                             </div>
                             <div>
@@ -728,7 +835,8 @@ export default function SettingsPage() {
                                 <select
                                     value={inviteForm.role}
                                     onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
-                                    className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                                    disabled={inviting}
+                                    className="w-full text-slate-900 placeholder:text-slate-400  rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] disabled:opacity-50"
                                 >
                                     {ROLE_OPTIONS.map((r) => (
                                         <option key={r} value={r}>
@@ -743,19 +851,20 @@ export default function SettingsPage() {
                         <div className="p-4 border-t border-gray-100 bg-white flex items-center justify-end gap-3">
                             <button
                                 onClick={() => setIsInviteOpen(false)}
-                                className="px-4 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                                disabled={inviting}
+                                className="px-4 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSendInvitation}
-                                disabled={!inviteForm.email || !inviteForm.name}
+                                disabled={!inviteForm.email || !inviteForm.name || inviting}
                                 className={`px-5 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-colors ${
-                                    !inviteForm.email || !inviteForm.name ? "opacity-50 cursor-not-allowed" : ""
+                                    !inviteForm.email || !inviteForm.name || inviting ? "opacity-50 cursor-not-allowed" : ""
                                 }`}
                                 style={{ backgroundColor: ORANGE }}
                             >
-                                Send Invitation
+                                {inviting ? "Sending..." : "Send Invitation"}
                             </button>
                         </div>
                     </div>
