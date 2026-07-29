@@ -14,12 +14,14 @@ import com.servicelink.core.model.appointment.AppointmentStatus;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.ProviderService;
 import com.servicelink.core.model.provider.ServiceCatalog;
+import com.servicelink.core.model.user.Role;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.appointment.ProviderServiceRepository;
 import com.servicelink.core.repository.appointment.ServiceCatalogRepository;
+import com.servicelink.core.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -45,6 +47,7 @@ public class AppointmentService {
     private final AppointmentMapper mapper;
     private final AppointmentPricingService pricingService;
     private final UserRepository userRepo;
+    private final NotificationService notificationService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // CUSTOMER-FACING
@@ -96,6 +99,16 @@ public class AppointmentService {
 
         Appointment saved = appointmentRepo.save(appointment);
         log.info("Appointment {} created for customer {} and provider {}", saved.getId(), customerId, provider.getId());
+
+        // 🔔 NOTIFY PROVIDER: new booking request
+        notificationService.sendPrivateNotification(
+                provider.getUser().getId(),          // provider's User id (assuming Provider -> User relation)
+                Role.PROVIDER,
+                "New Appointment Request",
+                "New booking request: " + catalog.getCategory() + " – " + catalog.getSubServiceName()
+                        + " on " + req.getAppointmentDate(),
+                "/provider/appointments/" + saved.getId()
+        );
 
         User customer = userRepo.findById(customerId).orElse(null);
         return mapper.toResponseDTO(saved, providerService, customer);
@@ -252,11 +265,32 @@ public class AppointmentService {
         appointment.setStatus(next);
 
         switch (next) {
-            case CONFIRMED -> appointment.setConfirmedAt(LocalDateTime.now());
+            case CONFIRMED -> {
+                appointment.setConfirmedAt(LocalDateTime.now());
+
+                // 🔔 NOTIFY CUSTOMER: appointment accepted
+                notificationService.sendPrivateNotification(
+                        appointment.getCustomerId(),
+                        Role.CUSTOMER,
+                        "Appointment Confirmed!",
+                        "Your appointment on " + appointment.getAppointmentDate()
+                                + " has been accepted by the provider.",
+                        "/user/appointments/" + appointment.getId()
+                );
+            }
             case IN_PROGRESS -> appointment.setStartedAt(LocalDateTime.now());
             case COMPLETED -> {
                 appointment.setCompletedAt(LocalDateTime.now());
                 incrementProviderJobCount(appointment.getProvider());
+
+                // Optional but often expected: notify customer job is done
+                notificationService.sendPrivateNotification(
+                        appointment.getCustomerId(),
+                        Role.CUSTOMER,
+                        "Service Completed",
+                        "Your appointment has been marked as completed.",
+                        "/user/appointments/" + appointment.getId()
+                );
             }
             case CANCELLED -> {
                 appointment.setCancelledAt(LocalDateTime.now());

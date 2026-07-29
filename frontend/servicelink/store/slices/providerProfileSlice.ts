@@ -61,6 +61,7 @@ export interface ProviderServiceSummary {
 
 export interface ProviderProfile {
     id: number;
+    userId: number;
     fullName: string;
     phone?: string | null;
     businessName?: string | null;

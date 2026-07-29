@@ -6,8 +6,10 @@ import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.subscription.ProviderSubscription;
 import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import com.servicelink.core.model.provider.subscription.SubscriptionStatus;
+import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.provider.subscription.ProviderSubscriptionRepository;
+import com.servicelink.core.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,6 +27,7 @@ public class ProviderSubscriptionService {
 
     private final ProviderSubscriptionRepository subscriptionRepo;
     private final ProviderRepository providerRepo;
+    private final NotificationService notificationService;
 
     @Transactional
     public ProviderSubscription issueTrialIfEligible(Provider provider) {
@@ -119,6 +122,17 @@ public class ProviderSubscriptionService {
 
         log.info("Provider {} upgraded to {} — {} carried-over day(s) + {} new day(s), new end date {}",
                 providerId, newPlan, carriedOverDays, newPlan.getDurationDays(), sub.getEndDate());
+
+        // 🔔 NOTIFY PROVIDER: subscription activated
+        notificationService.sendPrivateNotification(
+                sub.getProvider().getUser().getId(),
+                Role.PROVIDER,
+                "Subscription Activated",
+                "Your " + newPlan.name() + " plan is now active. New expiry: " + sub.getEndDate(),
+                "/provider/subscription"
+        );
+
+
         return toDto(sub);
     }
 

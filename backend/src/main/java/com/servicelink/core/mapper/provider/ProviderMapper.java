@@ -28,6 +28,7 @@ public class ProviderMapper {
                                            List<ReviewDTO> recentReviews) {
         return ProviderProfileDTO.builder()
                 .id(p.getId())
+                .userId(p.getUser().getId())
                 .fullName(p.getFullName())
                 .phone(p.getPhone())
                 .email(p.getUser() != null ? p.getUser().getEmail() : null)

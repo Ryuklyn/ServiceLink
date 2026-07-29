@@ -13,6 +13,7 @@ import java.util.List;
 public class ProviderProfileDTO {
 
     private Long   id;
+    private Long   userId;
     private String fullName;
     private String phone;
     private String businessName;
