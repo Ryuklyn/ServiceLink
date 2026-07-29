@@ -19,28 +19,18 @@ import {
     Hash,
     Phone,
     Mail,
-    FileText,
     AlertTriangle,
 } from "lucide-react";
 import api from "@/utils/axios";
 import { toast } from "react-toastify";
-import type { RootState } from "@/store"; // adjust to your store path
+import type { RootState } from "@/store";
+import { getOrganization, updateOrganization, uploadOrgLogo, getWorkspace, updateWorkspace } from "@/lib/api/organizationApi";
+import { getSubscriptionByWorkspace, initiatePayment } from "@/lib/api/proSubscriptionApi";
+import { redirectToGateway } from "@/utils/paymentRedirect";
+import type { OrganizationResponse, WorkspaceResponse, SubscriptionResponse, PaymentGateway, PlanType } from "@/types/business";
 
 const NAVY = "#1e3a8a";
 const ORANGE = "#e8683f";
-
-// ---------- Mock data (Organization Profile / Subscription / Notifications) ----------
-
-const initialOrgProfile = {
-    name: "Hotel Annapurna",
-    branch: "Thamel, Kathmandu",
-    services: ["HVAC", "Electrical", "Cleaning", "Plumbing"],
-    phone: "+977-1-4221711",
-    email: "rajesh@hotelannapurna.com",
-    vatPan: "987654321",
-    currentPlan: "Growth Plan — Rs. 4,000/mo",
-    workspaceId: "ws-001",
-};
 
 const ALL_SERVICE_OPTIONS = ["HVAC", "Electrical", "Cleaning", "Plumbing", "Security", "Pest Control"];
 
@@ -57,13 +47,15 @@ const PERMISSION_ROWS = [
 
 const ROLE_OPTIONS = ["Manager", "Staff", "Finance"];
 
-const subscriptionUsage = {
-    plan: "Growth",
-    renewalDate: "January 15, 2025",
-    priceLabel: "Rs. 4,000/month",
-    providers: { used: 34, limit: 30 },
-    jobsThisMonth: { used: 127, limit: null }, // null = unlimited
-    storage: { usedGb: 2.3, limitGb: 10 },
+const PLAN_TYPE_TO_TIER: Record<PlanType, "starter" | "growth" | "enterprise"> = {
+    STARTER: "starter",
+    GROWTH: "growth",
+    ENTERPRISE: "enterprise",
+};
+const TIER_TO_AMOUNT: Record<"starter" | "growth" | "enterprise", number> = {
+    starter: 1000,
+    growth: 4000,
+    enterprise: 12000,
 };
 
 const plans = [
@@ -71,15 +63,14 @@ const plans = [
         name: "Starter",
         price: "Rs. 1,000",
         period: "/mo",
+        tier: "starter" as const,
         features: ["Up to 10 providers", "50 jobs/month", "Basic SLA tracking", "Email support"],
-        cta: "Downgrade",
-        isCurrent: false,
-        tier: "starter",
     },
     {
         name: "Growth",
         price: "Rs. 4,000",
         period: "/mo",
+        tier: "growth" as const,
         features: [
             "Up to 30 providers",
             "Unlimited jobs",
@@ -88,14 +79,12 @@ const plans = [
             "Compliance module",
             "Priority support",
         ],
-        cta: "Current Plan",
-        isCurrent: true,
-        tier: "growth",
     },
     {
         name: "Enterprise",
         price: "Rs. 12,000",
         period: "/mo",
+        tier: "enterprise" as const,
         features: [
             "Unlimited providers",
             "Unlimited jobs",
@@ -105,9 +94,6 @@ const plans = [
             "Dedicated manager",
             "Custom integrations",
         ],
-        cta: "Upgrade to Enterprise",
-        isCurrent: false,
-        tier: "enterprise",
     },
 ];
 
@@ -192,34 +178,99 @@ function formatLastActive(m: TeamMemberResponse): string {
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState("profile");
 
-    // Current logged-in user's role IN THIS WORKSPACE — drives who sees
-    // the Invite / Edit / Delete controls below.
     const currentRole = useSelector((state: RootState) => state.proSession.role);
     const isAdmin = currentRole === "ADMIN";
 
-    // ----- Organization Profile state (mock, unwired) -----
-    const [orgProfile, setOrgProfile] = useState(initialOrgProfile);
+    // ── proSession (redux) — seeds subscription instantly, avoids a second waterfall ──
+    const { organizationId, workspaceId, planType, subscriptionStatus, trialEndsAt } =
+        useSelector((s: RootState) => s.proSession);
+
+    // ===================== ORGANIZATION PROFILE (wired) =====================
+    const [org, setOrg] = useState<OrganizationResponse | null>(null);
+    const [workspace, setWorkspace] = useState<WorkspaceResponse | null>(null);
+    const [loadingProfile, setLoadingProfile] = useState(false);
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [profileForm, setProfileForm] = useState({ companyName: "", contactNumber: "", primaryBranchLocation: "" });
+    const [savingProfile, setSavingProfile] = useState(false);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [draftServices, setDraftServices] = useState<string[]>([]);
     const [newService, setNewService] = useState("");
     const [showServiceInput, setShowServiceInput] = useState(false);
 
-    const removeService = (service: string) => {
-        setOrgProfile((prev) => ({ ...prev, services: prev.services.filter((s) => s !== service) }));
+    const fetchProfile = useCallback(async () => {
+        if (!organizationId || !workspaceId) return;
+        try {
+            setLoadingProfile(true);
+            const [orgData, wsData] = await Promise.all([getOrganization(organizationId), getWorkspace(workspaceId)]);
+            setOrg(orgData);
+            setWorkspace(wsData);
+            setDraftServices(wsData.preferredServices ?? []);
+            setProfileForm({
+                companyName: orgData.companyName,
+                contactNumber: orgData.contactNumber,
+                primaryBranchLocation: wsData.primaryBranchLocation,
+            });
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message ?? "Could not load organization profile");
+        } finally {
+            setLoadingProfile(false);
+        }
+    }, [organizationId, workspaceId]);
+
+    useEffect(() => {
+        if (activeTab === "profile" && !org) fetchProfile();
+    }, [activeTab, org, fetchProfile]);
+
+    const handleLogoUpload = async (file: File) => {
+        if (!organizationId || !isAdmin) return;
+        try {
+            setUploadingLogo(true);
+            setOrg(await uploadOrgLogo(organizationId, file));
+            toast.success("Logo updated");
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message ?? "Could not upload logo");
+        } finally {
+            setUploadingLogo(false);
+        }
     };
 
-    const addService = (service: string) => {
-        if (service && !orgProfile.services.includes(service)) {
-            setOrgProfile((prev) => ({ ...prev, services: [...prev.services, service] }));
+    const saveProfile = async () => {
+        if (!organizationId || !workspaceId) return;
+        try {
+            setSavingProfile(true);
+            const [orgData, wsData] = await Promise.all([
+                updateOrganization(organizationId, {
+                    companyName: profileForm.companyName,
+                    contactNumber: profileForm.contactNumber,
+                }),
+                updateWorkspace(workspaceId, {
+                    primaryBranchLocation: profileForm.primaryBranchLocation,
+                    preferredServices: draftServices,
+                }),
+            ]);
+            setOrg(orgData);
+            setWorkspace(wsData);
+            setIsEditingProfile(false);
+            toast.success("Organization profile updated");
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message ?? "Could not save changes");
+        } finally {
+            setSavingProfile(false);
         }
+    };
+
+    const removeDraftService = (s: string) => setDraftServices((prev) => prev.filter((x) => x !== s));
+    const addDraftService = (s: string) => {
+        if (s && !draftServices.includes(s)) setDraftServices((prev) => [...prev, s]);
         setNewService("");
         setShowServiceInput(false);
     };
 
-    // ----- Team Members state (wired to backend) -----
+    // ===================== TEAM MEMBERS (wired) =====================
     const [teamMembers, setTeamMembers] = useState<TeamMemberResponse[]>([]);
     const [loadingTeam, setLoadingTeam] = useState(false);
     const [showPermissions, setShowPermissions] = useState(false);
 
-    // Invite/Edit modal — same modal, two modes. `editingMember` set = edit mode.
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<TeamMemberResponse | null>(null);
     const [inviteForm, setInviteForm] = useState({ email: "", name: "", role: "Manager" });
@@ -228,7 +279,6 @@ export default function SettingsPage() {
     const [resendingId, setResendingId] = useState<number | null>(null);
     const [removingId, setRemovingId] = useState<number | null>(null);
 
-    // Delete confirmation
     const [memberToDelete, setMemberToDelete] = useState<TeamMemberResponse | null>(null);
 
     const fetchTeamMembers = useCallback(async () => {
@@ -261,7 +311,7 @@ export default function SettingsPage() {
         setInviteForm({
             email: member.email,
             name: member.fullName,
-            role: roleDisplay[member.role], // "Manager" / "Staff" / "Finance"
+            role: roleDisplay[member.role],
         });
         setIsInviteOpen(true);
     };
@@ -276,7 +326,6 @@ export default function SettingsPage() {
         if (!inviteForm.email || !inviteForm.name) return;
 
         if (editingMember) {
-            // ── Edit mode: PATCH fullName + role. Email is fixed (identity). ──
             try {
                 setSaving(true);
                 const { data } = await api.patch<TeamMemberResponse>(
@@ -295,7 +344,6 @@ export default function SettingsPage() {
             return;
         }
 
-        // ── Invite mode ──
         try {
             setSaving(true);
             const { data } = await api.post<TeamMemberResponse>("/business/team/invite", {
@@ -345,21 +393,68 @@ export default function SettingsPage() {
         }
     };
 
-    // ----- Notifications state (mock, unwired) -----
+    // ===================== SUBSCRIPTION (wired) =====================
+    const [subscription, setSubscription] = useState<SubscriptionResponse | null>(null);
+    const [loadingSubscription, setLoadingSubscription] = useState(false);
+    const [selectedTier, setSelectedTier] = useState<"starter" | "growth" | "enterprise" | null>(null);
+    const [selectedGateway, setSelectedGateway] = useState<PaymentGateway | null>(null);
+    const [initiatingPayment, setInitiatingPayment] = useState(false);
+
+    const fetchSubscription = useCallback(async () => {
+        if (!workspaceId) return;
+        try {
+            setLoadingSubscription(true);
+            setSubscription(await getSubscriptionByWorkspace(workspaceId));
+        } catch (e: any) {
+            if (e?.response?.status !== 404) toast.error("Could not load subscription");
+        } finally {
+            setLoadingSubscription(false);
+        }
+    }, [workspaceId]);
+
+    useEffect(() => {
+        if (activeTab === "subscription" && !subscription) fetchSubscription();
+    }, [activeTab, subscription, fetchSubscription]);
+
+    // Prefer live redux values (already loaded at app mount) for instant paint;
+    // fall back to the fetched record, which also backfills id/amountNpr/referenceId.
+    const effectivePlanType = (planType as PlanType | null) ?? subscription?.planType ?? null;
+    const effectiveStatus = subscriptionStatus ?? subscription?.status ?? null;
+    const effectiveTrialEndsAt = trialEndsAt ?? subscription?.trialEndsAt ?? null;
+
+    const daysRemaining = effectiveTrialEndsAt
+        ? Math.max(0, Math.ceil((new Date(effectiveTrialEndsAt).getTime() - Date.now()) / 86_400_000))
+        : null;
+
+    const confirmPayment = async () => {
+        if (!subscription || !selectedTier || !selectedGateway) return;
+        try {
+            setInitiatingPayment(true);
+            const res = await initiatePayment({
+                subscriptionId: subscription.id,
+                paymentGateway: selectedGateway,
+                amountNpr: TIER_TO_AMOUNT[selectedTier],
+                successUrl: `${window.location.origin}/payment/success`,
+                failureUrl: `${window.location.origin}/payment/failed`,
+            });
+            redirectToGateway(res);
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message ?? "Could not start payment");
+            setInitiatingPayment(false);
+        }
+    };
+
+    // ===================== NOTIFICATIONS (mock, unwired) =====================
     const [notifications, setNotifications] = useState(initialNotifications);
 
     const toggleNotification = (id: string) => {
         setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, enabled: !n.enabled } : n)));
     };
 
-    const providerPct = Math.min((subscriptionUsage.providers.used / subscriptionUsage.providers.limit) * 100, 100);
-    const providerOverLimit = subscriptionUsage.providers.used > subscriptionUsage.providers.limit;
-    const storagePct = (subscriptionUsage.storage.usedGb / subscriptionUsage.storage.limitGb) * 100;
-
     return (
         <main className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6 bg-slate-50/40 min-h-screen">
 
-            {/* Tab bar — horizontally scrollable on mobile, wraps on sm+ */}
+            {/* Tab bar */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 flex gap-2 overflow-x-auto sm:flex-wrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {TABS.map((tab) => {
                     const Icon = tab.icon;
@@ -380,190 +475,227 @@ export default function SettingsPage() {
                 })}
             </div>
 
-            {/* ================= ORGANIZATION PROFILE (mock, unwired) ================= */}
+            {/* ================= ORGANIZATION PROFILE (wired) ================= */}
             {activeTab === "profile" && (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
-                    <div>
-                        <h2 className="text-lg font-bold text-slate-900">Organization Profile</h2>
-                        <p className="text-sm text-slate-400 mt-0.5">Manage your organization's information and workspace details</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
-                        {/* Logo uploader */}
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Organization Logo</label>
-                            <div className="relative w-full aspect-square rounded-2xl border border-gray-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden">
-                                <div className="text-center px-4">
-                                    <p className="font-extrabold text-lg leading-tight" style={{ color: NAVY }}>
-                                        HOTEL
-                                    </p>
-                                    <p className="font-extrabold text-lg leading-tight" style={{ color: NAVY }}>
-                                        ANNAPURNA
-                                    </p>
-                                </div>
-                                <button className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-slate-50">
-                                    <Pencil size={13} className="text-slate-500" />
-                                </button>
-                            </div>
-                            <button className="w-full mt-3 flex items-center justify-center gap-2 py-2 rounded-xl border border-gray-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                                <Upload size={14} />
-                                Upload or Change
+                            <h2 className="text-lg font-bold text-slate-900">Organization Profile</h2>
+                            <p className="text-sm text-slate-400 mt-0.5">Manage your organization's information and workspace details</p>
+                        </div>
+                        {isAdmin && !isEditingProfile && org && (
+                            <button
+                                onClick={() => setIsEditingProfile(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                            >
+                                <Pencil size={13} /> Edit
                             </button>
-                            <p className="text-xs text-slate-400 mt-2">JPG, PNG or SVG. Max size 2MB.</p>
-                        </div>
+                        )}
+                    </div>
 
-                        {/* Right column fields */}
-                        <div className="space-y-5">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {loadingProfile || !org || !workspace ? (
+                        <div className="py-16 text-center text-sm text-slate-400 font-medium">Loading profile...</div>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
+                                {/* Logo — null-safe, admin-only edit */}
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Organization Name</label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={orgProfile.name}
-                                            onChange={(e) => setOrgProfile({ ...orgProfile, name: e.target.value })}
-                                            className="w-full rounded-xl border border-gray-200 p-2.5 pr-9 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
-                                        />
-                                        <Pencil size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Organization Logo</label>
+                                    <div className="relative w-full aspect-square rounded-2xl border border-gray-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden">
+                                        {org.logoUrl ? (
+                                            <img src={org.logoUrl} alt="Organization logo" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="text-center px-4">
+                                                <Building2 size={28} className="text-slate-300 mx-auto mb-2" />
+                                                <p className="text-xs font-semibold text-slate-400">No logo uploaded</p>
+                                            </div>
+                                        )}
+                                        {isAdmin && (
+                                            <label className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-slate-50 cursor-pointer">
+                                                <Pencil size={13} className="text-slate-500" />
+                                                <input
+                                                    type="file"
+                                                    accept="image/png,image/jpeg,image/jpg"
+                                                    className="hidden"
+                                                    onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
+                                                />
+                                            </label>
+                                        )}
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Primary Branch</label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={orgProfile.branch}
-                                            onChange={(e) => setOrgProfile({ ...orgProfile, branch: e.target.value })}
-                                            className="w-full rounded-xl border border-gray-200 p-2.5 pr-9 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
-                                        />
-                                        <Pencil size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Preferred Services</label>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {orgProfile.services.map((service) => (
-                                        <span
-                                            key={service}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-semibold"
-                                        >
-                                            {service}
-                                            <button onClick={() => removeService(service)} className="text-slate-400 hover:text-slate-700">
-                                                <X size={13} />
-                                            </button>
-                                        </span>
-                                    ))}
-
-                                    {showServiceInput ? (
-                                        <select
-                                            autoFocus
-                                            value={newService}
-                                            onChange={(e) => addService(e.target.value)}
-                                            onBlur={() => setShowServiceInput(false)}
-                                            className="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-semibold focus:outline-none focus:border-[#1e3a8a]"
-                                        >
-                                            <option value="">Select service...</option>
-                                            {ALL_SERVICE_OPTIONS.filter((s) => !orgProfile.services.includes(s)).map((s) => (
-                                                <option key={s} value={s}>
-                                                    {s}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <button
-                                            onClick={() => setShowServiceInput(true)}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-                                        >
-                                            <Plus size={13} />
-                                            Add Service
-                                        </button>
+                                    {isAdmin && (
+                                        <label className="w-full mt-3 flex items-center justify-center gap-2 py-2 rounded-xl border border-gray-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer">
+                                            <Upload size={14} />
+                                            {uploadingLogo ? "Uploading..." : "Upload or Change"}
+                                            <input
+                                                type="file"
+                                                accept="image/png,image/jpeg,image/jpg"
+                                                className="hidden"
+                                                disabled={uploadingLogo}
+                                                onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
+                                            />
+                                        </label>
                                     )}
+                                    <p className="text-xs text-slate-400 mt-2">JPG or PNG. Max size 10MB.</p>
+                                </div>
+
+                                {/* Right column fields */}
+                                <div className="space-y-5">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Organization Name</label>
+                                            <input
+                                                type="text"
+                                                value={isEditingProfile ? profileForm.companyName : org.companyName}
+                                                onChange={(e) => setProfileForm({ ...profileForm, companyName: e.target.value })}
+                                                disabled={!isEditingProfile}
+                                                className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] disabled:bg-slate-50 disabled:text-slate-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Primary Branch</label>
+                                            <input
+                                                type="text"
+                                                value={isEditingProfile ? profileForm.primaryBranchLocation : workspace.primaryBranchLocation}
+                                                onChange={(e) => setProfileForm({ ...profileForm, primaryBranchLocation: e.target.value })}
+                                                disabled={!isEditingProfile}
+                                                className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] disabled:bg-slate-50 disabled:text-slate-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Preferred Services</label>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {(isEditingProfile ? draftServices : workspace.preferredServices).map((service) => (
+                                                <span key={service} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-semibold">
+                                                    {service}
+                                                    {isEditingProfile && (
+                                                        <button onClick={() => removeDraftService(service)} className="text-slate-400 hover:text-slate-700">
+                                                            <X size={13} />
+                                                        </button>
+                                                    )}
+                                                </span>
+                                            ))}
+                                            {isEditingProfile && (
+                                                showServiceInput ? (
+                                                    <select
+                                                        autoFocus
+                                                        value={newService}
+                                                        onChange={(e) => addDraftService(e.target.value)}
+                                                        onBlur={() => setShowServiceInput(false)}
+                                                        className="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-semibold focus:outline-none focus:border-[#1e3a8a]"
+                                                    >
+                                                        <option value="">Select service...</option>
+                                                        {ALL_SERVICE_OPTIONS.filter((s) => !draftServices.includes(s)).map((s) => (
+                                                            <option key={s} value={s}>{s}</option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setShowServiceInput(true)}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                                                    >
+                                                        <Plus size={13} /> Add Service
+                                                    </button>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Contact info row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-gray-100 pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0">
-                                <Phone size={15} className="text-slate-500" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-xs text-slate-400 font-medium">Phone Number</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{orgProfile.phone}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0">
-                                <Mail size={15} className="text-slate-500" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-xs text-slate-400 font-medium">Email Address</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{orgProfile.email}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0">
-                                <FileText size={15} className="text-slate-500" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-xs text-slate-400 font-medium">VAT/PAN Number</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{orgProfile.vatPan}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Plan + workspace ID row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0">
-                                <Crown size={15} className="text-slate-500" />
-                            </div>
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <div>
-                                    <p className="text-xs text-slate-400 font-medium">Current Plan</p>
-                                    <p className="text-sm font-bold text-slate-800">{orgProfile.currentPlan}</p>
+                            {/* Contact info row — read-only, fetched from Organization */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0">
+                                        <Phone size={15} className="text-slate-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs text-slate-400 font-medium">Phone Number</p>
+                                        {isEditingProfile ? (
+                                            <input
+                                                type="text"
+                                                value={profileForm.contactNumber}
+                                                onChange={(e) => setProfileForm({ ...profileForm, contactNumber: e.target.value })}
+                                                className="text-sm font-bold text-slate-800 border border-gray-200 rounded-lg px-2 py-1 w-full"
+                                            />
+                                        ) : (
+                                            <p className="text-sm font-bold text-slate-800 truncate">{org.contactNumber}</p>
+                                        )}
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={() => setActiveTab("subscription")}
-                                    className="text-xs font-bold px-2.5 py-1 rounded-md border whitespace-nowrap"
-                                    style={{ color: ORANGE, borderColor: "#fed7aa" }}
-                                >
-                                    Upgrade Plan
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0">
-                                <Hash size={15} className="text-slate-500" />
-                            </div>
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="min-w-0">
-                                    <p className="text-xs text-slate-400 font-medium">Workspace ID</p>
-                                    <p className="text-sm font-bold text-slate-800 truncate">{orgProfile.workspaceId}</p>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0">
+                                        <Mail size={15} className="text-slate-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs text-slate-400 font-medium">Email Address</p>
+                                        <p className="text-sm font-bold text-slate-800 truncate">{org.workEmail}</p>
+                                        <p className="text-[11px] text-slate-400">Login email — not editable here</p>
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={() => navigator.clipboard?.writeText(orgProfile.workspaceId)}
-                                    className="ml-auto w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-slate-50 shrink-0"
-                                    aria-label="Copy workspace ID"
-                                >
-                                    <Copy size={14} className="text-slate-400" />
-                                </button>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="flex justify-end pt-2">
-                        <button
-                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm transition-colors"
-                            style={{ backgroundColor: NAVY }}
-                        >
-                            Save Changes
-                        </button>
-                    </div>
+                            {/* Plan + workspace ID row */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0">
+                                        <Crown size={15} className="text-slate-500" />
+                                    </div>
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <div>
+                                            <p className="text-xs text-slate-400 font-medium">Current Plan</p>
+                                            <p className="text-sm font-bold text-slate-800">{effectivePlanType ?? "—"}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setActiveTab("subscription")}
+                                            className="text-xs font-bold px-2.5 py-1 rounded-md border whitespace-nowrap"
+                                            style={{ color: ORANGE, borderColor: "#fed7aa" }}
+                                        >
+                                            Manage Plan
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0">
+                                        <Hash size={15} className="text-slate-500" />
+                                    </div>
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <div className="min-w-0">
+                                            <p className="text-xs text-slate-400 font-medium">Workspace ID</p>
+                                            <p className="text-sm font-bold text-slate-800 truncate">ws-{workspace.id}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => navigator.clipboard?.writeText(String(workspace.id))}
+                                            className="ml-auto w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-slate-50 shrink-0"
+                                        >
+                                            <Copy size={14} className="text-slate-400" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {isEditingProfile && (
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <button
+                                        onClick={() => { setIsEditingProfile(false); fetchProfile(); }}
+                                        disabled={savingProfile}
+                                        className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={saveProfile}
+                                        disabled={savingProfile}
+                                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm disabled:opacity-50"
+                                        style={{ backgroundColor: NAVY }}
+                                    >
+                                        {savingProfile ? "Saving..." : "Save Changes"}
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             )}
 
@@ -572,7 +704,6 @@ export default function SettingsPage() {
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
                     <div className="flex items-center justify-between gap-3 p-6 pb-4 flex-wrap">
                         <h2 className="text-lg font-bold text-slate-900">Team Members</h2>
-                        {/* Invite button — admin only */}
                         {isAdmin && (
                             <button
                                 onClick={openInviteModal}
@@ -591,7 +722,6 @@ export default function SettingsPage() {
                         <div className="py-16 text-center text-sm text-slate-400 font-medium">No team members yet.</div>
                     ) : (
                         <>
-                            {/* Desktop / tablet table */}
                             <div className="hidden sm:block overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
@@ -601,7 +731,6 @@ export default function SettingsPage() {
                                         <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Email</th>
                                         <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Last Active</th>
                                         <th className="py-3 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Invite Status</th>
-                                        {/* Actions column — admin only */}
                                         {isAdmin && (
                                             <th className="py-3 pr-6 font-semibold text-slate-400 text-xs uppercase tracking-wide text-right">Actions</th>
                                         )}
@@ -620,21 +749,21 @@ export default function SettingsPage() {
                                             >
                                                 <td className="py-3.5 pl-6 pr-4 font-bold text-slate-900">{m.fullName}</td>
                                                 <td className="py-3.5 pr-4">
-                                                        <span
-                                                            className={`text-xs font-bold px-2.5 py-1 rounded-full ${getRoleBadgeStyles(roleLabel)}`}
-                                                            style={roleLabel === "Finance" ? { color: ORANGE } : undefined}
-                                                        >
-                                                            {roleLabel}
-                                                        </span>
+                                                    <span
+                                                        className={`text-xs font-bold px-2.5 py-1 rounded-full ${getRoleBadgeStyles(roleLabel)}`}
+                                                        style={roleLabel === "Finance" ? { color: ORANGE } : undefined}
+                                                    >
+                                                        {roleLabel}
+                                                    </span>
                                                 </td>
                                                 <td className="py-3.5 pr-4 font-medium" style={{ color: NAVY }}>
                                                     {m.email}
                                                 </td>
                                                 <td className="py-3.5 pr-4 text-slate-500 font-medium">{formatLastActive(m)}</td>
                                                 <td className="py-3.5 pr-4">
-                                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${getInviteStatusStyles(statusLabel)}`}>
-                                                            {statusLabel}
-                                                        </span>
+                                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${getInviteStatusStyles(statusLabel)}`}>
+                                                        {statusLabel}
+                                                    </span>
                                                 </td>
                                                 {isAdmin && (
                                                     <td className="py-3.5 pr-6">
@@ -677,7 +806,6 @@ export default function SettingsPage() {
                                 </table>
                             </div>
 
-                            {/* Mobile card list */}
                             <div className="sm:hidden divide-y divide-gray-100">
                                 {teamMembers.map((m) => {
                                     const roleLabel = roleDisplay[m.role];
@@ -743,7 +871,6 @@ export default function SettingsPage() {
                         </>
                     )}
 
-                    {/* View role permissions collapsible — untouched, mock table */}
                     <div className="border-t border-gray-100">
                         <button
                             onClick={() => setShowPermissions(!showPermissions)}
@@ -791,112 +918,135 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            {/* ================= SUBSCRIPTION (mock, unwired) ================= */}
+            {/* ================= SUBSCRIPTION (wired) ================= */}
             {activeTab === "subscription" && (
                 <div className="space-y-6">
-                    {/* Usage card */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-900">Current Plan: {subscriptionUsage.plan}</h2>
-                                <p className="text-sm text-slate-400 mt-0.5">Renewal date: {subscriptionUsage.renewalDate}</p>
-                            </div>
-                            <p className="text-2xl font-extrabold text-slate-900">
-                                {subscriptionUsage.priceLabel.split("/")[0]}
-                                <span className="text-base font-semibold text-slate-400">/{subscriptionUsage.priceLabel.split("/")[1]}</span>
-                            </p>
+                    {loadingSubscription || !subscription ? (
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center text-sm text-slate-400 font-medium">
+                            {loadingSubscription ? "Loading subscription..." : "No subscription found for this workspace."}
                         </div>
-
-                        <div className="space-y-5 mt-6">
-                            <div>
-                                <div className="flex items-center justify-between mb-1.5 gap-2 flex-wrap">
-                                    <span className="text-sm font-semibold text-slate-700">Providers</span>
-                                    <span className="text-sm font-bold" style={{ color: providerOverLimit ? ORANGE : "#0f172a" }}>
-                                        {subscriptionUsage.providers.used} / {subscriptionUsage.providers.limit}
-                                        {providerOverLimit ? " (over limit)" : ""}
+                    ) : (
+                        <>
+                            {effectiveStatus === "TRIAL" && effectiveTrialEndsAt && (
+                                <div className="bg-white rounded-2xl border border-orange-100 shadow-sm p-5 flex items-center justify-between gap-3 flex-wrap">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">You're on a free trial</p>
+                                        <p className="text-sm text-slate-400 mt-0.5">
+                                            {daysRemaining} day{daysRemaining === 1 ? "" : "s"} remaining · ends{" "}
+                                            {new Date(effectiveTrialEndsAt).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ backgroundColor: "#fed7aa", color: ORANGE }}>
+                                        {daysRemaining} days left
                                     </span>
                                 </div>
-                                <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                                    <div
-                                        className="h-full rounded-full"
-                                        style={{ width: `${providerPct}%`, backgroundColor: providerOverLimit ? ORANGE : NAVY }}
-                                    />
+                            )}
+
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-slate-900">
+                                            Current Plan: {subscription.planType.charAt(0) + subscription.planType.slice(1).toLowerCase()}
+                                        </h2>
+                                        <p className="text-sm text-slate-400 mt-0.5">
+                                            Status: <span className="font-semibold text-slate-600">{effectiveStatus}</span>
+                                            {subscription.currentPeriodEnd && (
+                                                <> · Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</>
+                                            )}
+                                        </p>
+                                    </div>
+                                    <p className="text-2xl font-extrabold text-slate-900">
+                                        Rs. {subscription.amountNpr.toLocaleString()}
+                                        <span className="text-base font-semibold text-slate-400">/mo</span>
+                                    </p>
                                 </div>
                             </div>
 
-                            <div>
-                                <div className="flex items-center justify-between mb-1.5 gap-2 flex-wrap">
-                                    <span className="text-sm font-semibold text-slate-700">Jobs this month</span>
-                                    <span className="text-sm font-bold text-slate-900">
-                                        {subscriptionUsage.jobsThisMonth.used} / {subscriptionUsage.jobsThisMonth.limit ?? "Unlimited"}
-                                    </span>
-                                </div>
-                                <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                                    <div className="h-full rounded-full" style={{ width: "42%", backgroundColor: NAVY }} />
-                                </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                                {plans.map((plan) => {
+                                    const isCurrent = effectivePlanType ? PLAN_TYPE_TO_TIER[effectivePlanType] === plan.tier : false;
+                                    return (
+                                        <div
+                                            key={plan.name}
+                                            className={`relative bg-white rounded-2xl border p-6 shadow-sm flex flex-col ${isCurrent ? "shadow-md" : "border-gray-100"}`}
+                                            style={isCurrent ? { borderColor: NAVY, borderWidth: 2 } : undefined}
+                                        >
+                                            {isCurrent && (
+                                                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold text-white px-3 py-1 rounded-full whitespace-nowrap" style={{ backgroundColor: NAVY }}>
+                                                    Current Plan
+                                                </span>
+                                            )}
+                                            <p className="text-base font-bold text-slate-900 mt-2">{plan.name}</p>
+                                            <p className="text-3xl font-extrabold text-slate-900 mt-2">
+                                                {plan.price}<span className="text-base font-semibold text-slate-400">{plan.period}</span>
+                                            </p>
+                                            <ul className="space-y-2.5 mt-5 flex-1">
+                                                {plan.features.map((f) => (
+                                                    <li key={f} className="flex items-start gap-2 text-sm text-slate-600 font-medium">
+                                                        <span className="text-emerald-500 font-bold mt-0.5">✓</span>{f}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            <button
+                                                disabled={isCurrent || plan.tier === "starter"}
+                                                onClick={() => setSelectedTier(plan.tier)}
+                                                className={`mt-6 w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                                                    isCurrent || plan.tier === "starter"
+                                                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                                        : "text-white shadow-sm"
+                                                }`}
+                                                style={!isCurrent && plan.tier !== "starter" ? { backgroundColor: ORANGE } : undefined}
+                                            >
+                                                {isCurrent ? "Current Plan" : plan.tier === "starter" ? "Contact Support to Downgrade" : "Upgrade"}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
+                        </>
+                    )}
 
-                            <div>
-                                <div className="flex items-center justify-between mb-1.5 gap-2 flex-wrap">
-                                    <span className="text-sm font-semibold text-slate-700">Storage</span>
-                                    <span className="text-sm font-bold text-slate-900">
-                                        {subscriptionUsage.storage.usedGb} GB / {subscriptionUsage.storage.limitGb} GB
-                                    </span>
-                                </div>
-                                <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${storagePct}%` }} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Plan cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                        {plans.map((plan) => (
-                            <div
-                                key={plan.name}
-                                className={`relative bg-white rounded-2xl border p-6 shadow-sm flex flex-col ${
-                                    plan.isCurrent ? "shadow-md" : "border-gray-100"
-                                }`}
-                                style={plan.isCurrent ? { borderColor: NAVY, borderWidth: 2 } : undefined}
-                            >
-                                {plan.isCurrent && (
-                                    <span
-                                        className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold text-white px-3 py-1 rounded-full whitespace-nowrap"
-                                        style={{ backgroundColor: NAVY }}
-                                    >
-                                        Current Plan
-                                    </span>
-                                )}
-                                <p className="text-base font-bold text-slate-900 mt-2">{plan.name}</p>
-                                <p className="text-3xl font-extrabold text-slate-900 mt-2">
-                                    {plan.price}
-                                    <span className="text-base font-semibold text-slate-400">{plan.period}</span>
+                    {selectedTier && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                            <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl p-6">
+                                <h3 className="text-base font-bold text-slate-900">Choose a payment method</h3>
+                                <p className="text-sm text-slate-500 mt-1">
+                                    Upgrade to {selectedTier} — Rs. {TIER_TO_AMOUNT[selectedTier].toLocaleString()}/mo
                                 </p>
-                                <ul className="space-y-2.5 mt-5 flex-1">
-                                    {plan.features.map((f) => (
-                                        <li key={f} className="flex items-start gap-2 text-sm text-slate-600 font-medium">
-                                            <span className="text-emerald-500 font-bold mt-0.5">✓</span>
-                                            {f}
-                                        </li>
-                                    ))}
-                                </ul>
-                                <button
-                                    disabled={plan.isCurrent}
-                                    className={`mt-6 w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                                        plan.isCurrent
-                                            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                                            : plan.tier === "starter"
-                                                ? "bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-not-allowed"
-                                                : "text-white shadow-sm"
-                                    }`}
-                                    style={!plan.isCurrent && plan.tier === "enterprise" ? { backgroundColor: ORANGE } : undefined}
-                                >
-                                    {plan.cta}
-                                </button>
+                                <div className="grid grid-cols-2 gap-3 mt-5">
+                                    <button
+                                        onClick={() => setSelectedGateway("ESEWA")}
+                                        className={`py-3 rounded-xl border text-sm font-bold ${selectedGateway === "ESEWA" ? "border-[#1e3a8a] bg-blue-50 text-[#1e3a8a]" : "border-gray-200 text-slate-600"}`}
+                                    >
+                                        eSewa
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedGateway("KHALTI")}
+                                        className={`py-3 rounded-xl border text-sm font-bold ${selectedGateway === "KHALTI" ? "border-[#1e3a8a] bg-blue-50 text-[#1e3a8a]" : "border-gray-200 text-slate-600"}`}
+                                    >
+                                        Khalti
+                                    </button>
+                                </div>
+                                <div className="flex justify-end gap-3 mt-6">
+                                    <button
+                                        onClick={() => { setSelectedTier(null); setSelectedGateway(null); }}
+                                        disabled={initiatingPayment}
+                                        className="px-4 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmPayment}
+                                        disabled={!selectedGateway || initiatingPayment}
+                                        className="px-5 py-2 rounded-xl text-sm font-bold text-white shadow-sm disabled:opacity-50"
+                                        style={{ backgroundColor: ORANGE }}
+                                    >
+                                        {initiatingPayment ? "Redirecting..." : "Continue"}
+                                    </button>
+                                </div>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -930,7 +1080,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            {/* ================= INVITE / EDIT TEAM MEMBER MODAL (wired) ================= */}
+            {/* ================= INVITE / EDIT TEAM MEMBER MODAL ================= */}
             {isInviteOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] shadow-2xl relative flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">

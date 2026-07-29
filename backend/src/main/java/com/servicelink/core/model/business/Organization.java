@@ -19,6 +19,9 @@ public class Organization {
     @Column(nullable = false, length = 200)
     private String companyName;
 
+    @Column(length = 500)
+    private String logoUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BusinessType businessType;

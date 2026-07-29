@@ -27,6 +27,7 @@ public class OrganizationMapper {
                 .companySize(organization.getCompanySize())
                 .workEmail(organization.getWorkEmail())
                 .contactNumber(organization.getContactNumber())
+                .logoUrl(organization.getLogoUrl())
                 .registrationStatus(organization.getRegistrationStatus())
                 .createdAt(organization.getCreatedAt())
                 .build();

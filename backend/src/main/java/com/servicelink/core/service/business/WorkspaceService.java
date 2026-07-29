@@ -1,6 +1,7 @@
 package com.servicelink.core.service.business;
 
 import com.servicelink.core.dto.request.business.WorkspaceRequest;
+import com.servicelink.core.dto.request.business.WorkspaceUpdateRequest;
 import com.servicelink.core.dto.response.business.WorkspaceResponse;
 import com.servicelink.core.mapper.business.WorkspaceMapper;
 import com.servicelink.core.model.business.Organization;
@@ -35,5 +36,20 @@ public class WorkspaceService {
         return wMapper.toResponse(
                 wRepo.findById(id)
                         .orElseThrow(() -> new RuntimeException("Workspace not found: " + id)));
+    }
+
+    // WorkspaceService
+    @Transactional
+    public WorkspaceResponse update(Long id, WorkspaceUpdateRequest request) {
+        Workspace ws = wRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Workspace not found: " + id));
+
+        if (request.getPrimaryBranchLocation() != null && !request.getPrimaryBranchLocation().isBlank()) {
+            ws.setPrimaryBranchLocation(request.getPrimaryBranchLocation());
+        }
+        if (request.getPreferredServices() != null) {
+            ws.setPreferredServices(request.getPreferredServices());
+        }
+        return wMapper.toResponse(wRepo.save(ws));
     }
 }

@@ -1,6 +1,7 @@
 package com.servicelink.core.controller.business;
 
 import com.servicelink.core.dto.request.business.WorkspaceRequest;
+import com.servicelink.core.dto.request.business.WorkspaceUpdateRequest;
 import com.servicelink.core.dto.response.business.WorkspaceResponse;
 import com.servicelink.core.service.business.WorkspaceService;
 import jakarta.validation.Valid;
@@ -26,6 +27,19 @@ public class WorkspaceController {
     @GetMapping("/{id}")
     public ResponseEntity<WorkspaceResponse> getById(@PathVariable Long id ){
         return ResponseEntity.ok(workspaceService.findById(id));
+    }
+
+    // WorkspaceController
+    @PatchMapping("/{id}")
+    public ResponseEntity<WorkspaceResponse> update(
+            @PathVariable Long id,
+            @Valid @RequestBody WorkspaceUpdateRequest request
+    ) {
+        try {
+            return ResponseEntity.ok(workspaceService.update(id, request));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
 }

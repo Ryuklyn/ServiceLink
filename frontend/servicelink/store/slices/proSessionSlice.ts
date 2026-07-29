@@ -5,7 +5,7 @@ export type WorkspaceRole = "ADMIN" | "MANAGER" | "STAFF" | "FINANCE";
 
 interface ProSessionState {
     fullName: string | null;
-    role: WorkspaceRole | null; // ← naya: this user's role IN THIS WORKSPACE
+    role: WorkspaceRole | null;
     workspaceId: number | null;
     workspaceName: string | null;
     organizationId: number | null;

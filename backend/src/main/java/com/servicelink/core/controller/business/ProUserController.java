@@ -55,35 +55,6 @@ public class ProUserController {
         }
     }
 
-    /**
-     * Returns a ProUserResponse-shaped payload for the logged-in business user,
-     * regardless of whether they're the workspace owner (has a real ProUser row)
-     * or an invited team member (no ProUser row — only a TeamMember row).
-     *
-     * Workspace owner  -> real ProUser data.
-     * Invited member   -> synthesized response: workspaceId from TeamMember,
-     *                     fullName from the User's own account (NOT the owner's).
-     */
-//    @GetMapping("/me")
-//    public ResponseEntity<ProUserResponse> getMe(Authentication auth) {
-//        if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof User user)) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-//        }
-//
-//        return proUserRepository.findByUser_Id(user.getId())
-//                .map(proUserMapper::toResponse)
-//                .or(() -> teamMemberRepository.findByUser_Id(user.getId())
-//                        .map(member -> ProUserResponse.builder()
-//                                .id(null)
-//                                .workspaceId(member.getWorkspaceId())
-//                                .fullName(user.getFullName())
-//                                .createdAt(null)
-//                                .updatedAt(null)
-//                                .build()))
-//                .map(ResponseEntity::ok)
-//                .orElse(ResponseEntity.notFound().build());
-//    }
-
     @GetMapping("/me")
     public ResponseEntity<ProUserResponse> getMe(Authentication auth) {
         if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof User user)) {
