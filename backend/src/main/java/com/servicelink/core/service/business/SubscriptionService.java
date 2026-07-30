@@ -2,7 +2,9 @@ package com.servicelink.core.service.business;
 
 import com.servicelink.core.dto.request.business.SubscriptionRequest;
 import com.servicelink.core.dto.response.business.SubscriptionResponse;
+import com.servicelink.core.model.business.PlanType;
 import com.servicelink.core.model.business.Subscription;
+import com.servicelink.core.model.business.SubscriptionStatus;
 import com.servicelink.core.model.business.Workspace;
 import com.servicelink.core.repository.business.OrganizationRepository;
 import com.servicelink.core.repository.business.SubscriptionRepository;
@@ -85,5 +87,19 @@ public class SubscriptionService {
         long seq = REF_COUNTER.getAndIncrement();
 
         return String.format("SLP-%d-%06d", year, seq);
+    }
+
+    @Transactional
+    public SubscriptionResponse activateAfterPayment(Long subscriptionId, PlanType newPlan, Long amountNpr) {
+        Subscription sub = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new RuntimeException("Subscription not found: " + subscriptionId));
+
+        sub.setPlanType(newPlan);
+        sub.setAmountNpr(amountNpr);
+        sub.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
+        sub.setCurrentPeriodStart(LocalDateTime.now());
+        sub.setCurrentPeriodEnd(LocalDateTime.now().plusDays(30));
+
+        return toResponse(subscriptionRepository.save(sub));
     }
 }
