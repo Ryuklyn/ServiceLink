@@ -70,6 +70,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // =====================================================
+                        // WEBSOCKET — SockJS handshake (/ws/info, /ws/xhr, etc.)
+                        // doesn't carry JWT headers, so it must be public. Real
+                        // per-user auth for STOMP messages happens via the
+                        // recipientId/queue routing itself, not this handshake.
+                        // =====================================================
+                        .requestMatchers("/ws/**").permitAll()
+
+                        // =====================================================
                         // PUBLIC ENDPOINTS
                         // =====================================================
 

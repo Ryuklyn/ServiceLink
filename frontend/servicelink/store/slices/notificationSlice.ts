@@ -1,13 +1,14 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import axios from 'axios';
+import api from '@/utils/axios';
 
-const API_BASE = 'http://localhost:8080/api/notifications';
+const API_BASE = '/notifications';
 
 export interface NotificationItem {
     id: number;
     title: string;
     message: string;
-    link?: string;
+    actionUrl?: string;
+    category: "BOOKING" | "PLATFORM";
     isRead: boolean;
     createdAt: string;
 }
@@ -33,7 +34,7 @@ interface MarkAllAsReadArg { recipientId: number; role: string; }
 export const fetchNotifications = createAsyncThunk<NotificationsPage, FetchNotificationsArg>(
     'notifications/fetchNotifications',
     async ({ recipientId, role, page = 0, size = 10 }) => {
-        const response = await axios.get<NotificationsPage>(API_BASE, {
+        const response = await api.get<NotificationsPage>(API_BASE, {
             params: { recipientId, role, page, size },
         });
         return response.data;
@@ -43,7 +44,7 @@ export const fetchNotifications = createAsyncThunk<NotificationsPage, FetchNotif
 export const fetchUnreadCount = createAsyncThunk<number, FetchUnreadCountArg>(
     'notifications/fetchUnreadCount',
     async ({ recipientId, role }) => {
-        const response = await axios.get<{ unreadCount: number }>(`${API_BASE}/unread-count`, {
+        const response = await api.get<{ unreadCount: number }>(`${API_BASE}/unread-count`, {
             params: { recipientId, role },
         });
         return response.data.unreadCount;
@@ -53,7 +54,7 @@ export const fetchUnreadCount = createAsyncThunk<number, FetchUnreadCountArg>(
 export const markNotificationAsRead = createAsyncThunk<number, MarkAsReadArg>(
     'notifications/markAsRead',
     async ({ id, recipientId }) => {
-        await axios.patch(`${API_BASE}/${id}/read`, null, { params: { recipientId } });
+        await api.patch(`${API_BASE}/${id}/read`, null, { params: { recipientId } });
         return id;
     }
 );
@@ -61,7 +62,7 @@ export const markNotificationAsRead = createAsyncThunk<number, MarkAsReadArg>(
 export const markAllNotificationsAsRead = createAsyncThunk<void, MarkAllAsReadArg>(
     'notifications/markAllAsRead',
     async ({ recipientId, role }) => {
-        await axios.patch(`${API_BASE}/read-all`, null, { params: { recipientId, role } });
+        await api.patch(`${API_BASE}/read-all`, null, { params: { recipientId, role } });
     }
 );
 

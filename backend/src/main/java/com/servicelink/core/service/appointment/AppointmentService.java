@@ -11,6 +11,7 @@ import com.servicelink.core.exception.ResourceNotFoundException;
 import com.servicelink.core.mapper.appointment.AppointmentMapper;
 import com.servicelink.core.model.appointment.Appointment;
 import com.servicelink.core.model.appointment.AppointmentStatus;
+import com.servicelink.core.model.notification.NotificationCategory;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.ProviderService;
 import com.servicelink.core.model.provider.ServiceCatalog;
@@ -104,6 +105,7 @@ public class AppointmentService {
         notificationService.sendPrivateNotification(
                 provider.getUser().getId(),          // provider's User id (assuming Provider -> User relation)
                 Role.PROVIDER,
+                NotificationCategory.BOOKING,
                 "New Appointment Request",
                 "New booking request: " + catalog.getCategory() + " – " + catalog.getSubServiceName()
                         + " on " + req.getAppointmentDate(),
@@ -272,6 +274,7 @@ public class AppointmentService {
                 notificationService.sendPrivateNotification(
                         appointment.getCustomerId(),
                         Role.CUSTOMER,
+                        NotificationCategory.BOOKING,
                         "Appointment Confirmed!",
                         "Your appointment on " + appointment.getAppointmentDate()
                                 + " has been accepted by the provider.",
@@ -287,6 +290,7 @@ public class AppointmentService {
                 notificationService.sendPrivateNotification(
                         appointment.getCustomerId(),
                         Role.CUSTOMER,
+                        NotificationCategory.BOOKING,
                         "Service Completed",
                         "Your appointment has been marked as completed.",
                         "/user/appointments/" + appointment.getId()

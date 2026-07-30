@@ -25,6 +25,11 @@ public class Notification {
     @Column(nullable = false)
     private Role recipientRole;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private NotificationCategory category = NotificationCategory.PLATFORM;
+
     @Column(nullable = false)
     private String title;
 

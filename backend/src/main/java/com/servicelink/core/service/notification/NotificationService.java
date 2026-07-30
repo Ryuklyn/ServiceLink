@@ -4,6 +4,7 @@ import com.servicelink.core.dto.request.notification.NotificationRequestDto;
 import com.servicelink.core.dto.response.notification.NotificationResponseDto;
 import com.servicelink.core.mapper.notification.NotificationMapper;
 import com.servicelink.core.model.notification.Notification;
+import com.servicelink.core.model.notification.NotificationCategory;
 import com.servicelink.core.model.user.Role;
 
 import com.servicelink.core.repository.notification.NotificationRepository;
@@ -32,6 +33,7 @@ public class NotificationService {
         Notification notification = Notification.builder()
                 .recipientId(requestDto.getRecipientId())
                 .recipientRole(requestDto.getRecipientRole())
+                .category(requestDto.getCategory())
                 .title(requestDto.getTitle())
                 .message(requestDto.getMessage())
                 .actionUrl(requestDto.getActionUrl())
@@ -55,10 +57,11 @@ public class NotificationService {
      * Convenience helper method for internal cross-service calls (e.g., AppointmentService, SubscriptionService).
      */
     @Transactional
-    public NotificationResponseDto sendPrivateNotification(Long recipientId, Role role, String title, String message, String actionUrl) {
+    public NotificationResponseDto sendPrivateNotification(Long recipientId, Role role, NotificationCategory category, String title, String message, String actionUrl) {
         NotificationRequestDto requestDto = NotificationRequestDto.builder()
                 .recipientId(recipientId)
                 .recipientRole(role)
+                .category(category)
                 .title(title)
                 .message(message)
                 .actionUrl(actionUrl)
@@ -73,6 +76,7 @@ public class NotificationService {
     public void sendAdminBroadcast(String title, String message, String actionUrl) {
         NotificationResponseDto responseDto = NotificationResponseDto.builder()
                 .recipientRole(Role.ADMIN)
+                .category(NotificationCategory.PLATFORM)
                 .title(title)
                 .message(message)
                 .actionUrl(actionUrl)

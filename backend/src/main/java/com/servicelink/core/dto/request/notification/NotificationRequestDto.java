@@ -1,5 +1,6 @@
 package com.servicelink.core.dto.request.notification;
 
+import com.servicelink.core.model.notification.NotificationCategory;
 import com.servicelink.core.model.user.Role;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -19,6 +20,9 @@ public class NotificationRequestDto {
 
     @NotNull(message = "Recipient role is required")
     private Role recipientRole;
+
+    @NotNull(message = "Category is required")
+    private NotificationCategory category;
 
     @NotBlank(message = "Title cannot be blank")
     private String title;

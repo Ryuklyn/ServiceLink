@@ -15,6 +15,7 @@ public class NotificationMapper {
                 .id(notification.getId())
                 .recipientId(notification.getRecipientId())
                 .recipientRole(notification.getRecipientRole())
+                .category(notification.getCategory())
                 .title(notification.getTitle())
                 .message(notification.getMessage())
                 .actionUrl(notification.getActionUrl())

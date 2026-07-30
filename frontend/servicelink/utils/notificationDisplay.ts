@@ -1,17 +1,13 @@
-// utils/notificationDisplay.ts
 import type { NotificationItem } from "@/store/slices/notificationSlice";
 
 export type NotifTab = "booking" | "platform";
 export type NotifIconKey = "calendar" | "alert" | "star" | "check" | "info";
 
-/** Classify a notification into a tab based on its link/title, since backend doesn't send a category yet. */
+/** Now uses the real backend category — no more guessing from the URL. */
 export function inferTab(n: NotificationItem): NotifTab {
-    const link = n.link ?? "";
-    if (link.includes("/appointments")) return "booking";
-    return "platform";
+    return n.category === "BOOKING" ? "booking" : "platform";
 }
 
-/** Pick an icon + color based on keywords in the title (best-effort until backend sends an explicit icon). */
 export function inferIcon(n: NotificationItem): { icon: NotifIconKey; bg: string } {
     const t = (n.title ?? "").toLowerCase();
 
@@ -22,7 +18,6 @@ export function inferIcon(n: NotificationItem): { icon: NotifIconKey; bg: string
     return { icon: "info", bg: "#1e3a8a" };
 }
 
-/** "5 min ago" / "3 hrs ago" / "6 days ago" style relative time. */
 export function formatRelativeTime(iso: string): string {
     const date = new Date(iso);
     const diffMs = Date.now() - date.getTime();

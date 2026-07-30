@@ -2,6 +2,7 @@ package com.servicelink.core.service.provider.subscription;
 
 import com.servicelink.core.dto.response.provider.subscription.SubscriptionStatusDTO;
 import com.servicelink.core.exception.BusinessException;
+import com.servicelink.core.model.notification.NotificationCategory;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.subscription.ProviderSubscription;
 import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
@@ -127,6 +128,7 @@ public class ProviderSubscriptionService {
         notificationService.sendPrivateNotification(
                 sub.getProvider().getUser().getId(),
                 Role.PROVIDER,
+                NotificationCategory.BOOKING,
                 "Subscription Activated",
                 "Your " + newPlan.name() + " plan is now active. New expiry: " + sub.getEndDate(),
                 "/provider/subscription"

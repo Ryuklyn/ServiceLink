@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { Search, Bell, User, BellRing, LogOut, Menu } from "lucide-react"; // ✅ Menu थप्ने
+import { usePathname } from "next/navigation";
+import { Search, Bell, User, BellRing, LogOut, Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { clearUser } from "@/store/slices/userSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useLogout } from "@/hooks/useLogout";
 
 const pageTitles: Record<string, string> = {
   "/dashboard/user": "Dashboard",
@@ -16,20 +16,18 @@ const pageTitles: Record<string, string> = {
   "/dashboard/user/settings": "Account",
 };
 
-// ✅ Props interface थप्ने
 interface SearchBarProps {
   onMenuClick?: () => void;
 }
 
 export default function SearchBar({ onMenuClick }: SearchBarProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Redux
-  const dispatch = useAppDispatch();
   const { data: user } = useAppSelector((state) => state.user);
+  const { unreadCount } = useAppSelector((state) => state.notifications);
+  const logout = useLogout();
 
   const pageTitle = pageTitles[pathname] ?? "Dashboard";
 
@@ -37,20 +35,9 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
       ? user.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
       : "U";
 
-  const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("token");
-    dispatch(clearUser());
-    router.push("/login");
-  };
-
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (
-          dropdownRef.current &&
-          !dropdownRef.current.contains(e.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
       }
     };
@@ -63,7 +50,6 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
           className="flex items-center justify-between px-4 sm:px-8 py-3 shrink-0"
           style={{ background: "#1e3a8a" }}
       >
-        {/* ✅ Hamburger — mobile matra देखिने (lg breakpoint भन्दा तल) */}
         <button
             onClick={onMenuClick}
             className="lg:hidden p-2 -ml-1 mr-1 hover:bg-white/10 rounded-full transition-colors shrink-0"
@@ -72,12 +58,10 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
           <Menu className="w-5 h-5 text-white" />
         </button>
 
-        {/* Page Title */}
         <h1 className="text-lg sm:text-xl font-bold text-white w-auto lg:w-44 shrink-0 truncate mr-2">
           {pageTitle}
         </h1>
 
-        {/* Search Bar — mobile मा hide, tablet+ मा देखाउने */}
         <div className="hidden md:flex flex-1 mx-8 max-w-xl">
           <div className="relative w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -89,20 +73,20 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
           </div>
         </div>
 
-        {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-4 shrink-0 ml-auto">
-          {/* Notifications */}
+          {/* Notifications — dynamic unread count, fixed route typo */}
           <Link
-              href="/dashboard/user/notification"
+              href="/dashboard/user/notifications"
               className="relative p-2 hover:bg-white/10 rounded-full transition-colors"
           >
             <Bell className="w-5 h-5 text-white" />
-            <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#e8683f] rounded-full text-[9px] font-bold text-white flex items-center justify-center">
-            2
-          </span>
+            {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#e8683f] rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+            )}
           </Link>
 
-          {/* Avatar + Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setShowDropdown((prev) => !prev)}
@@ -123,7 +107,6 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
               )}
             </button>
 
-            {/* Dropdown Menu */}
             {showDropdown && (
                 <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
                   <Link
@@ -143,7 +126,7 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
                     Notifications
                   </Link>
                   <button
-                      onClick={handleLogout}
+                      onClick={logout}
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#e8683f] hover:bg-gray-50 transition-colors border-t border-gray-100"
                   >
                     <LogOut className="w-4 h-4" />

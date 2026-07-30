@@ -1,5 +1,6 @@
 package com.servicelink.core.dto.response.notification;
 
+import com.servicelink.core.model.notification.NotificationCategory;
 import com.servicelink.core.model.user.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +17,7 @@ public class NotificationResponseDto {
     private Long id;
     private Long recipientId;
     private Role recipientRole;
+    private NotificationCategory category;
     private String title;
     private String message;
     private String actionUrl;
