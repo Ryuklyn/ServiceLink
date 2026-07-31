@@ -1,20 +1,22 @@
 "use client";
 
 import React, { Suspense, useEffect, useRef, useState, useCallback } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useSearchParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import {
     Building2, Users, CreditCard, Bell, Pencil, Upload, X, Plus, Trash2,
     ChevronDown, ChevronUp, Copy, Crown, Hash, Phone, Mail, AlertTriangle,
 } from "lucide-react";
 import api from "@/utils/axios";
 import { toast } from "react-toastify";
-import type { RootState } from "@/store";
+import type { RootState, AppDispatch } from "@/store";
 import { getOrganization, updateOrganization, uploadOrgLogo, getWorkspace, updateWorkspace } from "@/lib/api/organizationApi";
-import { getSubscriptionByWorkspace, verifyPayment } from "@/lib/api/proSubscriptionApi"; // confirm this filename matches your repo — see note below
+import { getSubscriptionByWorkspace, verifyPayment } from "@/lib/api/proSubscriptionApi";
 import PaymentModal from "@/components/business/payment/PaymentModal";
 import type { PlanCheckout } from "@/components/business/PlanStep";
 import type { OrganizationResponse, WorkspaceResponse, SubscriptionResponse, PlanType } from "@/types/business";
+import { fetchProSession } from "@/store/slices/proSessionSlice";
 
 const NAVY = "#1e3a8a";
 const ORANGE = "#e8683f";
@@ -38,12 +40,16 @@ const PLAN_TYPE_TO_TIER: Record<PlanType, "starter" | "growth" | "enterprise"> =
     STARTER: "starter", GROWTH: "growth", ENTERPRISE: "enterprise",
 };
 
-// ⚠️ Prices + PlanCheckout MUST mirror backend PlanPricing.PRICE_NPR exactly.
+// Prices + PlanCheckout MUST mirror backend PlanPricing.PRICE_NPR exactly.
 // Backend re-derives the charge from these amounts server-side — client
 // amount is only used to resolve which plan, never trusted as the charge.
+// const TIER_TO_PLAN_CHECKOUT: Record<"starter" | "growth", PlanCheckout> = {
+//     starter: { id: "starter", name: "Starter", price: "NPR 1,999", priceLabel: "per month", amountNpr: 1999 },
+//     growth: { id: "growth", name: "Growth", price: "NPR 4,999", priceLabel: "per month", amountNpr: 4999 },
+// };
 const TIER_TO_PLAN_CHECKOUT: Record<"starter" | "growth", PlanCheckout> = {
-    starter: { id: "starter", name: "Starter", price: "NPR 1,999", priceLabel: "per month", amountNpr: 1999 },
-    growth: { id: "growth", name: "Growth", price: "NPR 4,999", priceLabel: "per month", amountNpr: 4999 },
+    starter: { id: "starter", name: "Starter", price: "NPR 1,999", priceLabel: "per month", amountNpr: 1999, planType: "STARTER" },
+    growth: { id: "growth", name: "Growth", price: "NPR 4,999", priceLabel: "per month", amountNpr: 4999, planType: "GROWTH" },
 };
 
 const plans = [
@@ -116,6 +122,21 @@ function formatLastActive(m: TeamMemberResponse): string {
     return m.inviteStatus === "PENDING" ? `Invite sent ${timeAgo(m.invitedAt)}` : timeAgo(m.lastActiveAt);
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+    if (error && typeof error === "object" && "response" in error) {
+        const resp = (error as { response?: { data?: { message?: string } } }).response;
+        return resp?.data?.message ?? fallback;
+    }
+    return fallback;
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+    if (error && typeof error === "object" && "response" in error) {
+        return (error as { response?: { status?: number } }).response?.status;
+    }
+    return undefined;
+}
+
 export default function SettingsPage() {
     return (
         <Suspense fallback={<div className="p-8 text-center text-sm text-slate-400">Loading settings...</div>}>
@@ -128,6 +149,8 @@ function SettingsPageContent() {
     const [activeTab, setActiveTab] = useState("profile");
     const searchParams = useSearchParams();
     const router = useRouter();
+
+    const dispatch = useDispatch<AppDispatch>();
 
     const currentRole = useSelector((state: RootState) => state.proSession.role);
     const isAdmin = currentRole === "ADMIN";
@@ -155,8 +178,8 @@ function SettingsPageContent() {
             setWorkspace(wsData);
             setDraftServices(wsData.preferredServices ?? []);
             setProfileForm({ companyName: orgData.companyName, contactNumber: orgData.contactNumber, primaryBranchLocation: wsData.primaryBranchLocation });
-        } catch (e: any) {
-            toast.error(e?.response?.data?.message ?? "Could not load organization profile");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Could not load organization profile"));
         } finally {
             setLoadingProfile(false);
         }
@@ -170,8 +193,8 @@ function SettingsPageContent() {
             setUploadingLogo(true);
             setOrg(await uploadOrgLogo(organizationId, file));
             toast.success("Logo updated");
-        } catch (e: any) {
-            toast.error(e?.response?.data?.message ?? "Could not upload logo");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Could not upload logo"));
         } finally {
             setUploadingLogo(false);
         }
@@ -189,8 +212,8 @@ function SettingsPageContent() {
             setWorkspace(wsData);
             setIsEditingProfile(false);
             toast.success("Organization profile updated");
-        } catch (e: any) {
-            toast.error(e?.response?.data?.message ?? "Could not save changes");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Could not save changes"));
         } finally {
             setSavingProfile(false);
         }
@@ -220,8 +243,8 @@ function SettingsPageContent() {
             setLoadingTeam(true);
             const { data } = await api.get<TeamMemberResponse[]>("/business/team");
             setTeamMembers(data);
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message ?? "Could not load team members");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Could not load team members"));
         } finally {
             setLoadingTeam(false);
         }
@@ -248,8 +271,8 @@ function SettingsPageContent() {
                 setTeamMembers((prev) => prev.map((m) => (m.id === editingMember.id ? data : m)));
                 toast.success("Member updated");
                 closeModal();
-            } catch (error: any) {
-                toast.error(error?.response?.data?.message ?? "Could not update member");
+            } catch (e: unknown) {
+                toast.error(getErrorMessage(e, "Could not update member"));
             } finally {
                 setSaving(false);
             }
@@ -263,8 +286,8 @@ function SettingsPageContent() {
             setTeamMembers((prev) => [...prev, data]);
             toast.success("Invitation sent successfully");
             closeModal();
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message ?? "Could not send invitation");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Could not send invitation"));
         } finally {
             setSaving(false);
         }
@@ -278,8 +301,8 @@ function SettingsPageContent() {
             setTeamMembers((prev) => prev.filter((m) => m.id !== memberToDelete.id));
             toast.success("Member removed");
             setMemberToDelete(null);
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message ?? "Could not remove member");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Could not remove member"));
         } finally {
             setRemovingId(null);
         }
@@ -291,8 +314,8 @@ function SettingsPageContent() {
             const { data } = await api.post<TeamMemberResponse>(`/business/team/${id}/resend`);
             setTeamMembers((prev) => prev.map((m) => (m.id === id ? data : m)));
             toast.success("Invite resent successfully");
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message ?? "Could not resend invite");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Could not resend invite"));
         } finally {
             setResendingId(null);
         }
@@ -310,8 +333,8 @@ function SettingsPageContent() {
         try {
             setLoadingSubscription(true);
             setSubscription(await getSubscriptionByWorkspace(workspaceId));
-        } catch (e: any) {
-            if (e?.response?.status !== 404) toast.error("Could not load subscription");
+        } catch (e: unknown) {
+            if (getErrorStatus(e) !== 404) toast.error("Could not load subscription");
         } finally {
             setLoadingSubscription(false);
         }
@@ -334,12 +357,15 @@ function SettingsPageContent() {
                     const res = await verifyPayment(searchParams);
                     if (res.verified) {
                         setPaymentBanner({ type: "success", message: "Payment verified — your plan is now active." });
-                        await fetchSubscription(); // re-pulls real planType/status/amountNpr set by backend activateAfterPayment
-                    } else {
+                        await Promise.all([
+                            fetchSubscription(),
+                            dispatch(fetchProSession()),   // refreshes sidebar's Trial/Starter/Growth badge
+                        ]);
+                    }else {
                         setPaymentBanner({ type: "failed", message: res.error ?? "We received a response but couldn't verify it. Contact support with your reference ID." });
                     }
-                } catch (e: any) {
-                    setPaymentBanner({ type: "failed", message: e?.response?.data?.message ?? "Verification failed." });
+                } catch (e: unknown) {
+                    setPaymentBanner({ type: "failed", message: getErrorMessage(e, "Verification failed.") });
                 }
             } else {
                 setPaymentBanner({ type: "failed", message: "Payment was not completed. You can try again below." });
@@ -348,9 +374,12 @@ function SettingsPageContent() {
         })();
     }, [searchParams, router, fetchSubscription]);
 
-    const effectivePlanType = (planType as PlanType | null) ?? subscription?.planType ?? null;
-    const effectiveStatus = subscriptionStatus ?? subscription?.status ?? null;
-    const effectiveTrialEndsAt = trialEndsAt ?? subscription?.trialEndsAt ?? null;
+    // Freshly-fetched subscription is the source of truth (especially right
+    // after a payment, where redux's proSession snapshot is stale) — redux
+    // only fills the gap before the fetch resolves on first paint.
+    const effectivePlanType = subscription?.planType ?? (planType as PlanType | null) ?? null;
+    const effectiveStatus = subscription?.status ?? subscriptionStatus ?? null;
+    const effectiveTrialEndsAt = subscription?.trialEndsAt ?? trialEndsAt ?? null;
     const isTrialing = effectiveStatus === "TRIAL";
 
     const daysRemaining = effectiveTrialEndsAt
@@ -396,7 +425,7 @@ function SettingsPageContent() {
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div>
                             <h2 className="text-lg font-bold text-slate-900">Organization Profile</h2>
-                            <p className="text-sm text-slate-400 mt-0.5">Manage your organization's information and workspace details</p>
+                            <p className="text-sm text-slate-400 mt-0.5">Manage your organization&apos;s information and workspace details</p>
                         </div>
                         {isAdmin && !isEditingProfile && org && (
                             <button onClick={() => setIsEditingProfile(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-bold text-slate-700 hover:bg-slate-50">
@@ -414,7 +443,7 @@ function SettingsPageContent() {
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Organization Logo</label>
                                     <div className="relative w-full aspect-square rounded-2xl border border-gray-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden">
                                         {org.logoUrl ? (
-                                            <img src={org.logoUrl} alt="Organization logo" className="w-full h-full object-cover" />
+                                            <Image src={org.logoUrl} alt="Organization logo" fill className="object-cover" unoptimized />
                                         ) : (
                                             <div className="text-center px-4">
                                                 <Building2 size={28} className="text-slate-300 mx-auto mb-2" />
@@ -422,7 +451,7 @@ function SettingsPageContent() {
                                             </div>
                                         )}
                                         {isAdmin && (
-                                            <label className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-slate-50 cursor-pointer">
+                                            <label className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-slate-50 cursor-pointer z-10">
                                                 <Pencil size={13} className="text-slate-500" />
                                                 <input type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])} />
                                             </label>
@@ -778,7 +807,7 @@ function SettingsPageContent() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
                                 {plans.map((plan) => {
                                     const isCurrent = !isTrialing && effectivePlanType ? PLAN_TYPE_TO_TIER[effectivePlanType] === plan.tier : false;
-                                    const isDowngradeLocked = !isTrialing && plan.tier === "starter" && effectivePlanType && PLAN_TYPE_TO_TIER[effectivePlanType] !== "starter";
+                                    const isDowngradeLocked = !isTrialing && plan.tier === "starter" && !!effectivePlanType && PLAN_TYPE_TO_TIER[effectivePlanType] !== "starter";
 
                                     return (
                                         <div key={plan.name} className={`relative bg-white rounded-2xl border p-6 shadow-sm flex flex-col ${isCurrent ? "shadow-md" : "border-gray-100"}`} style={isCurrent ? { borderColor: NAVY, borderWidth: 2 } : undefined}>
@@ -871,7 +900,7 @@ function SettingsPageContent() {
                                     disabled={saving || !!editingMember}
                                     className="w-full text-slate-900 placeholder:text-slate-400 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] disabled:opacity-50 disabled:bg-slate-50"
                                 />
-                                {editingMember && <p className="text-xs text-slate-400 mt-1.5">Email can't be changed after inviting.</p>}
+                                {editingMember && <p className="text-xs text-slate-400 mt-1.5">Email can&apos;t be changed after inviting.</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Full Name</label>
@@ -926,7 +955,7 @@ function SettingsPageContent() {
                             <div>
                                 <h3 className="text-base font-bold text-slate-900">Remove team member?</h3>
                                 <p className="text-sm text-slate-500 mt-1">
-                                    Are you sure you want to remove <span className="font-semibold text-slate-700">{memberToDelete.fullName}</span> from this workspace? They'll immediately lose access, and this can't be undone.
+                                    Are you sure you want to remove <span className="font-semibold text-slate-700">{memberToDelete.fullName}</span> from this workspace? They&apos;ll immediately lose access, and this can&apos;t be undone.
                                 </p>
                             </div>
                         </div>

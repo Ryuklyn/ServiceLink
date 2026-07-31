@@ -75,6 +75,7 @@ export default function PaymentModal({
       const payload = {
         subscriptionId,
         paymentGateway: selectedMethod,
+        planType: plan.planType,
         amountNpr: plan.amountNpr,
         successUrl: successUrl ?? `${window.location.origin}/register/business/payment/success`,
         failureUrl: failureUrl ?? `${window.location.origin}/register/business/payment/failed`,

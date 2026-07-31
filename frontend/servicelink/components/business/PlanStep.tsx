@@ -11,6 +11,7 @@ export interface PlanCheckout {
   price: string;
   priceLabel: string;
   amountNpr: number;
+  planType?: "STARTER" | "GROWTH";
 }
 
 interface Plan extends PlanCheckout {
@@ -27,6 +28,7 @@ const PLANS: Plan[] = [
     price: "NPR 1,999",
     priceLabel: "per month",
     amountNpr: 1999,
+    planType: "STARTER",
     description: "For small teams getting started with service operations.",
     features: [
       "14-day free trial",
@@ -42,6 +44,7 @@ const PLANS: Plan[] = [
     price: "NPR 4,999",
     priceLabel: "per month",
     amountNpr: 4999,
+    planType: "GROWTH",
     description: "Scaling operations with verified vendors and reporting.",
     features: [
       "Up to 20 team members",

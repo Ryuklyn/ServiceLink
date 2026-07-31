@@ -1,6 +1,7 @@
 package com.servicelink.core.dto.request.business;
 
 import com.servicelink.core.model.business.PaymentGateway;
+import com.servicelink.core.model.business.PlanType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -12,6 +13,9 @@ public class PaymentInitiateRequest {
 
     @NotNull(message = "Subscription ID is required")
     private Long subscriptionId;
+
+    @NotNull(message = "Plan type is required")   // ← NEW
+    private PlanType planType;
 
     @NotNull(message = "PaymentGateway is required")
     private PaymentGateway paymentGateway; //Esewa and Khalti

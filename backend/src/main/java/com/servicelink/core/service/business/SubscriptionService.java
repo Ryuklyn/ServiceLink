@@ -89,16 +89,30 @@ public class SubscriptionService {
         return String.format("SLP-%d-%06d", year, seq);
     }
 
+//    @Transactional
+//    public SubscriptionResponse activateAfterPayment(Long subscriptionId, PlanType newPlan, Long amountNpr) {
+//        Subscription sub = subscriptionRepository.findById(subscriptionId)
+//                .orElseThrow(() -> new RuntimeException("Subscription not found: " + subscriptionId));
+//
+//        sub.setPlanType(newPlan);
+//        sub.setAmountNpr(amountNpr);
+//        sub.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
+//        sub.setCurrentPeriodStart(LocalDateTime.now());
+//        sub.setCurrentPeriodEnd(LocalDateTime.now().plusDays(30));
+//
+//        return toResponse(subscriptionRepository.save(sub));
+//    }
+
     @Transactional
-    public SubscriptionResponse activateAfterPayment(Long subscriptionId, PlanType newPlan, Long amountNpr) {
+    public SubscriptionResponse activateAfterPayment(Long subscriptionId, PlanType planType, Long amountNpr) {
         Subscription sub = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new RuntimeException("Subscription not found: " + subscriptionId));
 
-        sub.setPlanType(newPlan);
+        sub.setPlanType(planType);
         sub.setAmountNpr(amountNpr);
         sub.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
         sub.setCurrentPeriodStart(LocalDateTime.now());
-        sub.setCurrentPeriodEnd(LocalDateTime.now().plusDays(30));
+        sub.setCurrentPeriodEnd(LocalDateTime.now().plusDays(30));   // ← 30 days, both Starter & Growth
 
         return toResponse(subscriptionRepository.save(sub));
     }

@@ -6,7 +6,9 @@ import com.servicelink.core.dto.request.business.SubscriptionRequest;
 import com.servicelink.core.dto.response.business.PaymentInitiateResponse;
 import com.servicelink.core.dto.response.business.PaymentTransactionResponse;
 import com.servicelink.core.dto.response.business.SubscriptionResponse;
+import com.servicelink.core.model.business.PaymentStatus;
 import com.servicelink.core.payment.service.PaymentService;
+import com.servicelink.core.service.business.SubscriptionPaymentService;
 import com.servicelink.core.service.business.SubscriptionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +27,10 @@ import java.util.Base64;
 @RequestMapping("/api/business/payment")
 public class PaymentController {
 
-    private final PaymentService paymentService;
+    // ⚠️ FIXED: was `PaymentService` (ProviderSubscription-based) — that entity
+    // is unrelated to the workspace `Subscription` this settings page/sidebar
+    // reads. Wiring to the wrong service silently updated a different table.
+    private final SubscriptionPaymentService subscriptionPaymentService;
     private final SubscriptionService subscriptionService;
     private final ObjectMapper objectMapper;
 
@@ -35,9 +40,6 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(subscriptionService.create(request));
     }
 
-    // Get Subscription by workspace — used by the dashboard to show the
-    // real plan tier (Starter/Growth/Enterprise) in the sidebar badge.
-    // Returns 404 (not 500) when a workspace hasn't reached the Plan step yet.
     @GetMapping("/subscription/workspace/{workspaceId}")
     public ResponseEntity<SubscriptionResponse> getSubscriptionByWorkspace(@PathVariable Long workspaceId) {
         try {
@@ -47,15 +49,13 @@ public class PaymentController {
         }
     }
 
-    //Initiate Payment - returns gatewayRedirectUrl
     @PostMapping("/initiate")
     public ResponseEntity<PaymentInitiateResponse> initiate(
             @Valid @RequestBody PaymentInitiateRequest request
     ) throws Exception{
-        return ResponseEntity.ok(paymentService.initiatePayment(request));
+        return ResponseEntity.ok(subscriptionPaymentService.initiatePayment(request));
     }
 
-    //Esewa callback GET /api/payment/esewa/callback?data=<base64 JSON>
     @GetMapping("/esewa/callback")
     public ResponseEntity<PaymentTransactionResponse> esewaCallback(
             @RequestParam String data
@@ -79,11 +79,9 @@ public class PaymentController {
         verify.setGatewayTransactionId(gatewayId);
         verify.setGatewayResponseData(data);
 
-        return ResponseEntity.ok(paymentService.verifyAndComplete(verify));
-
+        return ResponseEntity.ok(subscriptionPaymentService.verifyAndComplete(verify));
     }
 
-    //Khalti callback GET /api/payment/khalti/callback?pidx=X&status=Completed&purchase_order_id=Y
     @GetMapping("/khalti/callback")
     public ResponseEntity<PaymentTransactionResponse> khaltiCallback(
             @RequestParam String pidx,
@@ -101,15 +99,26 @@ public class PaymentController {
         verify.setReferenceId(purchaseOrderId);
         verify.setGatewayTransactionId(pidx);
 
-        return ResponseEntity.ok(paymentService.verifyAndComplete(verify));
+        return ResponseEntity.ok(subscriptionPaymentService.verifyAndComplete(verify));
     }
 
     @PostMapping("/verify")
     public ResponseEntity<PaymentTransactionResponse> verify(
             @RequestBody PaymentVerifyRequest request
-    )throws Exception{
+    ) {
         log.info("Manual verify requested: ref={}", request.getReferenceId());
-        return ResponseEntity.ok(paymentService.verifyAndComplete(request));
+        try {
+            return ResponseEntity.ok(subscriptionPaymentService.verifyAndComplete(request));
+        } catch (Exception e) {
+            // SubscriptionPaymentService throws on verification failure rather than
+            // returning a FAILED response — surface that as a proper 400 with a
+            // message the frontend's getErrorMessage() can read, instead of a bare 500.
+            log.warn("Payment verification failed: ref={} reason={}", request.getReferenceId(), e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(PaymentTransactionResponse.builder()
+                            .referenceId(request.getReferenceId())
+                            .status(PaymentStatus.FAILED)
+                            .build());
+        }
     }
-
 }
