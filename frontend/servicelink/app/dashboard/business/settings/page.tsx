@@ -40,13 +40,6 @@ const PLAN_TYPE_TO_TIER: Record<PlanType, "starter" | "growth" | "enterprise"> =
     STARTER: "starter", GROWTH: "growth", ENTERPRISE: "enterprise",
 };
 
-// Prices + PlanCheckout MUST mirror backend PlanPricing.PRICE_NPR exactly.
-// Backend re-derives the charge from these amounts server-side — client
-// amount is only used to resolve which plan, never trusted as the charge.
-// const TIER_TO_PLAN_CHECKOUT: Record<"starter" | "growth", PlanCheckout> = {
-//     starter: { id: "starter", name: "Starter", price: "NPR 1,999", priceLabel: "per month", amountNpr: 1999 },
-//     growth: { id: "growth", name: "Growth", price: "NPR 4,999", priceLabel: "per month", amountNpr: 4999 },
-// };
 const TIER_TO_PLAN_CHECKOUT: Record<"starter" | "growth", PlanCheckout> = {
     starter: { id: "starter", name: "Starter", price: "NPR 1,999", priceLabel: "per month", amountNpr: 1999, planType: "STARTER" },
     growth: { id: "growth", name: "Growth", price: "NPR 4,999", priceLabel: "per month", amountNpr: 4999, planType: "GROWTH" },

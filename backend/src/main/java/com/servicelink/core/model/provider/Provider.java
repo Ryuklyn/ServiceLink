@@ -118,6 +118,14 @@ public class Provider {
     @Column(name = "referral_code", unique = true)
     private String referralCode;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "referred_by_provider_id")
+    private Provider referredBy;
+
+    @Column(name = "referral_free_months_earned")
+    @Builder.Default
+    private Integer referralFreeMonthsEarned = 0;
+
 
     @Column(name = "is_online")
     private Boolean isOnline = false;

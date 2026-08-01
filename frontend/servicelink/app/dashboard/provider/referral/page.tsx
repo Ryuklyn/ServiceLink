@@ -1,25 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Copy,
     Link,
-    Share2,
     CheckCircle,
-    Circle,
     CheckCheck,
+    Loader2,
 } from "lucide-react";
-import {FaWhatsapp} from "react-icons/fa";
+import { FaWhatsapp } from "react-icons/fa";
+import api, { ApiError, normalizeError } from "@/utils/axios";
 
-const referralData = {
-    code: "SL-RUKESH-2026",
-    inviteLink: "https://servicelink.np/joi...",
-    progress: 3,
-    total: 5,
-    freeMonthsEarned: 0,
-    message:
-        "Hey! I use ServiceLink to get more customers. Join using my code SL-BHUMIKA-2026 and get your first month discounted! 🔗",
-};
+// Base URL the invite link is built against. Falls back to your local dev
+// server so this works out of the box; set NEXT_PUBLIC_APP_URL in .env for
+// staging/prod so the link isn't hardcoded to localhost there.
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const REGISTER_PATH = "/register/provider";
+
+interface ReferralHistoryItem {
+    name: string;
+    category: string;
+    joinedDate: string;
+    kycStatus: "APPROVED" | "PENDING" | "REJECTED";
+    paymentStatus: "PAID" | "PENDING" | "UNPAID";
+    counts: boolean;
+}
+
+interface ReferralSummary {
+    referralCode: string;
+    progress: number; // successful (KYC-approved + paid) referrals in the current cycle
+    total: number; // referrals needed for one free month
+    freeMonthsEarned: number;
+    history: ReferralHistoryItem[];
+}
 
 const FacebookIcon = ({ size = 15 }: { size?: number }) => (
     <svg
@@ -55,50 +68,113 @@ const InstagramIcon = ({ size = 15 }: { size?: number }) => (
     </svg>
 );
 
-const referralHistory = [
-    {
-        name: "Hari Sharma",
-        category: "Electrician",
-        joinedDate: "June 5, 2026",
-        kycStatus: "APPROVED",
-        paymentStatus: "PENDING",
-        counts: false,
-    },
-    {
-        name: "Ram Magar",
-        category: "Plumber",
-        joinedDate: "June 3, 2026",
-        kycStatus: "APPROVED",
-        paymentStatus: "PAID",
-        counts: true,
-    },
-    {
-        name: "Sita Devi",
-        category: "House Cleaner",
-        joinedDate: "June 8, 2026",
-        kycStatus: "PENDING",
-        paymentStatus: "UNPAID",
-        counts: false,
-    },
-];
-
 export default function ReferralPage() {
+    const [data, setData] = useState<ReferralSummary | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [copiedCode, setCopiedCode] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
 
-    const handleCopyCode = () => {
-        navigator.clipboard.writeText(referralData.code);
-        setCopiedCode(true);
-        setTimeout(() => setCopiedCode(false), 2000);
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadReferralSummary() {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // baseURL on `api` already includes `/api`, so this hits
+                // {NEXT_PUBLIC_API_URL}/api/providers/me/referrals — the
+                // Bearer token is attached automatically by the interceptor.
+                const { data: summary } = await api.get<ReferralSummary>(
+                    "/providers/me/referrals"
+                );
+
+                if (!cancelled) setData(summary);
+            } catch (err) {
+                if (!cancelled) {
+                    const apiErr: ApiError = normalizeError(err);
+                    setError(apiErr.message || "Failed to load referral data");
+                }
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }
+
+        loadReferralSummary();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const inviteLink = data ? `${APP_URL}${REGISTER_PATH}?ref=${data.referralCode}` : "";
+    const shareMessage = data
+        ? `Hey! I use ServiceLink to get more customers. Join using my code ${data.referralCode} and get your first month discounted! 🔗`
+        : "";
+
+    const handleCopyCode = async () => {
+        if (!data) return;
+        try {
+            await navigator.clipboard.writeText(data.referralCode);
+            setCopiedCode(true);
+            setTimeout(() => setCopiedCode(false), 2000);
+        } catch {
+            // Clipboard API can fail on non-HTTPS/localhost edge cases — non-fatal.
+        }
     };
 
-    const handleCopyLink = () => {
-        navigator.clipboard.writeText("https://servicelink.np/join?ref=SL-BHUMIKA-2026");
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
+    const handleCopyLink = async () => {
+        if (!inviteLink) return;
+        try {
+            await navigator.clipboard.writeText(inviteLink);
+            setCopiedLink(true);
+            setTimeout(() => setCopiedLink(false), 2000);
+        } catch {
+            // Clipboard API can fail on non-HTTPS/localhost edge cases — non-fatal.
+        }
     };
 
-    const progressPercent = (referralData.progress / referralData.total) * 100;
+    const handleShareWhatsapp = () => {
+        if (!shareMessage) return;
+        window.open(
+            `https://wa.me/?text=${encodeURIComponent(shareMessage)}`,
+            "_blank"
+        );
+    };
+
+    const handleShareFacebook = () => {
+        if (!inviteLink) return;
+        window.open(
+            `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                inviteLink
+            )}`,
+            "_blank"
+        );
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-24">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            </div>
+        );
+    }
+
+    if (error || !data) {
+        return (
+            <div className="max-w-[1200px] mx-auto mt-10 bg-white border border-gray-200 rounded-xl p-8 text-center">
+                <p className="text-gray-600 text-sm">
+                    {error ?? "Couldn't load your referral info right now."}
+                </p>
+            </div>
+        );
+    }
+
+    const progressPercent = Math.min(
+        100,
+        (data.progress / data.total) * 100
+    );
+    const remaining = Math.max(0, data.total - data.progress);
 
     return (
         <div className="flex flex-col gap-5 max-w-[1200px] mx-auto">
@@ -127,27 +203,27 @@ export default function ReferralPage() {
                         Earn free months.
                     </h1>
                     <p className="text-blue-200 text-sm md:text-base max-w-sm leading-relaxed mb-8">
-                        Grow the ServiceLink community in Nepal and get rewarded. For every
-                        5 verified providers you invite, your next subscription month is on
-                        us.
+                        Grow the ServiceLink community in Nepal and get rewarded. For every{" "}
+                        {data.total} verified providers you invite, your next subscription
+                        month is on us.
                     </p>
 
                     {/* Progress Card */}
                     <div className="bg-white rounded-xl p-5 max-w-sm shadow-md">
                         <div className="flex items-center justify-between mb-3">
-                <span className="font-semibold text-gray-800 text-sm">
-                    Your Progress
-                </span>
+                            <span className="font-semibold text-gray-800 text-sm">
+                                Your Progress
+                            </span>
                             <div className="flex items-baseline gap-0.5">
-                    <span
-                        className="text-2xl font-bold"
-                        style={{ color: "#e8683f" }}
-                    >
-                        {referralData.progress}
-                    </span>
+                                <span
+                                    className="text-2xl font-bold"
+                                    style={{ color: "#e8683f" }}
+                                >
+                                    {data.progress}
+                                </span>
                                 <span className="text-gray-400 text-base font-medium">
-                        /{referralData.total}
-                    </span>
+                                    /{data.total}
+                                </span>
                             </div>
                         </div>
                         {/* Progress Bar */}
@@ -161,7 +237,9 @@ export default function ReferralPage() {
                             />
                         </div>
                         <p className="text-gray-400 text-xs">
-                            42 providers in Kathmandu earned a free month last cycle.
+                            {remaining > 0
+                                ? `${remaining} more referral${remaining === 1 ? "" : "s"} to earn your next free month.`
+                                : "You've unlocked a free month — nice work!"}
                         </p>
                     </div>
                 </div>
@@ -184,9 +262,9 @@ export default function ReferralPage() {
                                     Referral Code
                                 </label>
                                 <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50">
-                  <span className="text-sm font-semibold text-gray-800 flex-1">
-                    {referralData.code}
-                  </span>
+                                    <span className="text-sm font-semibold text-gray-800 flex-1 font-mono">
+                                        {data.referralCode}
+                                    </span>
                                     <button
                                         onClick={handleCopyCode}
                                         className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
@@ -201,9 +279,9 @@ export default function ReferralPage() {
                                     Invite Link
                                 </label>
                                 <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50">
-                  <span className="text-sm text-gray-500 flex-1 truncate">
-                    {referralData.inviteLink}
-                  </span>
+                                    <span className="text-sm text-gray-500 flex-1 truncate">
+                                        {inviteLink}
+                                    </span>
                                     <button
                                         onClick={handleCopyLink}
                                         className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
@@ -221,24 +299,31 @@ export default function ReferralPage() {
                                 Pre-written Message
                             </label>
                             <div className="border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50 text-sm text-gray-700 leading-relaxed min-h-[64px]">
-                                {referralData.message}
+                                {shareMessage}
                             </div>
                         </div>
 
                         {/* Share Buttons */}
                         <div className="flex gap-3 flex-wrap">
                             <button
+                                onClick={handleShareWhatsapp}
                                 className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
                                 style={{ backgroundColor: "#25D366" }}
                             >
                                 <FaWhatsapp size={15} />
                                 Share on WhatsApp
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                            <button
+                                onClick={handleShareFacebook}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                            >
                                 <FacebookIcon size={15} />
                                 Facebook
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 transition-opacity">
+                            <button
+                                onClick={handleCopyLink}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 transition-opacity"
+                            >
                                 <InstagramIcon size={15} />
                                 Instagram
                             </button>
@@ -266,7 +351,7 @@ export default function ReferralPage() {
                                     {
                                         step: 3,
                                         title: "You get rewarded",
-                                        desc: "After 5 successful referrals, your next month's subscription is free.",
+                                        desc: `After ${data.total} successful referrals, your next month's subscription is free.`,
                                     },
                                 ].map(({ step, title, desc }) => (
                                     <div key={step} className="flex gap-3 items-start">
@@ -312,12 +397,14 @@ export default function ReferralPage() {
                                         className="text-2xl font-bold leading-none"
                                         style={{ color: "#e8683f" }}
                                     >
-                                        {referralData.freeMonthsEarned}
+                                        {data.freeMonthsEarned}
                                     </p>
                                 </div>
                             </div>
                             <p className="text-xs text-gray-400 mt-2">
-                                Refer 2 more to earn your first!
+                                {remaining > 0
+                                    ? `Refer ${remaining} more to earn your next!`
+                                    : "Next free month unlocked!"}
                             </p>
                         </div>
                     </div>
@@ -353,7 +440,17 @@ export default function ReferralPage() {
                             </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                            {referralHistory.map((row, idx) => (
+                            {data.history.length === 0 && (
+                                <tr>
+                                    <td
+                                        colSpan={5}
+                                        className="px-6 py-8 text-center text-gray-400 text-sm"
+                                    >
+                                        No referrals yet — share your link to get started.
+                                    </td>
+                                </tr>
+                            )}
+                            {data.history.map((row, idx) => (
                                 <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-gray-800">
                                         {row.name}
@@ -363,34 +460,28 @@ export default function ReferralPage() {
                                         {row.joinedDate}
                                     </td>
                                     <td className="px-6 py-4">
-                      <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold ${
-                              row.kycStatus === "APPROVED"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                          }`}
-                      >
-                        {row.kycStatus}
-                      </span>
+                                        <span
+                                            className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold ${
+                                                row.kycStatus === "APPROVED"
+                                                    ? "bg-green-100 text-green-700"
+                                                    : row.kycStatus === "REJECTED"
+                                                        ? "bg-red-100 text-red-700"
+                                                        : "bg-yellow-100 text-yellow-700"
+                                            }`}
+                                        >
+                                            {row.kycStatus}
+                                        </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                        <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold border ${
-                                row.paymentStatus === "PAID"
-                                    ? "border-gray-300 text-gray-700 bg-white"
-                                    : row.paymentStatus === "PENDING"
-                                        ? "border-gray-300 text-gray-600 bg-white"
-                                        : "border-gray-300 text-gray-600 bg-white"
-                            }`}
-                        >
-                          {row.paymentStatus}
-                        </span>
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold border border-gray-300 text-gray-600 bg-white">
+                                                {row.paymentStatus}
+                                            </span>
                                             {row.counts && (
                                                 <span className="text-xs text-green-600 font-medium flex items-center gap-0.5">
-                            <CheckCircle size={12} />
-                            Counts
-                          </span>
+                                                    <CheckCircle size={12} />
+                                                    Counts
+                                                </span>
                                             )}
                                         </div>
                                     </td>

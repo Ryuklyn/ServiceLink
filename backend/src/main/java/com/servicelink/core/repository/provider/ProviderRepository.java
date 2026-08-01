@@ -30,11 +30,6 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
 
     // ── Profile fetches ───────────────────────────────────────────────────────
 
-    /**
-     * Full profile: services + catalogItem + portfolio in one DISTINCT query.
-     * Use this for the provider profile page — prevents N+1 completely.
-     * Guards on isActive so inactive providers return empty.
-     */
     @Query("""
             SELECT DISTINCT p FROM Provider p
             LEFT JOIN FETCH p.services ps
@@ -44,10 +39,6 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
             """)
     Optional<Provider> findByIdWithFullDetails(@Param("id") Long id);
 
-    /**
-     * Services only — lighter fetch when portfolio is not needed.
-     * Example use: booking flow where you only need sub-service list.
-     */
     @Query("""
             SELECT p FROM Provider p
             LEFT JOIN FETCH p.services s
@@ -56,9 +47,6 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
             """)
     Optional<Provider> findProfileWithServicesById(@Param("id") Long id);
 
-    /**
-     * Portfolio only — for a portfolio-tab load without refetching services.
-     */
     @Query("""
             SELECT p FROM Provider p
             LEFT JOIN FETCH p.portfolio
@@ -77,10 +65,6 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
 
     // ── Search: district + category ───────────────────────────────────────────
 
-    /**
-     * Primary search: category + district, sorted by rating then experience.
-     * Used as the main result when user selects a service category in their area.
-     */
     @Query("""
             SELECT p FROM Provider p
             WHERE p.primaryService = :category
@@ -93,9 +77,6 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
             @Param("category") ServiceCategory category,
             @Param("district") String district);
 
-    /**
-     * Category-wide fallback — used when district search returns fewer than 3 results.
-     */
     @Query("""
             SELECT p FROM Provider p
             WHERE p.primaryService = :category
@@ -105,10 +86,6 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
             """)
     List<Provider> findByCategory(@Param("category") ServiceCategory category);
 
-    /**
-     * Sub-service drill-down: providers who offer a specific catalog item.
-     * Used when user taps a sub-service card (e.g. "Ceiling Fan Installation").
-     */
     @Query("""
             SELECT DISTINCT p FROM Provider p
             JOIN p.services ps
@@ -122,33 +99,13 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
 
     // ── Online / availability ─────────────────────────────────────────────────
 
-    /**
-     * Active AND online providers in a district — "available now" feature.
-     * Providers toggle isOnline manually or via the provider app.
-     */
     List<Provider> findByBaseDistrictAndIsActiveTrueAndIsOnlineTrue(String baseDistrict);
 
-    /**
-     * All verified+active providers for a category — no district scope.
-     * Useful for admin overviews and fallback searches.
-     */
     List<Provider> findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrue(
             ServiceCategory primaryService);
 
     // ── Geospatial ────────────────────────────────────────────────────────────
 
-    /**
-     * Bounding box search using lat/lng columns.
-     * Returns providers roughly within a coordinate square.
-     * Combine with Haversine formula in the service layer for precise km radius.
-     *
-     * Bounding box calculation (service layer):
-     *   double delta = radiusKm / 111.0;  // 1 degree ≈ 111 km
-     *   minLat = centerLat - delta;
-     *   maxLat = centerLat + delta;
-     *   minLng = centerLng - delta / cos(toRadians(centerLat));
-     *   maxLng = centerLng + delta / cos(toRadians(centerLat));
-     */
     @Query("""
             SELECT p FROM Provider p
             WHERE p.isActive = true
@@ -163,17 +120,11 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
 
     // ── Paginated / featured ──────────────────────────────────────────────────
 
-    /**
-     * Top-rated verified providers system-wide — paginated.
-     * Used for "Featured Providers" or "Top Rated" sections on the home screen.
-     */
     Page<Provider> findByIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(
             Pageable pageable);
 
-    /**
-     * Same as above, scoped to a single category — used by the Explore page
-     * when the user filters by category server-side.
-     */
     Page<Provider> findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(
             ServiceCategory primaryService, Pageable pageable);
+
+    List<Provider> findByReferredById(Long referrerId);
 }

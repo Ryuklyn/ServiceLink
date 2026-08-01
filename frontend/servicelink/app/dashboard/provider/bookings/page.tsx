@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
     SlidersHorizontal, Calendar, Clock, MapPin, Mail, Phone, Copy, Play,
-    MessageCircle, PhoneCall, CheckCircle, XCircle, Wrench, ArrowRight,
+    PhoneCall, CheckCircle, XCircle, Wrench, ArrowRight,
     ArrowLeft, Pause, ChevronDown, Loader2, Search as SearchIcon, RefreshCcw,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -47,8 +47,9 @@ import {
  *
  * ── RESCHEDULE FIELDS (NOT YET ON THE BACKEND) ──────────────────────────
  * The reschedule-aware UI below (badges, before/after banner, contextual
- * Approve/Decline copy) reads three optional fields that do NOT exist on
- * AppointmentSummaryDTO / AppointmentResponseDTO today:
+ * Approve/Decline copy, dedicated "Rescheduled" list section) reads three
+ * optional fields that do NOT exist on AppointmentSummaryDTO /
+ * AppointmentResponseDTO today:
  *   - previousAppointmentDate?: string | null   (yyyy-MM-dd, pre-reschedule)
  *   - previousTimeSlot?: string | null          (MORNING/AFTERNOON/EVENING, pre-reschedule)
  *   - rescheduledAt?: string | null             (ISO timestamp, for display/sort if needed)
@@ -57,10 +58,54 @@ import {
  * renders — it degrades gracefully rather than guessing. Cast to `any` is
  * used at the read sites specifically because these fields aren't in the
  * current generated/shared type from providerBookingsSlice.
+ *
+ * ── WHATSAPP / CALL (see also: the WhatsAppIcon component below) ────────
+ * These two actions are gated ONLY on `customerPhone` being present on the
+ * record — there is no per-user allowlist, ID check, or role restriction
+ * anywhere in this file. If a booking is missing `customerPhone` (as some
+ * seed/test records are), both buttons render in a disabled, non-clickable
+ * state with a tooltip rather than disappearing, so the layout stays
+ * consistent across every card and the customer header regardless of
+ * whether that particular record has a phone number on file.
  * ─────────────────────────────────────────────────────────────────────────
  */
 
 type SortKey = "newest" | "oldest" | "earnings";
+
+// ── Brand / trademark colors — single source of truth ──────────────────
+// Everything that used to reach for a random Tailwind color (amber, indigo,
+// green, red, etc.) now pulls from these two so the whole page stays on-brand.
+//
+// NOTE: this constant only covers usages that go through inline `style={}}`
+// (JS values). A handful of spots — the reschedule banner/badges — use
+// Tailwind ARBITRARY VALUE classes instead, e.g. `bg-[#1e3a8a]/10`,
+// `text-[#1e3a8a]`, `border-[#1e3a8a]/20`. Tailwind's JIT compiler needs a
+// static string literal at build time to generate those classes, so they
+// CANNOT reference `BRAND.navy` via template literals (`bg-[${BRAND.navy}]`
+// will not work). If BRAND.navy ever changes, those class strings must be
+// updated by hand — search for `1e3a8a` in className props.
+const BRAND = {
+    navy: "#1e3a8a",
+    orange: "#e8683f",
+};
+
+// Real WhatsApp glyph as inline SVG (currentColor-based, sized via prop)
+// instead of lucide's generic MessageCircle bubble — reads as WhatsApp at
+// a glance instead of "some chat icon."
+function WhatsAppIcon({ size = 13 }: { size?: number }) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+        >
+            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.85.49 3.66 1.42 5.25L2 22l4.98-1.31a9.87 9.87 0 0 0 5.06 1.38h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2Zm0 18.14a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.26-4.37c0-4.54 3.7-8.24 8.25-8.24 4.54 0 8.24 3.7 8.24 8.24 0 4.55-3.7 8.23-8.25 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.06-.39-2.01-1.24-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.84-.86 2.05 0 1.21.88 2.38 1 2.54.12.17 1.74 2.66 4.22 3.73.59.25 1.05.4 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.48-.28Z" />
+        </svg>
+    );
+}
 
 const statusLabel = (s: BackendAppointmentStatus): string => {
     if (s === "CONFIRMED") return "Accepted";
@@ -78,14 +123,12 @@ const statusBadgeStyle = (s: BackendAppointmentStatus): string => {
     }
 };
 
+// Only your two trademark colors from here on — orange marks "not yet
+// actioned" (pending), navy marks everything that's moved past that.
 const groupLabelColor = (s: string): string => {
     switch (s) {
-        case "PENDING": return "#e8683f";
-        case "CONFIRMED": return "#1e40af";
-        case "IN_PROGRESS": return "#4f46e5";
-        case "COMPLETED": return "#16a34a";
-        case "CANCELLED": return "#dc2626";
-        default: return "#6b7280";
+        case "PENDING": return BRAND.orange;
+        default: return BRAND.navy;
     }
 };
 
@@ -136,6 +179,11 @@ function formatDate(iso: string): { display: string; weekday: string } {
 function wasRescheduled(b: Record<string, any> | undefined | null): boolean {
     if (!b) return false;
     return Boolean(b.previousAppointmentDate || b.previousTimeSlot);
+}
+
+function whatsappHref(phone: string, message: string): string {
+    const digits = phone.replace(/\D/g, "");
+    return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
 const steps = [
@@ -237,12 +285,35 @@ export default function BookingsPage() {
         return list;
     }, [filtered, sortKey]);
 
-    // For the RESCHEDULED filter, group by status same as everywhere else so
-    // it slots into the existing grouped-list layout without a special case.
-    const groupSource = activeFilter === "RESCHEDULED" ? sorted : sorted;
-    const groups = (["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as BackendAppointmentStatus[])
-        .map((status) => ({ groupLabel: status, items: groupSource.filter((b) => b.status === status) }))
-        .filter((g) => g.items.length > 0);
+    // Regular status groups (Pending / Accepted / In Progress / Completed / Cancelled)
+    const statusGroups = useMemo(
+        () =>
+            (["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as BackendAppointmentStatus[])
+                .map((status) => ({
+                    key: status as string,
+                    label: statusLabel(status),
+                    color: groupLabelColor(status),
+                    items: sorted.filter((b) => b.status === status),
+                }))
+                .filter((g) => g.items.length > 0),
+        [sorted],
+    );
+
+    // Standalone "Rescheduled" mini-section — same card treatment as
+    // Accepted/Completed, shown separately from (and in addition to) the
+    // normal status group a rescheduled booking still belongs to.
+    const rescheduledGroup = useMemo(() => {
+        const rItems = sorted.filter(wasRescheduled);
+        return rItems.length > 0
+            ? { key: "RESCHEDULED", label: "Rescheduled", color: BRAND.navy, items: rItems }
+            : null;
+    }, [sorted]);
+
+    const groups = useMemo(() => {
+        if (activeFilter === "RESCHEDULED") return rescheduledGroup ? [rescheduledGroup] : [];
+        if (activeFilter === "ALL") return rescheduledGroup ? [rescheduledGroup, ...statusGroups] : statusGroups;
+        return statusGroups;
+    }, [activeFilter, statusGroups, rescheduledGroup]);
 
     const selectedSummary = items.find((b) => b.id === selectedId);
     const selectedDetail = selectedId != null ? detailsById[selectedId] : undefined;
@@ -265,12 +336,6 @@ export default function BookingsPage() {
         setSelectedId(id);
         setMobileView("detail"); // on mobile, jump straight to the detail pane
     };
-
-    const waLink = selectedSummary
-        ? `https://wa.me/977${selectedSummary.customerPhone ?? ""}?text=${encodeURIComponent(
-            `Hello ${selectedSummary.customerName}, regarding your booking BK-${selectedSummary.id}.`,
-        )}`
-        : "#";
 
     if (listStatus === "loading" && items.length === 0) {
         return (
@@ -326,7 +391,8 @@ export default function BookingsPage() {
                 </div>
             </div>
 
-            {/* Filter tabs — horizontally scrollable on small screens instead of wrapping awkwardly */}
+            {/* Filter tabs — horizontally scrollable on small screens instead of wrapping awkwardly.
+                All active tabs share the same brand navy so the row reads as one consistent set. */}
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
                 {TAB_FILTERS.map(({ label, key }) => (
                     <button
@@ -335,13 +401,13 @@ export default function BookingsPage() {
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                             activeFilter === key ? "text-white" : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
                         }`}
-                        style={activeFilter === key ? { backgroundColor: key === "RESCHEDULED" ? "#b45309" : "#1e3a8a" } : {}}
+                        style={activeFilter === key ? { backgroundColor: BRAND.navy } : {}}
                     >
                         {key === "RESCHEDULED" && <RefreshCcw size={12} />}
                         {label}
                         <span
                             className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${activeFilter === key ? "bg-white" : "bg-gray-100 text-gray-500"}`}
-                            style={activeFilter === key ? { color: key === "RESCHEDULED" ? "#b45309" : "#1e3a8a" } : {}}
+                            style={activeFilter === key ? { color: BRAND.navy } : {}}
                         >
                             {counts[key]}
                         </span>
@@ -350,52 +416,65 @@ export default function BookingsPage() {
             </div>
 
             <div className="flex flex-col lg:flex-row gap-4 items-start">
-                {/* LEFT: List — full width & stacked on mobile, hidden once a detail is open on mobile */}
+                {/* LEFT: List — full width & stacked on mobile, hidden once a detail is open on mobile.
+                    space-y-6 (not -5) so full-height group cards — especially now that every card can
+                    carry a WhatsApp row — get visible breathing room between sections, most noticeable
+                    on the "All" tab where every group renders back to back. */}
                 <div
-                    className={`${mobileView === "list" ? "flex" : "hidden"} lg:flex flex-col w-full lg:w-72 lg:flex-shrink-0 space-y-5 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto pr-0 lg:pr-1`}
+                    className={`${mobileView === "list" ? "flex" : "hidden"} lg:flex flex-col w-full lg:w-72 lg:flex-shrink-0 space-y-6 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto pr-0 lg:pr-1`}
                 >
                     {groups.length === 0 && (
                         <div className="text-center text-gray-400 text-sm py-12">No bookings found.</div>
                     )}
-                    {groups.map(({ groupLabel, items: groupItems }) => (
-                        <div key={groupLabel} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                            <div className="px-4 pt-4 pb-2 border-b border-gray-100">
-                                <p className="text-xs font-bold tracking-wide uppercase" style={{ color: groupLabelColor(groupLabel) }}>
-                                    {statusLabel(groupLabel as BackendAppointmentStatus)} ({groupItems.length})
+                    {groups.map(({ key, label, color, items: groupItems }) => (
+                        // NOTE: no `overflow-hidden` on this wrapper anymore — it was clipping cards
+                        // that render taller than the group's initial layout pass (e.g. once the
+                        // WhatsApp row below is added, or on the "All" tab where several groups stack).
+                        // `overflow-hidden` was only ever needed to keep the header's rounded corners
+                        // clean, so that's handled directly on the header/footer elements instead.
+                        <div key={key} className="w-full bg-white rounded-xl border border-gray-100 shadow-sm">
+                            <div className="px-4 pt-4 pb-2 border-b border-gray-100 rounded-t-xl">
+                                <p className="text-xs font-bold tracking-wide uppercase flex items-center gap-1" style={{ color }}>
+                                    {key === "RESCHEDULED" && <RefreshCcw size={11} />}
+                                    {label} ({groupItems.length})
                                 </p>
                             </div>
-                            <div className="p-2 space-y-2">
-                                {groupItems.map((b) => {
+                            <div className="p-2 pb-3 space-y-2 rounded-b-xl">
+                                {groupItems.map((b: any) => {
                                     const { display, weekday } = formatDate(b.appointmentDate);
                                     const rescheduled = wasRescheduled(b);
                                     return (
                                         <div
                                             key={b.id}
                                             onClick={() => handleSelectBooking(b.id)}
-                                            className={`rounded-lg p-2.5 cursor-pointer transition-colors border ${
-                                                selectedId === b.id ? "bg-orange-100 border-orange-200" : rescheduled ? "border-amber-200 bg-amber-50/40 hover:bg-amber-50" : "border-transparent hover:bg-gray-50"
+                                            className={`w-full rounded-lg p-2.5 cursor-pointer transition-colors border ${
+                                                selectedId === b.id
+                                                    ? "bg-orange-100 border-orange-200"
+                                                    : rescheduled
+                                                        ? "border-[#1e3a8a]/20 bg-[#1e3a8a]/5 hover:bg-[#1e3a8a]/10"
+                                                        : "border-transparent hover:bg-gray-50"
                                             }`}
                                         >
-                                            <div className="flex items-start gap-2.5">
+                                            <div className="flex items-start gap-2.5 w-full">
                                                 {b.customerProfilePictureUrl ? (
                                                     // eslint-disable-next-line @next/next/no-img-element
                                                     <img src={b.customerProfilePictureUrl} alt={b.customerName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                                                 ) : (
-                                                    <div className="w-10 h-10 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                                    <div className="w-10 h-10 rounded-full text-white flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: BRAND.navy }}>
                                                         {initialsOf(b.customerName)}
                                                     </div>
                                                 )}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start justify-between gap-1">
                                                         <p className="text-sm font-semibold text-gray-800 truncate">{b.customerName}</p>
-                                                        <p className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: "#e8683f" }}>
+                                                        <p className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: BRAND.orange }}>
                                                             Rs. {(b.totalPrice ?? 0).toLocaleString()}
                                                         </p>
                                                     </div>
                                                     <p className="text-xs text-gray-500 mt-0.5 truncate">{b.subServiceName}</p>
 
                                                     {rescheduled && (
-                                                        <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                                                        <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#1e3a8a] bg-[#1e3a8a]/10 border border-[#1e3a8a]/20 px-1.5 py-0.5 rounded-full">
                                                             <RefreshCcw size={9} /> {b.status === "PENDING" ? "Awaiting your approval" : "Rescheduled"}
                                                         </span>
                                                     )}
@@ -403,14 +482,48 @@ export default function BookingsPage() {
                                                     <div className="flex items-center gap-1 mt-1.5 text-xs text-gray-400">
                                                         <Calendar size={10} /> {display} · {weekday}
                                                     </div>
-                                                    <div className="flex items-center justify-between mt-1.5 gap-2">
-                                                        <div className="flex items-center gap-1 text-xs text-gray-400 truncate min-w-0">
+                                                    {/* flex-wrap so the status pill drops to its own line instead of
+                                                        getting clipped by the card's edge on narrower widths */}
+                                                    <div className="flex items-center justify-between mt-1.5 gap-2 flex-wrap">
+                                                        <div className="flex items-center gap-1 text-xs text-gray-400 truncate min-w-0 max-w-[60%]">
                                                             <MapPin size={10} className="flex-shrink-0" /> <span className="truncate">{b.address}</span>
                                                         </div>
-                                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded flex-shrink-0 ${statusBadgeStyle(b.status)}`}>
+                                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap ${statusBadgeStyle(b.status)}`}>
                                                             {statusLabel(b.status)}
                                                         </span>
                                                     </div>
+
+                                                    {/* WhatsApp — lives in the shared card loop, so it renders on
+                                                        every card in every group (Rescheduled, Pending, Accepted,
+                                                        In Progress, Completed, Cancelled) and therefore on "All" too,
+                                                        regardless of which customer/booking it is. Gated ONLY on
+                                                        customerPhone existing on the record — no ID allowlist.
+                                                        When there's no phone on file it renders disabled instead of
+                                                        disappearing, so cards stay visually consistent.
+                                                        stopPropagation so tapping it doesn't also select the card. */}
+                                                    {b.customerPhone ? (
+                                                        <a
+                                                            href={whatsappHref(
+                                                                b.customerPhone,
+                                                                `Hello ${b.customerName}, regarding your booking BK-${b.id}.`
+                                                            )}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-white px-2.5 py-1 rounded-full w-fit"
+                                                            style={{ backgroundColor: "#25D366" }}
+                                                        >
+                                                            <WhatsAppIcon size={11} /> WhatsApp
+                                                        </a>
+                                                    ) : (
+                                                        <span
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            title="No phone number on file"
+                                                            className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-gray-400 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full w-fit cursor-not-allowed"
+                                                        >
+                                                            <WhatsAppIcon size={11} /> WhatsApp
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -447,19 +560,39 @@ export default function BookingsPage() {
                                         return (
                                             <div key={step.label} className="flex items-center flex-1">
                                                 <div className="flex flex-col items-center flex-1">
-                                                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mb-1.5 border-2 ${
-                                                        isDone ? "border-blue-700 bg-blue-700" : isActive ? "border-orange-400 bg-orange-50" : "border-gray-200 bg-gray-50"
-                                                    }`}>
-                                                        <span className={isDone ? "text-white" : isActive ? "text-orange-500" : "text-gray-400"}>{step.icon}</span>
+                                                    <div
+                                                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mb-1.5 border-2"
+                                                        style={
+                                                            isDone
+                                                                ? { borderColor: BRAND.navy, backgroundColor: BRAND.navy }
+                                                                : isActive
+                                                                    ? { borderColor: BRAND.orange, backgroundColor: "#fff7f4" }
+                                                                    : {}
+                                                        }
+                                                    >
+                                                        <span
+                                                            style={
+                                                                isDone
+                                                                    ? { color: "#fff" }
+                                                                    : isActive
+                                                                        ? { color: BRAND.orange }
+                                                                        : { color: "#9ca3af" }
+                                                            }
+                                                        >
+                                                            {step.icon}
+                                                        </span>
                                                     </div>
-                                                    <p className={`text-[11px] sm:text-xs font-semibold text-center leading-tight ${isActive ? "text-orange-500" : isDone ? "text-blue-700" : "text-gray-400"}`}>
+                                                    <p
+                                                        className="text-[11px] sm:text-xs font-semibold text-center leading-tight"
+                                                        style={isActive ? { color: BRAND.orange } : isDone ? { color: BRAND.navy } : { color: "#9ca3af" }}
+                                                    >
                                                         {step.label}
                                                     </p>
                                                     <p className="text-[10px] sm:text-xs text-gray-400 text-center hidden sm:block">{step.sub}</p>
                                                 </div>
                                                 {i < steps.length - 1 && (
                                                     <div className="flex items-center justify-center mb-8 px-1 sm:px-2">
-                                                        <span className={isDone ? "text-blue-500" : "text-gray-300"}><ArrowRight size={16} /></span>
+                                                        <span style={isDone ? { color: BRAND.navy } : { color: "#d1d5db" }}><ArrowRight size={16} /></span>
                                                     </div>
                                                 )}
                                             </div>
@@ -481,7 +614,7 @@ export default function BookingsPage() {
                                                 onClick={() => setLightbox({ type: "image", src: selectedSummary.customerProfilePictureUrl! })}
                                             />
                                         ) : (
-                                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center text-base sm:text-lg font-bold flex-shrink-0">
+                                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full text-white flex items-center justify-center text-base sm:text-lg font-bold flex-shrink-0" style={{ backgroundColor: BRAND.navy }}>
                                                 {initialsOf(selectedSummary.customerName)}
                                             </div>
                                         )}
@@ -493,7 +626,7 @@ export default function BookingsPage() {
                                                     {statusLabel(selectedSummary.status)}
                                                 </span>
                                                 {selectedRescheduled && (
-                                                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded bg-[#1e3a8a]/10 text-[#1e3a8a] border border-[#1e3a8a]/20">
                                                         <RefreshCcw size={11} /> Rescheduled
                                                     </span>
                                                 )}
@@ -514,6 +647,56 @@ export default function BookingsPage() {
                                                     )}
                                                 </>
                                             )}
+
+                                            {/* WhatsApp + Call — always visible in the customer header, for every
+                                                booking regardless of status (Pending, Accepted, In Progress,
+                                                Completed, Cancelled, Rescheduled) and regardless of which customer
+                                                it is — gated only on customerPhone being present, not any ID.
+                                                Each button independently falls back to a disabled state (rather
+                                                than disappearing) when customerPhone is missing on that record. */}
+                                            <div className="flex items-center gap-2 mt-2.5">
+                                                {selectedSummary.customerPhone ? (
+                                                    <a
+                                                        href={whatsappHref(
+                                                            selectedSummary.customerPhone,
+                                                            `Hello ${selectedSummary.customerName}, regarding your booking BK-${selectedSummary.id}.`
+                                                        )}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
+                                                        style={{ backgroundColor: "#25D366" }}
+                                                    >
+                                                        <WhatsAppIcon size={13} />
+                                                        <span>WhatsApp</span>
+                                                    </a>
+                                                ) : (
+                                                    <span
+                                                        title="No phone number on file"
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed"
+                                                    >
+                                                        <WhatsAppIcon size={13} />
+                                                        <span>WhatsApp</span>
+                                                    </span>
+                                                )}
+                                                {selectedSummary.customerPhone ? (
+                                                    <a
+                                                        href={`tel:${selectedSummary.customerPhone}`}
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border"
+                                                        style={{ borderColor: BRAND.navy, color: BRAND.navy }}
+                                                    >
+                                                        <PhoneCall size={13} />
+                                                        <span>Call</span>
+                                                    </a>
+                                                ) : (
+                                                    <span
+                                                        title="No phone number on file"
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border text-gray-400 border-gray-200 cursor-not-allowed"
+                                                    >
+                                                        <PhoneCall size={13} />
+                                                        <span>Call</span>
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="text-left sm:text-right flex-shrink-0 w-full sm:w-auto flex sm:block items-center justify-between border-t sm:border-t-0 pt-3 sm:pt-0">
@@ -531,7 +714,7 @@ export default function BookingsPage() {
                                         </div>
                                         <div>
                                             <p className="text-xs text-gray-400 mt-0 sm:mt-2">Service Amount</p>
-                                            <p className="text-lg sm:text-xl font-bold" style={{ color: "#e8683f" }}>
+                                            <p className="text-lg sm:text-xl font-bold" style={{ color: BRAND.orange }}>
                                                 Rs. {(selectedSummary.totalPrice ?? 0).toLocaleString()}
                                             </p>
                                             <p className="text-xs text-gray-400 hidden sm:block">Pay after service</p>
@@ -544,26 +727,26 @@ export default function BookingsPage() {
                                 exposes previousAppointmentDate/previousTimeSlot (see header note) */}
                             {selectedRescheduled && (
                                 <div className="px-4 sm:px-6 pb-5">
-                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 sm:p-4 flex items-start gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
-                                            <RefreshCcw size={14} className="text-amber-700" />
+                                    <div className="bg-[#1e3a8a]/5 border border-[#1e3a8a]/20 rounded-xl p-3.5 sm:p-4 flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-[#1e3a8a]/10 border border-[#1e3a8a]/20 flex items-center justify-center shrink-0">
+                                            <RefreshCcw size={14} className="text-[#1e3a8a]" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-bold text-amber-800 mb-1.5">
+                                            <p className="text-xs font-bold text-[#1e3a8a] mb-1.5">
                                                 {selectedSummary.status === "PENDING"
                                                     ? "Customer requested a new time — needs your approval"
                                                     : "This booking's time was changed by the customer"}
                                             </p>
                                             <div className="flex flex-wrap items-center gap-2 text-xs">
                                                 {(selectedSummary as any).previousAppointmentDate && (
-                                                    <span className="text-amber-600/70 line-through font-medium">
+                                                    <span className="text-[#1e3a8a]/50 line-through font-medium">
                                                         {formatDate((selectedSummary as any).previousAppointmentDate).display}
                                                         {(selectedSummary as any).previousTimeSlot &&
                                                             ` · ${TIME_SLOT_LABELS[(selectedSummary as any).previousTimeSlot]?.label ?? (selectedSummary as any).previousTimeSlot}`}
                                                     </span>
                                                 )}
-                                                <ArrowRight size={12} className="text-amber-500 shrink-0" />
-                                                <span className="text-amber-900 font-bold">
+                                                <ArrowRight size={12} className="text-[#1e3a8a]/70 shrink-0" />
+                                                <span className="text-[#1e3a8a] font-bold">
                                                     {formatDate(selectedSummary.appointmentDate).display} · {TIME_SLOT_LABELS[selectedSummary.timeSlot]?.label}
                                                 </span>
                                             </div>
@@ -577,7 +760,7 @@ export default function BookingsPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-gray-100 border border-gray-200 rounded-lg p-4">
                                     <div className="flex items-start gap-2.5">
                                         <div className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0" style={{ backgroundColor: "#fff7f4" }}>
-                                            <Calendar size={15} style={{ color: "#e8683f" }} />
+                                            <Calendar size={15} style={{ color: BRAND.orange }} />
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold text-gray-800">{formatDate(selectedSummary.appointmentDate).display}</p>
@@ -586,7 +769,7 @@ export default function BookingsPage() {
                                     </div>
                                     <div className="flex items-start gap-2.5">
                                         <div className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0" style={{ backgroundColor: "#fff7f4" }}>
-                                            <Clock size={15} style={{ color: "#e8683f" }} />
+                                            <Clock size={15} style={{ color: BRAND.orange }} />
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold text-gray-800">{TIME_SLOT_LABELS[selectedSummary.timeSlot]?.range}</p>
@@ -595,7 +778,7 @@ export default function BookingsPage() {
                                     </div>
                                     <div className="flex items-start gap-2.5">
                                         <div className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 flex-shrink-0" style={{ backgroundColor: "#fff7f4" }}>
-                                            <MapPin size={15} style={{ color: "#e8683f" }} />
+                                            <MapPin size={15} style={{ color: BRAND.orange }} />
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-sm font-semibold text-gray-800 truncate">{selectedSummary.address}</p>
@@ -669,7 +852,7 @@ export default function BookingsPage() {
                                     <div>
                                         <h3 className="text-sm font-semibold text-gray-800 mb-3">Service Address</h3>
                                         <div className="flex items-start gap-2 mb-3">
-                                            <MapPin size={14} className="mt-0.5 flex-shrink-0" style={{ color: "#1e3a8a" }} />
+                                            <MapPin size={14} className="mt-0.5 flex-shrink-0" style={{ color: BRAND.navy }} />
                                             <p className="text-sm text-gray-700 font-medium">{selectedSummary.address}</p>
                                         </div>
                                     </div>
@@ -746,7 +929,7 @@ export default function BookingsPage() {
                                                     onClick={() => doTransition("IN_PROGRESS")}
                                                     disabled={updatingId === selectedSummary.id}
                                                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                                                    style={{ backgroundColor: "#1e3a8a" }}
+                                                    style={{ backgroundColor: BRAND.navy }}
                                                 >
                                                     <Wrench size={15} /> Start Job
                                                 </button>
@@ -765,7 +948,7 @@ export default function BookingsPage() {
                                                 onClick={() => doTransition("COMPLETED")}
                                                 disabled={updatingId === selectedSummary.id}
                                                 className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                                                style={{ backgroundColor: "#1e3a8a" }}
+                                                style={{ backgroundColor: BRAND.navy }}
                                             >
                                                 <CheckCircle size={15} /> Mark Complete
                                             </button>
@@ -784,23 +967,9 @@ export default function BookingsPage() {
                                         )}
                                     </div>
 
-                                    <div className="sm:ml-auto flex flex-col sm:flex-row gap-2">
-                                        <a
-                                            href={waLink}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90"
-                                            style={{ backgroundColor: "#25D366" }}
-                                        >
-                                            <MessageCircle size={15} /> WhatsApp
-                                        </a>
-                                        <a
-                                            href={selectedSummary.customerPhone ? `tel:${selectedSummary.customerPhone}` : undefined}
-                                            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-gray-700 border border-gray-200 bg-white hover:bg-gray-50"
-                                        >
-                                            <PhoneCall size={15} /> Call
-                                        </a>
-                                    </div>
+                                    {/* WhatsApp/Call now live up in the customer header (always visible,
+                                        status-independent) — removed the duplicate copy that used to sit
+                                        here to avoid showing the same two buttons twice per booking. */}
                                 </div>
                             </div>
                         </div>

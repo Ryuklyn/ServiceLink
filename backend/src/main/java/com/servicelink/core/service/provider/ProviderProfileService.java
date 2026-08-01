@@ -47,6 +47,7 @@ public class ProviderProfileService {
 
     private static final int MAX_PORTFOLIO_PROJECTS = 10;
     private static final int MAX_PORTFOLIO_PHOTOS = 5;
+    private static final int REFERRALS_PER_FREE_MONTH = 5;
 
     private final ProviderRepository         providerRepo;
     private final ProviderServiceRepository  providerServiceRepo;
@@ -267,12 +268,6 @@ public class ProviderProfileService {
         // from Supabase storage. Add a deleteFile(objectPath) method to
         // SupabaseStorageService and call it per media item here if needed.
     }
-
-    // caption-editing and "set primary" are intentionally not carried over —
-    // Portfolio has no `caption` or `isPrimary` field in the current schema.
-    // If you want either back: isPrimary as a project-level flag on Portfolio,
-    // vs. a cover-photo flag on PortfolioMedia — say which and I'll add the
-    // field + these methods to both this service and PortfolioService.
 
     private LocalDate parseCompletionDate(String monthValue) {
         if (monthValue == null || monthValue.isBlank()) return null;
@@ -531,5 +526,57 @@ public class ProviderProfileService {
 
         log.info("Provider {} saved {} service selection(s) via onboarding batch",
                 provider.getId(), selections.size());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // REFERRALS
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Transactional(readOnly = true)
+    public ReferralSummaryDTO getMyReferralSummary(Long userId) {
+        Provider me = resolveActiveProvider(userId);
+
+        // Column was added after some Provider rows already existed, so it
+        // can be NULL in the DB for legacy rows — @Builder.Default only
+        // applies to newly-built objects, not rows Hibernate hydrates.
+        // Guard against NPE on unboxing to primitive int below.
+        int freeMonthsEarned = me.getReferralFreeMonthsEarned() != null
+                ? me.getReferralFreeMonthsEarned()
+                : 0;
+
+        List<Provider> referred = providerRepo.findByReferredById(me.getId());
+
+        List<ReferralHistoryDTO> history = referred.stream()
+                .map(p -> {
+                    String kycStatus = p.getKycSubmission() != null
+                            ? p.getKycSubmission().getStatus().name()
+                            : "PENDING";
+                    // TODO: replace with a real subscription/payment status check
+                    // once that entity exists — placeholder below assumes any
+                    // active provider has paid.
+                    String paymentStatus = Boolean.TRUE.equals(p.getIsActive()) ? "PAID" : "UNPAID";
+                    boolean counts = "APPROVED".equals(kycStatus) && "PAID".equals(paymentStatus);
+
+                    return ReferralHistoryDTO.builder()
+                            .name(p.getFullName())
+                            .category(p.getPrimaryService() != null ? p.getPrimaryService().name() : "UNKNOWN")
+                            .joinedDate(p.getMemberSince())
+                            .kycStatus(kycStatus)
+                            .paymentStatus(paymentStatus)
+                            .counts(counts)
+                            .build();
+                })
+                .toList();
+
+        int countedTotal = (int) history.stream().filter(ReferralHistoryDTO::isCounts).count();
+        int progress = countedTotal - (freeMonthsEarned * REFERRALS_PER_FREE_MONTH);
+
+        return ReferralSummaryDTO.builder()
+                .referralCode(me.getReferralCode())
+                .progress(Math.max(0, progress))
+                .total(REFERRALS_PER_FREE_MONTH)
+                .freeMonthsEarned(freeMonthsEarned)
+                .history(history)
+                .build();
     }
 }
