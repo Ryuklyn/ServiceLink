@@ -95,6 +95,7 @@ public class AuthService {
                 .fullName(profile != null ? profile.getFullName() : user.getFullName())
                 .profileImage(profile != null ? profile.getProfileImage() : null)
                 .requiresProfileImage(profile == null || profile.getProfileImage() == null)
+                .role(user.getRole().name())
                 .build();
     }
 

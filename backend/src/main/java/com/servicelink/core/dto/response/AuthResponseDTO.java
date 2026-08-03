@@ -11,5 +11,6 @@ public class AuthResponseDTO {
     private String fullName;
     private String profileImage;
     private boolean requiresProfileImage;
+    private String role;
     private String message; // for registration success or error messages
 }

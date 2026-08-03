@@ -25,4 +25,5 @@ public class UserResponseDTO {
     private AuthProvider provider;
     private boolean verified;
     private LocalDateTime createdAt;
+    private String role;
 }

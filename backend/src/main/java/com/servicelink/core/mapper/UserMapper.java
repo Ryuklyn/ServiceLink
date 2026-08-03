@@ -73,6 +73,7 @@ public class UserMapper {
                     .provider(user.getProvider())
                     .verified(user.isVerified())
                     .createdAt(user.getCreatedAt())
+                    .role(user.getRole().name())
                     .build();
         }
 }
