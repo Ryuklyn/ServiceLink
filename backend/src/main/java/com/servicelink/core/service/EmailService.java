@@ -221,13 +221,68 @@ public class EmailService {
             log.info("{} email sent to [{}]", logLabel, mask(to));
         } catch (MessagingException | java.io.UnsupportedEncodingException e) {
             log.error("Failed to send {} email to [{}]: {}", logLabel, mask(to), e.getMessage());
-            // OTP failure बाहेक अरू सबै non-critical — rethrow गर्दैनौं
-            // (KYC data पहिले नै save भइसकेको हुन्छ, email fail हुँदा block नगरोस्)
         }
     }
 
     private static String mask(String s) {
         if (s == null || s.length() <= 4) return "***";
         return s.substring(0, 4) + "***";
+    }
+
+    @Async
+    public void sendKycVideoAuditEmail(String to, String applicantName, String meetLink, Instant when) {
+        String subject = "ServiceLink KYC — Video Verification Scheduled";
+        String displayName = (applicantName == null || applicantName.isBlank()) ? "there" : applicantName;
+        String whenFormatted = DateTimeFormatter
+                .ofPattern("dd MMM yyyy, hh:mm a")
+                .withZone(ZoneId.of("Asia/Kathmandu"))
+                .format(when);
+
+        String body = wrapTemplate(
+                "Video Verification",
+                "One more step, " + displayName + ".",
+                "Your KYC video verification has been scheduled. Please join a few minutes early with your original citizenship/PAN documents ready.",
+                """
+                <div style="background:#fafaf9; border:1px solid #e7e5e4; border-radius:10px; padding:16px; margin: 20px 0;">
+                  <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#78716c; margin:0 0 4px;">
+                    Scheduled For
+                  </p>
+                  <p style="font-size:16px; font-weight:600; color:#1c1917; margin:0;">%s</p>
+                </div>
+                """.formatted(whenFormatted),
+                "Join Google Meet", meetLink
+        );
+
+        send(to, subject, body, "KYC video audit invite");
+    }
+
+    @Async
+    public void sendKycRejectionEmail(String to, String applicantName, String referenceNumber, String reason) {
+        String subject = "Update on your KYC application";
+        String displayName = (applicantName == null || applicantName.isBlank()) ? "there" : applicantName;
+
+        String body = wrapTemplate(
+                "Verification Update",
+                "We need a bit more from you, " + displayName + ".",
+                "Your KYC application couldn't be approved as submitted.",
+                """
+                <div style="background:#fafaf9; border:1px solid #e7e5e4; border-radius:10px; padding:16px; margin: 20px 0;">
+                  <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#78716c; margin:0 0 4px;">
+                    Reference Number
+                  </p>
+                  <p style="font-size:16px; font-weight:600; color:#1c1917; margin:0 0 12px;">%s</p>
+                  <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#78716c; margin:0 0 4px;">
+                    Reason
+                  </p>
+                  <p style="font-size:14px; color:#44403c; margin:0;">%s</p>
+                </div>
+                <p style="font-size:14px; line-height:1.6; color:#44403c; margin:0;">
+                  Please review the details above and resubmit your application with the corrected documents.
+                </p>
+                """.formatted(referenceNumber, reason == null || reason.isBlank() ? "Not specified" : reason),
+                null, null
+        );
+
+        send(to, subject, body, "KYC rejection (ref: " + referenceNumber + ")");
     }
 }

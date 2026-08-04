@@ -102,4 +102,11 @@ public class KycSubmission {
     private Instant reviewedAt;
     @Column(columnDefinition = "TEXT")
     private String  reviewNotes;
+
+    // ── Video audit (Option B — admin pastes a manually-created Meet link) ────
+    @Column(columnDefinition = "TEXT")
+    private String scheduledMeetLink;
+
+    private Instant scheduledMeetAt;
+
 }

@@ -1,5 +1,6 @@
 package com.servicelink.core.controller;
 
+import com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO;
 import com.servicelink.core.service.KycService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -46,5 +47,13 @@ public class AdminKycController {
         kycService.rejectKyc(identifier, reviewNotes);
 
         return ResponseEntity.ok(Map.of("message", "KYC application rejected."));
+    }
+
+    @PutMapping("/{identifier}/schedule-video-audit")
+    public ResponseEntity<?> scheduleVideoAudit(
+            @PathVariable String identifier,
+            @RequestBody ScheduleVideoAuditRequestDTO req) throws Exception {
+        kycService.scheduleVideoAudit(identifier, req);
+        return ResponseEntity.ok(Map.of("message", "Video audit scheduled and invite sent."));
     }
 }

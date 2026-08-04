@@ -1,10 +1,14 @@
 package com.servicelink.core.service;
 
 import com.servicelink.core.dto.request.KycSubmitRequestDTO;
+import com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO;
 import com.servicelink.core.dto.response.KycStatusResponseDTO;
 import com.servicelink.core.dto.response.KycSubmitResponseDTO;
+import com.servicelink.core.dto.response.admin.KycAdminDetailDTO;
+import com.servicelink.core.dto.response.admin.KycAdminListItemDTO;
 import com.servicelink.core.dto.response.kyc.PublicKycStatusResponseDTO;
 import com.servicelink.core.mapper.KycMapper;
+import com.servicelink.core.mapper.admin.KycAdminMapper;
 import com.servicelink.core.model.auth.AuthProvider;
 import com.servicelink.core.model.common.KycSubmission;
 import com.servicelink.core.model.common.KycStatus;
@@ -16,6 +20,8 @@ import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.storage.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -36,13 +42,14 @@ public class KycService {
 
     private final KycRepository      kycRepository;
     private final UserRepository     userRepository;
-    private final ProviderRepository providerRepository; // ← NEW
+    private final ProviderRepository providerRepository;
     private final SupabaseStorageService storageService;
     private final KycMapper       kycMapper;
+    private final KycAdminMapper  kycAdminMapper; // NEW — maps KycSubmission -> admin list/detail DTOs
     private final EmailService    emailService;
 
     // ─── Submit ───────────────────────────────────────────────────────────────
-    // (unchanged — submit() stays exactly as-is)
+    // (unchanged)
 
     @Transactional
     public KycSubmitResponseDTO submit(
@@ -99,6 +106,33 @@ public class KycService {
     }
 
     /**
+     * Admin desk list — all submissions, optionally filtered by status and/or
+     * searched by name/email/reference. Used by the KYC management table.
+     */
+    public List<KycAdminListItemDTO> listAll(String status, String search) {
+        List<KycSubmission> all = (status == null || status.isBlank() || status.equalsIgnoreCase("all"))
+                ? kycRepository.findAll()
+                : kycRepository.findByStatus(KycStatus.valueOf(status.toUpperCase()));
+
+        return all.stream()
+                .filter(s -> search == null || search.isBlank()
+                        || s.getFullName().toLowerCase().contains(search.toLowerCase())
+                        || s.getEmail().toLowerCase().contains(search.toLowerCase())
+                        || s.getReferenceNumber().toLowerCase().contains(search.toLowerCase()))
+                .map(kycAdminMapper::toListItem)
+                .toList();
+    }
+
+    /** Admin detail modal — full submission by applicantIdentifier. */
+
+    public KycAdminDetailDTO getDetailByIdentifier(String applicantIdentifier) {
+        KycSubmission submission = kycRepository.findByApplicantIdentifier(applicantIdentifier)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "KYC submission not found for identifier: " + applicantIdentifier));
+        return kycAdminMapper.toDetail(submission);
+    }
+
+    /**
      * Approves an application, provisions (or elevates) the applicant's User account
      * to PROVIDER, and creates the corresponding Provider row. This is the single
      * place approval should happen through — a bare SQL UPDATE on kyc_submissions.status
@@ -130,18 +164,14 @@ public class KycService {
         Provider provider = Provider.builder()
                 .user(user)
                 .build();
-        provider.syncFromKyc(submission); // sets kycSubmission, fullName, phone, primaryService, otherService, experienceYears, bio
+        provider.syncFromKyc(submission);
 
         provider.setBaseDistrict(submission.getPrimaryDistrict());
-        provider.setCoveredDistricts(submission.getSecondaryDistricts()); // already JSON-as-text
+        provider.setCoveredDistricts(submission.getSecondaryDistricts());
         provider.setProfilePictureUrl(submission.getProfilePhotoUrl());
         provider.setTravelRadiusKm(parseTravelRadiusKm(submission.getTravelRadius()));
         provider.setCertifiedCategories(buildCertifiedCategories(submission));
 
-        // Approval is what makes a provider verified and active — set explicitly here
-        // rather than relying on syncFromKyc(), since these are approval-outcome flags,
-        // not KYC-submission data. Do not remove or move this without checking
-        // syncFromKyc() doesn't also set these — keep exactly one source of truth.
         provider.setIsVerified(true);
         provider.setIsActive(true);
 
@@ -152,15 +182,10 @@ public class KycService {
         log.info("Submission id = {}", submission.getId());
         log.info("Reference = {}", submission.getReferenceNumber());
         log.info("Provisioned Provider id = {} (userId = {})", provider.getId(), user.getId());
+
+        emailService.sendKycApprovalEmail(submission.getEmail(), submission.getFullName(), submission.getReferenceNumber());
     }
 
-    /**
-     * Resolves the User to promote to PROVIDER, creating one if the applicant
-     * never had an account. Prefers the User already linked on the submission
-     * (set at submit time, if any) over re-deriving from applicantIdentifier,
-     * since applicantIdentifier may be a phone number rather than an email —
-     * looking that up against User.email would silently miss a real match.
-     */
     private User resolveOrCreateProviderUser(KycSubmission submission, String applicantIdentifier) {
         User user = submission.getUser();
 
@@ -175,9 +200,6 @@ public class KycService {
             return user;
         }
 
-        // No account existed yet — provision one. Login is OTP-based (phone or email),
-        // no password required, matching your existing AuthProvider.LOCAL / null-password
-        // convention already used for Google-auth users.
         String email = submission.getEmail();
         if (email == null || email.isBlank()) {
             throw new IllegalStateException(
@@ -193,7 +215,7 @@ public class KycService {
                 .provider(AuthProvider.LOCAL)
                 .role(Role.PROVIDER)
                 .verified(true)
-                .password(null) // OTP login, no password
+                .password(null)
                 .build();
 
         User saved = userRepository.save(newUser);
@@ -228,6 +250,35 @@ public class KycService {
         submission.setReviewedAt(Instant.now());
         submission.setReviewNotes(reviewNotes);
         kycRepository.save(submission);
+
+        // NOTE: this was missing before — applicant never got told why they were rejected.
+        emailService.sendKycRejectionEmail(submission.getEmail(), submission.getFullName(),
+                submission.getReferenceNumber(), reviewNotes);
+    }
+
+    /**
+     * Option B video audit: admin manually creates the Meet event in
+     * servicelink@1607gmail.com's own Calendar and pastes the link here.
+     * No Calendar API / service account involved.
+     */
+    @Transactional
+    public void scheduleVideoAudit(String identifier, ScheduleVideoAuditRequestDTO req) {
+        KycSubmission submission = kycRepository.findByApplicantIdentifier(identifier)
+                .orElseThrow(() -> new IllegalArgumentException("Submission not found for identifier: " + identifier));
+
+        LocalDateTime meetDateTime = LocalDateTime.parse(req.getMeetDate() + "T" + req.getMeetTime());
+        Instant scheduledAt = meetDateTime.atZone(ZoneId.of("Asia/Kathmandu")).toInstant();
+
+        submission.setStatus(KycStatus.UNDER_REVIEW);
+        submission.setScheduledMeetLink(req.getMeetLink());
+        submission.setScheduledMeetAt(scheduledAt);
+        kycRepository.save(submission);
+
+        if (req.isSendEmail()) {
+            emailService.sendKycVideoAuditEmail(submission.getEmail(), submission.getFullName(),
+                    req.getMeetLink(), scheduledAt);
+        }
+        // WhatsApp: not wired yet — no provider configured
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -264,8 +315,8 @@ public class KycService {
                 .submittedAt(submission.getSubmittedAt())
                 .reviewedAt(submission.getReviewedAt())
                 .reviewNotes(submission.getReviewNotes())
-                .fullName(submission.getFullName())   // NEW
-                .email(submission.getEmail())         // NEW
+                .fullName(submission.getFullName())
+                .email(submission.getEmail())
                 .build();
     }
 
