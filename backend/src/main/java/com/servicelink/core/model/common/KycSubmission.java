@@ -54,44 +54,40 @@ public class KycSubmission {
     private String tole;
 
     // ── Professional ──────────────────────────────────────────────────────────
-    private String  primaryService;
-    private String  otherService;
-    @Column(columnDefinition = "TEXT")
-    private String  additionalServices;     // JSON array stored as text
-    private Integer experienceYears;
-    private String  primaryDistrict;
-    @Column(columnDefinition = "TEXT")
-    private String  secondaryDistricts;     // JSON array stored as text
-    private String  travelRadius;
-    @Column(columnDefinition = "TEXT")
-    private String  bio;
+    private String primaryService;
+    private String otherService;
 
-    // ── Document paths ────────────────────────────────────────────────────────
-//    private String citizenshipFrontPath;
-//    private String citizenshipBackPath;
-//    private String photoPath;
-//    private String panPath;
-//    @Column(columnDefinition = "TEXT")
-//    private String professionalCertPaths;   // JSON array
-//    @Column(name = "profile_photo_url")
-//    private String profilePhotoUrl;
-    // ── Document paths ────────────────────────────────────────────────────────
     @Column(columnDefinition = "TEXT")
+    private String additionalServices;     // JSON array stored as text
+
+    private Integer experienceYears;
+    private String primaryDistrict;
+
+    @Column(columnDefinition = "TEXT")
+    private String secondaryDistricts;     // JSON array stored as text
+
+    private String travelRadius;
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    // ── Document paths / Base64 Strings ───────────────────────────────────────
+    @Column(name = "citizenship_front_path", columnDefinition = "LONGTEXT")
     private String citizenshipFrontPath;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "citizenship_back_path", columnDefinition = "LONGTEXT")
     private String citizenshipBackPath;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "photo_path", columnDefinition = "LONGTEXT")
     private String photoPath;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "pan_path", columnDefinition = "LONGTEXT")
     private String panPath;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "professional_cert_paths", columnDefinition = "LONGTEXT")
     private String professionalCertPaths;   // JSON array
 
-    @Column(name = "profile_photo_url", columnDefinition = "TEXT")
+    @Column(name = "profile_photo_url", columnDefinition = "LONGTEXT")
     private String profilePhotoUrl;
 
     // ── Status ────────────────────────────────────────────────────────────────
@@ -100,13 +96,13 @@ public class KycSubmission {
 
     private Instant submittedAt;
     private Instant reviewedAt;
+
     @Column(columnDefinition = "TEXT")
-    private String  reviewNotes;
+    private String reviewNotes;
 
     // ── Video audit (Option B — admin pastes a manually-created Meet link) ────
     @Column(columnDefinition = "TEXT")
     private String scheduledMeetLink;
 
     private Instant scheduledMeetAt;
-
 }

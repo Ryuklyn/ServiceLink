@@ -1,18 +1,19 @@
 package com.servicelink.core.controller;
 
+import com.servicelink.core.dto.request.admin.KycReviewRequestDTO;
 import com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO;
+import com.servicelink.core.dto.response.admin.ApiResponse;
+import com.servicelink.core.dto.response.admin.KycAdminDetailDTO;
+import com.servicelink.core.dto.response.admin.KycAdminListItemDTO;
+import com.servicelink.core.model.common.KycSubmission;
 import com.servicelink.core.service.KycService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.List;
 
 @PreAuthorize("hasRole('ADMIN')")
 @RestController
@@ -22,38 +23,51 @@ public class AdminKycController {
 
     private final KycService kycService;
 
+    /** Handles GET /api/admin/kyc?status=PENDING&search=john */
+    @GetMapping
+    public ResponseEntity<List<KycAdminListItemDTO>> listAllKyc(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(kycService.listAll(status, search));
+    }
+
+    /** Handles GET /api/admin/kyc/pending */
     @GetMapping("/pending")
-    public ResponseEntity<?> getPendingKyc() {
+    public ResponseEntity<List<KycSubmission>> getPendingKyc() {
         return ResponseEntity.ok(kycService.getPendingSubmissions());
     }
 
+    /** Handles GET /api/admin/kyc/{identifier} (Accepts numeric ID, reference string, or applicant identifier) */
+    @GetMapping("/{identifier}")
+    public ResponseEntity<KycAdminDetailDTO> getKycByIdentifier(@PathVariable String identifier) {
+        return ResponseEntity.ok(kycService.getDetailByIdentifier(identifier));
+    }
+
     @PutMapping("/{identifier}/approve")
-    public ResponseEntity<?> approveKyc(
+    public ResponseEntity<ApiResponse> approveKyc(
             @PathVariable String identifier,
-            @RequestBody Map<String, String> body) {
+            @RequestBody(required = false) KycReviewRequestDTO request) {
 
-        String reviewNotes = body.get("reviewNotes");
+        String reviewNotes = request != null ? request.getReviewNotes() : null;
         kycService.approveKyc(identifier, reviewNotes);
-
-        return ResponseEntity.ok(Map.of("message", "KYC application approved successfully."));
+        return ResponseEntity.ok(new ApiResponse("KYC application approved successfully."));
     }
 
     @PutMapping("/{identifier}/reject")
-    public ResponseEntity<?> rejectKyc(
+    public ResponseEntity<ApiResponse> rejectKyc(
             @PathVariable String identifier,
-            @RequestBody Map<String, String> body) {
+            @Valid @RequestBody KycReviewRequestDTO request) {
 
-        String reviewNotes = body.get("reviewNotes");
-        kycService.rejectKyc(identifier, reviewNotes);
-
-        return ResponseEntity.ok(Map.of("message", "KYC application rejected."));
+        kycService.rejectKyc(identifier, request.getReviewNotes());
+        return ResponseEntity.ok(new ApiResponse("KYC application rejected."));
     }
 
-    @PutMapping("/{identifier}/schedule-video-audit")
-    public ResponseEntity<?> scheduleVideoAudit(
+    @PostMapping("/{identifier}/schedule-video-audit")
+    public ResponseEntity<ApiResponse> scheduleVideoAudit(
             @PathVariable String identifier,
-            @RequestBody ScheduleVideoAuditRequestDTO req) throws Exception {
-        kycService.scheduleVideoAudit(identifier, req);
-        return ResponseEntity.ok(Map.of("message", "Video audit scheduled and invite sent."));
+            @Valid @RequestBody ScheduleVideoAuditRequestDTO request) {
+
+        kycService.scheduleVideoAudit(identifier, request);
+        return ResponseEntity.ok(new ApiResponse("Video audit scheduled and invite sent."));
     }
 }

@@ -20,10 +20,6 @@ import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.storage.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,8 +27,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -40,16 +41,36 @@ public class KycService {
 
     private static final Logger log = LoggerFactory.getLogger(KycService.class);
 
-    private final KycRepository      kycRepository;
-    private final UserRepository     userRepository;
-    private final ProviderRepository providerRepository;
+    private final KycRepository          kycRepository;
+    private final UserRepository         userRepository;
+    private final ProviderRepository     providerRepository;
     private final SupabaseStorageService storageService;
-    private final KycMapper       kycMapper;
-    private final KycAdminMapper  kycAdminMapper; // NEW — maps KycSubmission -> admin list/detail DTOs
-    private final EmailService    emailService;
+    private final KycMapper              kycMapper;
+    private final KycAdminMapper         kycAdminMapper;
+    private final EmailService           emailService;
+    private final GoogleCalendarService  googleCalendarService;
+
+    // ─── Universal Resolver ───────────────────────────────────────────────────
+
+    private KycSubmission findSubmissionByIdentifierOrId(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            throw new IllegalArgumentException("Identifier must not be empty.");
+        }
+
+        if (identifier.matches("\\d+")) {
+            Long id = Long.parseLong(identifier);
+            Optional<KycSubmission> byId = kycRepository.findById(id);
+            if (byId.isPresent()) {
+                return byId.get();
+            }
+        }
+
+        return kycRepository.findByApplicantIdentifier(identifier)
+                .orElseGet(() -> kycRepository.findByReferenceNumber(identifier)
+                        .orElseThrow(() -> new IllegalArgumentException("KYC submission not found for identifier or ID: " + identifier)));
+    }
 
     // ─── Submit ───────────────────────────────────────────────────────────────
-    // (unchanged)
 
     @Transactional
     public KycSubmitResponseDTO submit(
@@ -99,16 +120,12 @@ public class KycService {
         return response;
     }
 
-    // ─── Phase 4: Admin Infrastructure ────────────────────────────────────────
+    // ─── Admin Infrastructure ─────────────────────────────────────────────────
 
     public List<KycSubmission> getPendingSubmissions() {
         return kycRepository.findByStatus(KycStatus.PENDING);
     }
 
-    /**
-     * Admin desk list — all submissions, optionally filtered by status and/or
-     * searched by name/email/reference. Used by the KYC management table.
-     */
     public List<KycAdminListItemDTO> listAll(String status, String search) {
         List<KycSubmission> all = (status == null || status.isBlank() || status.equalsIgnoreCase("all"))
                 ? kycRepository.findAll()
@@ -123,43 +140,34 @@ public class KycService {
                 .toList();
     }
 
-    /** Admin detail modal — full submission by applicantIdentifier. */
-
-    public KycAdminDetailDTO getDetailByIdentifier(String applicantIdentifier) {
-        KycSubmission submission = kycRepository.findByApplicantIdentifier(applicantIdentifier)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "KYC submission not found for identifier: " + applicantIdentifier));
+    public KycAdminDetailDTO getDetailByIdentifier(String identifier) {
+        KycSubmission submission = findSubmissionByIdentifierOrId(identifier);
         return kycAdminMapper.toDetail(submission);
     }
 
-    /**
-     * Approves an application, provisions (or elevates) the applicant's User account
-     * to PROVIDER, and creates the corresponding Provider row. This is the single
-     * place approval should happen through — a bare SQL UPDATE on kyc_submissions.status
-     * will NOT create the Provider row or promote the user, leaving the system in an
-     * inconsistent state (status says approved, but nothing else reflects it).
-     */
+    // ─── Approve Decision ─────────────────────────────────────────────────────
+
     @Transactional
-    public void approveKyc(String applicantIdentifier, String reviewNotes) {
-        KycSubmission submission = kycRepository
-                .findByApplicantIdentifier(applicantIdentifier)
-                .orElseThrow(() -> new RuntimeException("KYC registration record not found"));
+    public void approveKyc(String identifier, String reviewNotes) {
+        KycSubmission submission = findSubmissionByIdentifierOrId(identifier);
 
         if (submission.getStatus() == KycStatus.APPROVED) {
             log.info("KYC for [{}] is already APPROVED — skipping re-approval to avoid duplicate Provider rows.",
-                    mask(applicantIdentifier));
+                    mask(submission.getApplicantIdentifier()));
             return;
         }
 
         submission.setStatus(KycStatus.APPROVED);
         submission.setReviewedAt(Instant.now());
 
-        if (reviewNotes != null) {
-            submission.setReviewNotes(reviewNotes);
+        // Save optional review note passed from DecisionModal
+        if (reviewNotes != null && !reviewNotes.isBlank()) {
+            submission.setReviewNotes(reviewNotes.trim());
         }
+
         kycRepository.save(submission);
 
-        User user = resolveOrCreateProviderUser(submission, applicantIdentifier);
+        User user = resolveOrCreateProviderUser(submission, submission.getApplicantIdentifier());
 
         Provider provider = Provider.builder()
                 .user(user)
@@ -177,14 +185,88 @@ public class KycService {
 
         providerRepository.save(provider);
 
-        log.info("KYC Approved for identifier [{}]", mask(applicantIdentifier));
-        log.info("Approving applicant = {}", mask(applicantIdentifier));
+        log.info("KYC Approved for identifier [{}]", mask(submission.getApplicantIdentifier()));
         log.info("Submission id = {}", submission.getId());
         log.info("Reference = {}", submission.getReferenceNumber());
         log.info("Provisioned Provider id = {} (userId = {})", provider.getId(), user.getId());
 
         emailService.sendKycApprovalEmail(submission.getEmail(), submission.getFullName(), submission.getReferenceNumber());
     }
+
+    // ─── Reject Decision ──────────────────────────────────────────────────────
+
+    @Transactional
+    public void rejectKyc(String identifier, String reviewNotes) {
+        KycSubmission submission = findSubmissionByIdentifierOrId(identifier);
+
+        submission.setStatus(KycStatus.REJECTED);
+        submission.setReviewedAt(Instant.now());
+
+        // Trim and attach mandatory rejection reason note from DecisionModal
+        String reasonNote = (reviewNotes != null && !reviewNotes.isBlank()) ? reviewNotes.trim() : null;
+        submission.setReviewNotes(reasonNote);
+
+        kycRepository.save(submission);
+
+        log.info("KYC Rejected for identifier [{}]", mask(submission.getApplicantIdentifier()));
+
+        emailService.sendKycRejectionEmail(
+                submission.getEmail(),
+                submission.getFullName(),
+                submission.getReferenceNumber(),
+                reasonNote
+        );
+    }
+
+    @Transactional
+    public void scheduleVideoAudit(String identifier, ScheduleVideoAuditRequestDTO req) {
+        KycSubmission submission = findSubmissionByIdentifierOrId(identifier);
+
+        // Calculate audit timestamp safely
+        Instant scheduledAt;
+        if (req.getScheduledAt() != null) {
+            scheduledAt = req.getScheduledAt();
+        } else if (req.getMeetDate() != null && req.getMeetTime() != null) {
+            LocalDateTime meetDateTime = LocalDateTime.parse(req.getMeetDate() + "T" + req.getMeetTime());
+            scheduledAt = meetDateTime.atZone(ZoneId.of("Asia/Kathmandu")).toInstant();
+        } else {
+            throw new IllegalArgumentException("Schedule date/time must be provided.");
+        }
+
+        String meetLink = req.getMeetLink();
+
+        // Dynamically auto-generate Google Meet link if absent
+        if (meetLink == null || meetLink.isBlank()) {
+            try {
+                meetLink = googleCalendarService.createMeetEventAndGetLink(
+                        submission.getEmail(),
+                        submission.getFullName(),
+                        scheduledAt,
+                        scheduledAt.plus(30, ChronoUnit.MINUTES)
+                );
+            } catch (Exception e) {
+                log.error("Failed to generate Google Calendar event for [{}]", submission.getEmail(), e);
+                throw new RuntimeException("Could not auto-generate Google Meet link: " + e.getMessage(), e);
+            }
+        }
+
+        submission.setStatus(KycStatus.UNDER_REVIEW);
+        submission.setScheduledMeetLink(meetLink);
+        submission.setScheduledMeetAt(scheduledAt);
+        kycRepository.save(submission);
+
+        // Send email with confirmed meet link
+        if (req.isSendEmail()) {
+            emailService.sendKycVideoAuditEmail(
+                    submission.getEmail(),
+                    submission.getFullName(),
+                    meetLink,
+                    scheduledAt
+            );
+        }
+    }
+
+    // ─── Helpers & Status Queries ─────────────────────────────────────────────
 
     private User resolveOrCreateProviderUser(KycSubmission submission, String applicantIdentifier) {
         User user = submission.getUser();
@@ -242,47 +324,6 @@ public class KycService {
         return String.join(",", categories);
     }
 
-    public void rejectKyc(String identifier, String reviewNotes) {
-        KycSubmission submission = kycRepository.findByApplicantIdentifier(identifier)
-                .orElseThrow(() -> new IllegalArgumentException("Submission not found for identifier: " + identifier));
-
-        submission.setStatus(KycStatus.REJECTED);
-        submission.setReviewedAt(Instant.now());
-        submission.setReviewNotes(reviewNotes);
-        kycRepository.save(submission);
-
-        // NOTE: this was missing before — applicant never got told why they were rejected.
-        emailService.sendKycRejectionEmail(submission.getEmail(), submission.getFullName(),
-                submission.getReferenceNumber(), reviewNotes);
-    }
-
-    /**
-     * Option B video audit: admin manually creates the Meet event in
-     * servicelink@1607gmail.com's own Calendar and pastes the link here.
-     * No Calendar API / service account involved.
-     */
-    @Transactional
-    public void scheduleVideoAudit(String identifier, ScheduleVideoAuditRequestDTO req) {
-        KycSubmission submission = kycRepository.findByApplicantIdentifier(identifier)
-                .orElseThrow(() -> new IllegalArgumentException("Submission not found for identifier: " + identifier));
-
-        LocalDateTime meetDateTime = LocalDateTime.parse(req.getMeetDate() + "T" + req.getMeetTime());
-        Instant scheduledAt = meetDateTime.atZone(ZoneId.of("Asia/Kathmandu")).toInstant();
-
-        submission.setStatus(KycStatus.UNDER_REVIEW);
-        submission.setScheduledMeetLink(req.getMeetLink());
-        submission.setScheduledMeetAt(scheduledAt);
-        kycRepository.save(submission);
-
-        if (req.isSendEmail()) {
-            emailService.sendKycVideoAuditEmail(submission.getEmail(), submission.getFullName(),
-                    req.getMeetLink(), scheduledAt);
-        }
-        // WhatsApp: not wired yet — no provider configured
-    }
-
-    // ─── Helpers ──────────────────────────────────────────────────────────────
-
     private String buildCertPaths(MultipartFile[] certs) throws Exception {
         if (certs == null || certs.length == 0) return "[]";
         StringBuilder sb = new StringBuilder("[");
@@ -304,10 +345,7 @@ public class KycService {
     }
 
     public KycStatusResponseDTO getStatus(String identifier) {
-        KycSubmission submission = kycRepository
-                .findByApplicantIdentifier(identifier)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("No KYC submission found."));
+        KycSubmission submission = findSubmissionByIdentifierOrId(identifier);
 
         return KycStatusResponseDTO.builder()
                 .status(submission.getStatus().name())

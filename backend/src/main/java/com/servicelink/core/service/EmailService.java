@@ -238,6 +238,37 @@ public class EmailService {
                 .withZone(ZoneId.of("Asia/Kathmandu"))
                 .format(when);
 
+        // Defense-in-depth: @NotBlank on ScheduleVideoAuditRequestDTO.meetLink should already
+        // prevent this at the controller layer, but @Async methods fail silently on NPE,
+        // so guard here too rather than trusting upstream validation alone.
+        boolean hasMeetLink = meetLink != null && !meetLink.isBlank();
+
+        String calendarBlock = "";
+        if (hasMeetLink) {
+            String calendarUrl = buildGoogleCalendarLink(
+                    "ServiceLink KYC Video Verification",
+                    "Join your KYC video verification here: " + meetLink,
+                    meetLink,
+                    when,
+                    when.plus(30, ChronoUnit.MINUTES)
+            );
+            calendarBlock = """
+            <p style="font-size:13px; color:#78716c; margin:0 0 4px;">
+              Note: this event has <strong>not</strong> been added to your Google Calendar automatically —
+              use the button below to add it yourself.
+            </p>
+            <div style="margin-top:12px;">
+              <a href="%s" style="display:inline-block; padding:10px 18px; background:#fff;
+                        border:1px solid #d6d3d1; color:#1c1917; text-decoration:none; border-radius:8px;
+                        font-weight:600; font-size:13px;">
+                📅 Add to Google Calendar
+              </a>
+            </div>
+            """.formatted(calendarUrl);
+        } else {
+            log.warn("sendKycVideoAuditEmail called with blank meetLink for [{}] — sending without Meet/Calendar links", mask(to));
+        }
+
         String body = wrapTemplate(
                 "Video Verification",
                 "One more step, " + displayName + ".",
@@ -249,11 +280,27 @@ public class EmailService {
                   </p>
                   <p style="font-size:16px; font-weight:600; color:#1c1917; margin:0;">%s</p>
                 </div>
-                """.formatted(whenFormatted),
-                "Join Google Meet", meetLink
+                %s
+                """.formatted(whenFormatted, calendarBlock),
+                hasMeetLink ? "Join Google Meet" : null,
+                hasMeetLink ? meetLink : null
         );
 
         send(to, subject, body, "KYC video audit invite");
+    }
+
+    private String buildGoogleCalendarLink(String title, String details, String location, Instant start, Instant end) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneId.of("UTC"));
+        String dates = fmt.format(start) + "/" + fmt.format(end);
+        return "https://calendar.google.com/calendar/render?action=TEMPLATE"
+                + "&text=" + urlEncode(title)
+                + "&dates=" + dates
+                + "&details=" + urlEncode(details)
+                + "&location=" + urlEncode(location);
+    }
+
+    private static String urlEncode(String s) {
+        return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     @Async

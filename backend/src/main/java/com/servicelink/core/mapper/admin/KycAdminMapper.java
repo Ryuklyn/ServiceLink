@@ -21,6 +21,7 @@ public class KycAdminMapper {
                 .fullName(s.getFullName())
                 .email(s.getEmail())
                 .phone(s.getPhone())
+                .photoUrl(resolvePhotoUrl(s)) // Fixed: Added missing photoUrl mapping
                 .primaryService(s.getPrimaryService())
                 .status(s.getStatus().name())
                 .submittedAt(s.getSubmittedAt())
@@ -56,12 +57,22 @@ public class KycAdminMapper {
                 .photoPath(s.getPhotoPath())
                 .panPath(s.getPanPath())
                 .professionalCertPaths(kycMapper.fromJson(s.getProfessionalCertPaths()))
-                .profilePhotoUrl(s.getProfilePhotoUrl())
+                .profilePhotoUrl(resolvePhotoUrl(s)) // Fixed: Added fallback resolver
                 .submittedAt(s.getSubmittedAt())
                 .reviewedAt(s.getReviewedAt())
                 .reviewNotes(s.getReviewNotes())
                 .scheduledMeetLink(s.getScheduledMeetLink())
                 .scheduledMeetAt(s.getScheduledMeetAt())
                 .build();
+    }
+
+    /**
+     * Resolves profile photo URL with fallback to photoPath if profilePhotoUrl is null or empty.
+     */
+    private String resolvePhotoUrl(KycSubmission s) {
+        if (s.getProfilePhotoUrl() != null && !s.getProfilePhotoUrl().isBlank()) {
+            return s.getProfilePhotoUrl();
+        }
+        return s.getPhotoPath();
     }
 }
