@@ -43,7 +43,26 @@ public class AdminKycController {
         return ResponseEntity.ok(kycService.getDetailByIdentifier(identifier));
     }
 
-    @PutMapping("/{identifier}/approve")
+//    @PutMapping("/{identifier}/approve")
+//    public ResponseEntity<ApiResponse> approveKyc(
+//            @PathVariable String identifier,
+//            @RequestBody(required = false) KycReviewRequestDTO request) {
+//
+//        String reviewNotes = request != null ? request.getReviewNotes() : null;
+//        kycService.approveKyc(identifier, reviewNotes);
+//        return ResponseEntity.ok(new ApiResponse("KYC application approved successfully."));
+//    }
+//
+//    @PutMapping("/{identifier}/reject")
+//    public ResponseEntity<ApiResponse> rejectKyc(
+//            @PathVariable String identifier,
+//            @Valid @RequestBody KycReviewRequestDTO request) {
+//
+//        kycService.rejectKyc(identifier, request.getReviewNotes());
+//        return ResponseEntity.ok(new ApiResponse("KYC application rejected."));
+//    }
+
+    @PostMapping("/{identifier}/approve")
     public ResponseEntity<ApiResponse> approveKyc(
             @PathVariable String identifier,
             @RequestBody(required = false) KycReviewRequestDTO request) {
@@ -53,7 +72,7 @@ public class AdminKycController {
         return ResponseEntity.ok(new ApiResponse("KYC application approved successfully."));
     }
 
-    @PutMapping("/{identifier}/reject")
+    @PostMapping("/{identifier}/reject")
     public ResponseEntity<ApiResponse> rejectKyc(
             @PathVariable String identifier,
             @Valid @RequestBody KycReviewRequestDTO request) {

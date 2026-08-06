@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -87,5 +89,31 @@ public class GlobalExceptionHandler {
         }
         body.put("timestamp", Instant.now().toString());
         return ResponseEntity.status(status).body(body);
+    }
+
+    /**
+     * Thrown by Hibernate/JPA when a DB constraint (NOT NULL, unique, FK) is
+     * violated — e.g. inserting a Provider with a null email. Without this
+     * handler it falls through to the generic RuntimeException handler and
+     * reports as an opaque 500, hiding a real data-integrity bug behind
+     * "please try again."
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation: {}", ex.getMessage(), ex);
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "DATA_INTEGRITY_ERROR",
+                "The request could not be completed due to a data constraint. Please check the submission and try again.");
+    }
+
+    /**
+     * Thrown when a route exists but not for the HTTP verb used (e.g. a
+     * frontend POST hitting a @PutMapping-only route). Without this handler
+     * Spring's default 405 gets swallowed by the generic Exception handler
+     * below and reported as a 500, hiding what is really a client-side
+     * routing/verb mismatch.
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        return build(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", ex.getMessage());
     }
 }

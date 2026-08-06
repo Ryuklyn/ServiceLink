@@ -174,6 +174,7 @@ public class KycService {
                 .build();
         provider.syncFromKyc(submission);
 
+        provider.setEmail(user.getEmail());
         provider.setBaseDistrict(submission.getPrimaryDistrict());
         provider.setCoveredDistricts(submission.getSecondaryDistricts());
         provider.setProfilePictureUrl(submission.getProfilePhotoUrl());
