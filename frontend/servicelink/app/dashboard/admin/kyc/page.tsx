@@ -119,9 +119,9 @@ export default function KYCManagementPage() {
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Kpi label="Total Requests"     value={items.length}                                            icon={<UserCheck size={20} />}   tone="blue" />
+                <Kpi label="Total Requests"     value={items.length}                                            icon={<UserCheck size={20} />}   tone="brand" />
                 <Kpi label="Pending Review"     value={items.filter((p) => p.status === "PENDING").length}       icon={<Clock size={20} />}       tone="amber" />
-                <Kpi label="Video Audits"       value={items.filter((p) => p.status === "UNDER_REVIEW").length} icon={<Video size={20} />}       tone="indigo" />
+                <Kpi label="Video Audits"       value={items.filter((p) => p.status === "UNDER_REVIEW").length} icon={<Video size={20} />}       tone="accent" />
                 <Kpi label="Verified Providers" value={items.filter((p) => p.status === "APPROVED").length}      icon={<CheckCircle2 size={20} />} tone="emerald" />
             </div>
 
@@ -132,8 +132,8 @@ export default function KYCManagementPage() {
                             <button
                                 key={key}
                                 onClick={() => setActiveTab(key)}
-                                className={`px-3 py-1.5 rounded-md transition ${
-                                    activeTab === key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                                className={`px-3 py-1.5 rounded-md transition whitespace-nowrap ${
+                                    activeTab === key ? "bg-[#1e3a8a] text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
                                 }`}
                             >
                                 {key === "all" ? `All (${items.length})` : TAB_LABELS[key]}
@@ -147,7 +147,7 @@ export default function KYCManagementPage() {
                             placeholder="Search name, email, reference..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-1.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-9 pr-4 py-1.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:border-transparent"
                         />
                     </div>
                 </div>
@@ -179,7 +179,7 @@ export default function KYCManagementPage() {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             {/* Profile Avatar / Photo Image */}
-                                            <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center font-bold text-xs text-blue-700 bg-blue-50">
+                                            <div className="w-9 h-9 rounded-full bg-[#1e3a8a]/10 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center font-bold text-xs text-[#1e3a8a]">
                                                 {provider.photoUrl ? (
                                                     <img
                                                         src={provider.photoUrl}
@@ -206,7 +206,7 @@ export default function KYCManagementPage() {
                                         <div className="flex items-center justify-end gap-2">
                                             <button onClick={() => openDetail(provider.id, "video")}
                                                     title="Schedule Manual Video Audit"
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                                                    className="p-1.5 text-[#1e3a8a] hover:bg-[#1e3a8a]/10 rounded-lg transition">
                                                 <Video size={18} />
                                             </button>
                                             <button
@@ -258,12 +258,12 @@ export default function KYCManagementPage() {
 
 function Kpi({ label, value, icon, tone }: {
     label: string; value: number; icon: React.ReactNode;
-    tone: "blue" | "amber" | "indigo" | "emerald";
+    tone: "brand" | "amber" | "accent" | "emerald";
 }) {
     const toneMap = {
-        blue:    "bg-blue-50 text-blue-600",
+        brand:   "bg-[#1e3a8a]/10 text-[#1e3a8a]",
         amber:   "bg-amber-50 text-amber-600",
-        indigo:  "bg-indigo-50 text-indigo-600",
+        accent:  "bg-[#e8683f]/10 text-[#e8683f]",
         emerald: "bg-emerald-50 text-emerald-600",
     } as const;
     return (
