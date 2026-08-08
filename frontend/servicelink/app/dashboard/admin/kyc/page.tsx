@@ -16,10 +16,10 @@ type DecisionAction = "approve" | "reject";
 // Map UI Tab labels to backend enum strings
 const TAB_LABELS: Record<StatusTab, string> = {
     all: "All",
-    PENDING: "PENDING",
+    PENDING: "Pending",
     UNDER_REVIEW: "Manual Audit",
     APPROVED: "Verified",
-    REJECTED: "REJECTED",
+    REJECTED: "Rejected",
 };
 
 export default function KYCManagementPage() {

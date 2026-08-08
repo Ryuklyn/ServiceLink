@@ -3,6 +3,11 @@ package com.servicelink.core.service.provider;
 // com/servicelink/core/service/provider/ProviderProfileService.java
 import com.servicelink.core.dto.request.provider.*;
 import com.servicelink.core.dto.request.provider.portfolio.CreatePortfolioDTO;
+import com.servicelink.core.dto.request.provider.service.CreateProviderServiceDTO;
+import com.servicelink.core.dto.request.provider.service.CreateServiceCatalogDTO;
+import com.servicelink.core.dto.request.provider.service.ProviderServiceSelectionDTO;
+import com.servicelink.core.dto.request.provider.service.UpdateProviderServiceDTO;
+import com.servicelink.core.dto.request.provider.service.UpdateServiceCatalogDTO;
 import com.servicelink.core.dto.response.provider.*;
 import com.servicelink.core.dto.response.provider.onboarding.OnboardingStatusDTO;
 import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
@@ -421,6 +426,20 @@ public class ProviderProfileService {
                 .toList();
     }
 
+    /**
+     * Admin-facing catalog listing — includes inactive items so admins can
+     * see and re-activate them (unlike getAllActiveCatalog(), which is for
+     * the public/user-facing browse screens).
+     */
+    @Transactional(readOnly = true)
+    public List<ServiceCatalogDTO> getAllCatalogForAdmin() {
+        return catalogRepo
+                .findAllByOrderByCategoryAscSubServiceNameAsc()
+                .stream()
+                .map(mapper::toCatalogDTO)
+                .toList();
+    }
+
     /** Admin creates a new catalog sub-service entry. */
     @Transactional
     public ServiceCatalogDTO createCatalogItem(CreateServiceCatalogDTO req) {
@@ -439,6 +458,20 @@ public class ProviderProfileService {
                 .basePrice(req.getBasePrice())
                 .isActive(true)
                 .build();
+
+        return mapper.toCatalogDTO(catalogRepo.save(sc));
+    }
+
+    /** Admin edits a catalog item's name/duration/pricing unit/base price. */
+    @Transactional
+    public ServiceCatalogDTO updateCatalogItem(Long catalogId, UpdateServiceCatalogDTO req) {
+        ServiceCatalog sc = catalogRepo.findById(catalogId)
+                .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", catalogId));
+
+        if (req.getSubServiceName() != null) sc.setSubServiceName(req.getSubServiceName());
+        if (req.getDefaultDuration() != null) sc.setDefaultDuration(req.getDefaultDuration());
+        if (req.getPricingUnit()    != null) sc.setPricingUnit(req.getPricingUnit());
+        if (req.getBasePrice()      != null) sc.setBasePrice(req.getBasePrice());
 
         return mapper.toCatalogDTO(catalogRepo.save(sc));
     }

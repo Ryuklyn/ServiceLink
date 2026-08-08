@@ -1,8 +1,8 @@
 package com.servicelink.core.controller.provider;
 
-import com.servicelink.core.dto.request.provider.CreateProviderServiceDTO;
-import com.servicelink.core.dto.request.provider.CreateServiceCatalogDTO;
-import com.servicelink.core.dto.request.provider.UpdateProviderServiceDTO;
+import com.servicelink.core.dto.request.provider.service.CreateProviderServiceDTO;
+import com.servicelink.core.dto.request.provider.service.CreateServiceCatalogDTO;
+import com.servicelink.core.dto.request.provider.service.UpdateProviderServiceDTO;
 import com.servicelink.core.dto.response.provider.ProviderServiceDTO;
 import com.servicelink.core.dto.response.provider.ServiceCatalogDTO;
 import com.servicelink.core.service.provider.ProviderProfileService;

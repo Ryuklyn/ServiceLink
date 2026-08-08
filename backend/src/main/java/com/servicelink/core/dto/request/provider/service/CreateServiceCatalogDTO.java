@@ -1,4 +1,4 @@
-    package com.servicelink.core.dto.request.provider;
+    package com.servicelink.core.dto.request.provider.service;
 
     import com.servicelink.core.model.common.ServiceCategory;
     import com.servicelink.core.model.provider.ServiceCatalog;

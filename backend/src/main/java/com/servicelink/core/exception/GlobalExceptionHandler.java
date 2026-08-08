@@ -2,14 +2,15 @@ package com.servicelink.core.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -59,6 +60,44 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "CONFLICT", ex.getMessage());
     }
 
+    /**
+     * Thrown by Spring Boot 3.2+ / Spring 6.1+ when no static resource or
+     * controller mapping exists for a given request path. Prevents unmapped routes
+     * from falling through to the generic Exception handler and triggering a 500.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResourceFound(NoResourceFoundException ex) {
+        log.warn("Resource or endpoint not found: {}", ex.getResourcePath());
+        return build(HttpStatus.NOT_FOUND, "NOT_FOUND",
+                "The requested endpoint or resource was not found: " + ex.getResourcePath());
+    }
+
+    /**
+     * Thrown by Hibernate/JPA when a DB constraint (NOT NULL, unique, FK) is
+     * violated — e.g. inserting a Provider with a null email. Without this
+     * handler it falls through to the generic RuntimeException handler and
+     * reports as an opaque 500, hiding a real data-integrity bug behind
+     * "please try again."
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation: {}", ex.getMessage(), ex);
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "DATA_INTEGRITY_ERROR",
+                "The request could not be completed due to a data constraint. Please check the submission and try again.");
+    }
+
+    /**
+     * Thrown when a route exists but not for the HTTP verb used (e.g. a
+     * frontend POST hitting a @PutMapping-only route). Without this handler
+     * Spring's default 405 gets swallowed by the generic Exception handler
+     * below and reported as a 500, hiding what is really a client-side
+     * routing/verb mismatch.
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        return build(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", ex.getMessage());
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntime(RuntimeException ex) {
         log.error("Unhandled runtime exception: {}", ex.getMessage(), ex);
@@ -89,31 +128,5 @@ public class GlobalExceptionHandler {
         }
         body.put("timestamp", Instant.now().toString());
         return ResponseEntity.status(status).body(body);
-    }
-
-    /**
-     * Thrown by Hibernate/JPA when a DB constraint (NOT NULL, unique, FK) is
-     * violated — e.g. inserting a Provider with a null email. Without this
-     * handler it falls through to the generic RuntimeException handler and
-     * reports as an opaque 500, hiding a real data-integrity bug behind
-     * "please try again."
-     */
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        log.error("Data integrity violation: {}", ex.getMessage(), ex);
-        return build(HttpStatus.UNPROCESSABLE_ENTITY, "DATA_INTEGRITY_ERROR",
-                "The request could not be completed due to a data constraint. Please check the submission and try again.");
-    }
-
-    /**
-     * Thrown when a route exists but not for the HTTP verb used (e.g. a
-     * frontend POST hitting a @PutMapping-only route). Without this handler
-     * Spring's default 405 gets swallowed by the generic Exception handler
-     * below and reported as a 500, hiding what is really a client-side
-     * routing/verb mismatch.
-     */
-    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<Map<String, Object>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
-        return build(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", ex.getMessage());
     }
 }

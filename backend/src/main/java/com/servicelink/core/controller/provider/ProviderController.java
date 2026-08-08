@@ -2,12 +2,14 @@ package com.servicelink.core.controller.provider;
 
 import com.servicelink.core.dto.request.provider.*;
 import com.servicelink.core.dto.request.provider.portfolio.CreatePortfolioDTO;
+import com.servicelink.core.dto.request.provider.service.CreateServiceCatalogDTO;
+import com.servicelink.core.dto.request.provider.service.UpdateServiceCatalogDTO;
 import com.servicelink.core.dto.response.provider.*;
 import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
 import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.service.provider.ProviderProfileService;
-import com.servicelink.core.dto.request.provider.ProviderServiceSelectionDTO;
+import com.servicelink.core.dto.request.provider.service.ProviderServiceSelectionDTO;
 import com.servicelink.core.dto.response.provider.onboarding.OnboardingStatusDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -73,6 +75,39 @@ public class ProviderController {
                 : providerProfileService.getAllActiveCatalog();
 
         return ResponseEntity.ok(result);
+    }
+
+
+    // ─────────────────────────────────────────────────────────────────────────
+// SERVICE CATALOG — admin management (ROLE_ADMIN required)
+// ─────────────────────────────────────────────────────────────────────────
+
+    @GetMapping("/catalog/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<ServiceCatalogDTO>> getCatalogForAdmin() {
+        return ResponseEntity.ok(providerProfileService.getAllCatalogForAdmin());
+    }
+
+    @PostMapping("/catalog")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ServiceCatalogDTO> createCatalogItem(
+            @Valid @RequestBody CreateServiceCatalogDTO req) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(providerProfileService.createCatalogItem(req));
+    }
+
+    @PatchMapping("/catalog/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ServiceCatalogDTO> updateCatalogItem(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateServiceCatalogDTO req) {
+        return ResponseEntity.ok(providerProfileService.updateCatalogItem(id, req));
+    }
+
+    @PatchMapping("/catalog/{id}/toggle")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ServiceCatalogDTO> toggleCatalogItem(@PathVariable Long id) {
+        return ResponseEntity.ok(providerProfileService.toggleCatalogActive(id));
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import providerSubscriptionReducer from "./slices/providerSubscriptionSlice";
 import providerAvailabilityReducer from "./slices/providerAvailabilitySlice";
 import providerBookingsReducer from "./slices/providerBookingsSlice";
 import proSessionReducer from "@/store/slices/proSessionSlice";
+import categoriesAdminReducer from "@/store/slices/categoriesAdminSlice";
 import uiReducer from "@/store/slices/uiSlice";
 import notificationReducer from "./slices/notificationSlice";
 
@@ -23,10 +24,11 @@ export const store = configureStore({
         providerOnboarding: providerOnboardingReducer,
         providerSubscription: providerSubscriptionReducer,
         providerServices: providerServicesReducer,
-        providerAvailability:providerAvailabilityReducer,
+        providerAvailability: providerAvailabilityReducer,
         providerBookings: providerBookingsReducer,
         proSession: proSessionReducer,
-        ui:uiReducer,
+        categoriesAdmin: categoriesAdminReducer,
+        ui: uiReducer,
         notifications: notificationReducer,
     },
 });

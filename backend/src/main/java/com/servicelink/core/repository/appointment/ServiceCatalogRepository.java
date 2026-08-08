@@ -38,4 +38,12 @@ public interface ServiceCatalogRepository extends JpaRepository<ServiceCatalog, 
      */
     boolean existsByCategoryAndSubServiceNameIgnoreCase(
             ServiceCategory category, String subServiceName);
+
+    /**
+     * ALL sub-services (active + inactive) sorted by category then name.
+     * Used by the admin catalog management page — unlike the user-facing
+     * query above, this must include inactive items so admins can see and
+     * re-activate them.
+     */
+    List<ServiceCatalog> findAllByOrderByCategoryAscSubServiceNameAsc();
 }

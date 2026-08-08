@@ -1,4 +1,4 @@
-package com.servicelink.core.dto.request.provider;
+package com.servicelink.core.dto.request.provider.service;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

@@ -1,110 +1,110 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState, FormEvent } from "react";
 import {
     Search,
     Plus,
     Edit2,
-    Trash2,
     Layers,
     Wrench,
     CheckCircle2,
     XCircle,
-    Percent,
+    Loader2,
+    X,
 } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks"; // adjust if your typed hooks live elsewhere
+import {
+    fetchCatalogAdmin,
+    createCatalogItemThunk,
+    updateCatalogItemThunk,
+    toggleCatalogItemThunk,
+    clearCategoriesAdminError,
+} from "@/store/slices/categoriesAdminSlice"; // MUST match the actual file location — see note below
+import {
+    KNOWN_CATEGORIES,
+    PricingUnit,
+    formatCategoryLabel,
+    ServiceCatalogDTO,
+} from "@/store/slices/features/categories/categoriesTypes";
 
-interface SubService {
-    id: string;
-    name: string;
-    basePriceNpr: number;
-    isActive: boolean;
-}
-
-interface Category {
-    id: string;
-    name: string;
-    description: string;
-    commissionRate: number; // percentage
-    isActive: boolean;
-    services: SubService[];
-}
-
-const INITIAL_CATEGORIES: Category[] = [
-    {
-        id: "CAT-01",
-        name: "Electrical Services",
-        description: "Wiring, appliance repair, and electrical installations.",
-        commissionRate: 10,
-        isActive: true,
-        services: [
-            { id: "SRV-101", name: "Short Circuit Repair", basePriceNpr: 800, isActive: true },
-            { id: "SRV-102", name: "Full House Wiring Inspection", basePriceNpr: 2500, isActive: true },
-        ],
-    },
-    {
-        id: "CAT-02",
-        name: "Plumbing & Sanitation",
-        description: "Pipe fittings, leakage repair, and sanitary fixtures.",
-        commissionRate: 12,
-        isActive: true,
-        services: [
-            { id: "SRV-201", name: "Pipe Leakage Fixing", basePriceNpr: 600, isActive: true },
-            { id: "SRV-202", name: "Water Tank Cleaning", basePriceNpr: 3500, isActive: true },
-        ],
-    },
-    {
-        id: "CAT-03",
-        name: "Home Cleaning & Hygiene",
-        description: "Deep home cleaning, sofa cleaning, and carpet sanitization.",
-        commissionRate: 15,
-        isActive: false,
-        services: [
-            { id: "SRV-301", name: "3BHK Deep Cleaning", basePriceNpr: 8000, isActive: true },
-        ],
-    },
-];
+const PRICING_UNITS: PricingUnit[] = ["PER_JOB", "PER_SQFT", "PER_WALL", "PER_ITEM"];
 
 export default function CategoriesPage() {
-    const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+    const dispatch = useAppDispatch();
+    const { items, loading, saving, togglingId, error } = useAppSelector(
+        (state) => state.categoriesAdmin,
+    );
+
     const [searchTerm, setSearchTerm] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // New Category Form State
-    const [newCatName, setNewCatName] = useState("");
-    const [newCatDesc, setNewCatDesc] = useState("");
-    const [newCatCommission, setNewCatCommission] = useState("10");
+    // New sub-service form state
+    const [newCategory, setNewCategory] = useState<string>(KNOWN_CATEGORIES[0]);
+    const [newName, setNewName] = useState("");
+    const [newDuration, setNewDuration] = useState("");
+    const [newPricingUnit, setNewPricingUnit] = useState<PricingUnit>("PER_JOB");
+    const [newBasePrice, setNewBasePrice] = useState("");
 
-    const filteredCategories = categories.filter(
-        (cat) =>
-            cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cat.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    useEffect(() => {
+        dispatch(fetchCatalogAdmin());
+    }, [dispatch]);
 
-    const handleToggleCategory = (id: string) => {
-        setCategories((prev) =>
-            prev.map((c) => (c.id === id ? { ...c, isActive: !c.isActive } : c))
+    const grouped = useMemo(() => {
+        const term = searchTerm.toLowerCase();
+        const filtered = items.filter(
+            (item: ServiceCatalogDTO) =>
+                item.subServiceName.toLowerCase().includes(term) ||
+                formatCategoryLabel(item.category).toLowerCase().includes(term),
         );
-    };
 
-    const handleCreateCategory = (e: React.FormEvent) => {
+        const map = new Map<string, ServiceCatalogDTO[]>();
+        for (const item of filtered) {
+            const list = map.get(item.category) ?? [];
+            list.push(item);
+            map.set(item.category, list);
+        }
+        return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+    }, [items, searchTerm]);
+
+    function handleToggle(id: number) {
+        dispatch(toggleCatalogItemThunk(id));
+    }
+
+    async function handleCreate(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        if (!newCatName.trim()) return;
+        if (!newName.trim()) return;
 
-        const newCategory: Category = {
-            id: `CAT-0${categories.length + 1}`,
-            name: newCatName,
-            description: newCatDesc,
-            commissionRate: Number(newCatCommission) || 10,
-            isActive: true,
-            services: [],
-        };
+        const result = await dispatch(
+            createCatalogItemThunk({
+                category: newCategory,
+                subServiceName: newName.trim(),
+                defaultDuration: newDuration.trim() || undefined,
+                pricingUnit: newPricingUnit,
+                basePrice: newBasePrice ? Number(newBasePrice) : undefined,
+            }),
+        );
 
-        setCategories([...categories, newCategory]);
-        setIsModalOpen(false);
-        setNewCatName("");
-        setNewCatDesc("");
-        setNewCatCommission("10");
-    };
+        if (createCatalogItemThunk.fulfilled.match(result)) {
+            setIsModalOpen(false);
+            setNewName("");
+            setNewDuration("");
+            setNewBasePrice("");
+            setNewPricingUnit("PER_JOB");
+            setNewCategory(KNOWN_CATEGORIES[0]);
+        }
+    }
+
+    function handleInlinePriceEdit(item: ServiceCatalogDTO) {
+        const value = window.prompt(
+            `New base price (NPR) for "${item.subServiceName}"`,
+            String(item.basePrice ?? ""),
+        );
+        if (value === null) return;
+        const basePrice = Number(value);
+        if (Number.isNaN(basePrice) || basePrice < 0) return;
+
+        dispatch(updateCatalogItemThunk({ id: item.id, payload: { basePrice } }));
+    }
 
     return (
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -113,7 +113,7 @@ export default function CategoriesPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Categories &amp; Services</h1>
                     <p className="text-sm text-slate-500">
-                        Configure marketplace service categories, base rates, and platform commission fees.
+                        Manage the service catalog admins and providers select from.
                     </p>
                 </div>
 
@@ -121,7 +121,7 @@ export default function CategoriesPage() {
                     onClick={() => setIsModalOpen(true)}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg flex items-center gap-2 shadow-sm transition shrink-0"
                 >
-                    <Plus size={16} /> Add New Category
+                    <Plus size={16} /> Add New Sub-Service
                 </button>
             </div>
 
@@ -131,7 +131,7 @@ export default function CategoriesPage() {
                     <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
                     <input
                         type="text"
-                        placeholder="Search categories..."
+                        placeholder="Search categories or services..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-9 pr-4 py-1.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -139,163 +139,208 @@ export default function CategoriesPage() {
                 </div>
 
                 <div className="text-xs text-slate-500 font-medium">
-                    Total Categories: <span className="text-slate-900 font-bold">{categories.length}</span>
+                    Total Services: <span className="text-slate-900 font-bold">{items.length}</span>
                 </div>
             </div>
 
-            {/* CATEGORY GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCategories.map((category) => (
-                    <div
-                        key={category.id}
-                        className={`bg-white rounded-xl border transition shadow-sm flex flex-col justify-between ${
-                            category.isActive ? "border-slate-200" : "border-slate-200 bg-slate-50/50 opacity-80"
-                        }`}
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center justify-between">
+                    <span>{error}</span>
+                    <button
+                        onClick={() => dispatch(clearCategoriesAdminError())}
+                        className="text-red-400 hover:text-red-600"
                     >
-                        {/* CARD HEADER */}
-                        <div className="p-5 border-b border-slate-100 space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                        <Layers size={18} />
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
+
+            {/* LOADING */}
+            {loading && (
+                <div className="flex items-center justify-center py-20 text-slate-400 gap-2">
+                    <Loader2 className="animate-spin" size={18} /> Loading catalog...
+                </div>
+            )}
+
+            {/* EMPTY STATE */}
+            {!loading && grouped.length === 0 && (
+                <div className="text-center py-20 text-slate-400 text-sm">
+                    No services found. Try adjusting your search, or add a new sub-service.
+                </div>
+            )}
+
+            {/* CATEGORY GRID */}
+            {!loading && grouped.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {grouped.map(([category, services]) => {
+                        const activeCount = services.filter((s) => s.isActive).length;
+                        return (
+                            <div
+                                key={category}
+                                className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between"
+                            >
+                                {/* CARD HEADER */}
+                                <div className="p-5 border-b border-slate-100 space-y-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                            <Layers size={18} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 text-base">
+                                                {formatCategoryLabel(category)}
+                                            </h3>
+                                            <span className="text-[10px] font-mono text-slate-400">{category}</span>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-900 text-base">{category.name}</h3>
-                                        <span className="text-[10px] font-mono text-slate-400">{category.id}</span>
+
+                                    <div className="text-xs text-slate-500">
+                                        {activeCount} of {services.length} service{services.length === 1 ? "" : "s"} active
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => handleToggleCategory(category.id)}
-                                    title={category.isActive ? "Deactivate Category" : "Activate Category"}
-                                    className={`px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 ${
-                                        category.isActive
-                                            ? "bg-emerald-50 text-emerald-700"
-                                            : "bg-slate-100 text-slate-500"
-                                    }`}
-                                >
-                                    {category.isActive ? (
-                                        <>
-                                            <CheckCircle2 size={12} /> Active
-                                        </>
-                                    ) : (
-                                        <>
-                                            <XCircle size={12} /> Inactive
-                                        </>
-                                    )}
-                                </button>
+                                {/* SUBSERVICES LIST */}
+                                <div className="p-5 flex-1 space-y-3">
+                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <Wrench size={12} /> Services ({services.length})
+                                    </p>
+
+                                    <ul className="space-y-2">
+                                        {services.map((service) => (
+                                            <li
+                                                key={service.id}
+                                                className={`flex items-center justify-between gap-2 text-xs p-2 rounded-lg border ${
+                                                    service.isActive
+                                                        ? "bg-slate-50 border-slate-100"
+                                                        : "bg-slate-50/50 border-slate-100 opacity-60"
+                                                }`}
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="font-medium text-slate-700 truncate">
+                                                        {service.subServiceName}
+                                                    </p>
+                                                    <p className="text-slate-400">
+                                                        {service.pricingUnit.replace("_", " ")}
+                                                        {service.defaultDuration ? ` · ${service.defaultDuration}` : ""}
+                                                    </p>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <button
+                                                        onClick={() => handleInlinePriceEdit(service)}
+                                                        title="Edit base price"
+                                                        className="text-slate-400 hover:text-blue-600 transition"
+                                                    >
+                                                        <Edit2 size={12} />
+                                                    </button>
+                                                    <span className="font-mono text-slate-900 font-semibold">
+                                                        NPR {(service.basePrice ?? 0).toLocaleString()}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => handleToggle(service.id)}
+                                                        disabled={togglingId === service.id}
+                                                        title={service.isActive ? "Deactivate" : "Activate"}
+                                                        className={`shrink-0 ${
+                                                            service.isActive ? "text-emerald-600" : "text-slate-400"
+                                                        } hover:opacity-70 transition disabled:opacity-40`}
+                                                    >
+                                                        {togglingId === service.id ? (
+                                                            <Loader2 size={14} className="animate-spin" />
+                                                        ) : service.isActive ? (
+                                                            <CheckCircle2 size={14} />
+                                                        ) : (
+                                                            <XCircle size={14} />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
+                        );
+                    })}
+                </div>
+            )}
 
-                            <p className="text-xs text-slate-500 line-clamp-2">{category.description}</p>
-
-                            {/* COMMISSION BADGE */}
-                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 text-xs font-medium">
-                                <Percent size={12} /> Commission Fee: {category.commissionRate}%
-                            </div>
-                        </div>
-
-                        {/* SUBSERVICES LIST */}
-                        <div className="p-5 flex-1 space-y-3">
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <Wrench size={12} /> Included Services ({category.services.length})
-                            </p>
-
-                            {category.services.length === 0 ? (
-                                <p className="text-xs text-slate-400 italic">No sub-services configured yet.</p>
-                            ) : (
-                                <ul className="space-y-2">
-                                    {category.services.map((service) => (
-                                        <li
-                                            key={service.id}
-                                            className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 border border-slate-100"
-                                        >
-                      <span className="font-medium text-slate-700 truncate max-w-[150px]">
-                        {service.name}
-                      </span>
-                                            <span className="font-mono text-slate-900 font-semibold">
-                        NPR {service.basePriceNpr.toLocaleString()}
-                      </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-
-                        {/* CARD FOOTER */}
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 rounded-b-xl flex items-center justify-between text-xs">
-                            <button
-                                onClick={() => alert(`Edit category: ${category.name}`)}
-                                className="text-slate-600 hover:text-blue-600 font-medium flex items-center gap-1 transition"
-                            >
-                                <Edit2 size={14} /> Edit Category
-                            </button>
-
-                            <button
-                                onClick={() => alert(`Managing sub-services for: ${category.name}`)}
-                                className="text-blue-600 hover:text-blue-700 font-semibold transition"
-                            >
-                                + Manage Services
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* CREATE CATEGORY MODAL */}
+            {/* CREATE SUB-SERVICE MODAL */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-xl border border-slate-200">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                <Layers className="text-blue-600" size={20} /> Create New Category
+                                <Layers className="text-blue-600" size={20} /> Add New Sub-Service
                             </h3>
                             <button
                                 onClick={() => setIsModalOpen(false)}
                                 className="text-slate-400 hover:text-slate-600 transition"
                             >
-                                ✕
+                                <X size={18} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleCreateCategory} className="space-y-4 text-xs">
+                        <form onSubmit={handleCreate} className="space-y-4 text-xs">
                             <div>
-                                <label className="font-semibold text-slate-700 block mb-1">
-                                    Category Name *
-                                </label>
+                                <label className="font-semibold text-slate-700 block mb-1">Category *</label>
+                                <select
+                                    value={newCategory}
+                                    onChange={(e) => setNewCategory(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                >
+                                    {KNOWN_CATEGORIES.map((c) => (
+                                        <option key={c} value={c}>
+                                            {formatCategoryLabel(c)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="font-semibold text-slate-700 block mb-1">Service Name *</label>
                                 <input
                                     type="text"
                                     required
-                                    placeholder="e.g., Home Carpentry & Furniture"
-                                    value={newCatName}
-                                    onChange={(e) => setNewCatName(e.target.value)}
+                                    placeholder="e.g., Short Circuit Repair"
+                                    value={newName}
+                                    onChange={(e) => setNewName(e.target.value)}
                                     className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
 
-                            <div>
-                                <label className="font-semibold text-slate-700 block mb-1">
-                                    Description
-                                </label>
-                                <textarea
-                                    rows={3}
-                                    placeholder="Brief summary of services provided..."
-                                    value={newCatDesc}
-                                    onChange={(e) => setNewCatDesc(e.target.value)}
-                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="font-semibold text-slate-700 block mb-1">Pricing Unit *</label>
+                                    <select
+                                        value={newPricingUnit}
+                                        onChange={(e) => setNewPricingUnit(e.target.value as PricingUnit)}
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    >
+                                        {PRICING_UNITS.map((u) => (
+                                            <option key={u} value={u}>
+                                                {u.replace("_", " ")}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="font-semibold text-slate-700 block mb-1">Base Price (NPR)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        placeholder="800"
+                                        value={newBasePrice}
+                                        onChange={(e) => setNewBasePrice(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
                             </div>
 
                             <div>
-                                <label className="font-semibold text-slate-700 block mb-1">
-                                    Platform Commission Fee (%) *
-                                </label>
+                                <label className="font-semibold text-slate-700 block mb-1">Default Duration</label>
                                 <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    required
-                                    value={newCatCommission}
-                                    onChange={(e) => setNewCatCommission(e.target.value)}
+                                    type="text"
+                                    placeholder="e.g., 35–45 mins"
+                                    value={newDuration}
+                                    onChange={(e) => setNewDuration(e.target.value)}
                                     className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
@@ -310,9 +355,11 @@ export default function CategoriesPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                                    disabled={saving}
+                                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
                                 >
-                                    Create Category
+                                    {saving && <Loader2 size={14} className="animate-spin" />}
+                                    Create Sub-Service
                                 </button>
                             </div>
                         </form>
