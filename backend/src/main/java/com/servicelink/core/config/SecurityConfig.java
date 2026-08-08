@@ -161,9 +161,41 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/providers",
                                 "/api/providers/catalog",
+                                "/api/providers/categories",
                                 "/api/providers/{providerId}",
                                 "/api/providers/{providerId}/reviews"
                         ).permitAll()
+
+                        // =====================================================
+                        // CATEGORY & CATALOG ADMIN — url-level defense-in-depth
+                        // alongside the @PreAuthorize("hasRole('ADMIN')") on the
+                        // controller methods themselves. Declared AFTER the
+                        // public GET rule above so it can't be shadowed by it,
+                        // and BEFORE the generic /api/providers/** fallthrough.
+                        // =====================================================
+                        .requestMatchers(
+                                "/api/providers/categories/admin",
+                                "/api/providers/categories/with-services",
+                                "/api/providers/catalog/admin"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/providers/categories"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/providers/categories/*",
+                                "/api/providers/categories/*/toggle"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/providers/catalog"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/providers/catalog/*",
+                                "/api/providers/catalog/*/toggle"
+                        ).hasRole("ADMIN")
 
                         // =====================================================
                         // ADMIN

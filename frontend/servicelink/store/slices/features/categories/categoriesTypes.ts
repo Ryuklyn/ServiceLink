@@ -2,24 +2,17 @@
 
 export type PricingUnit = "PER_JOB" | "PER_SQFT" | "PER_WALL" | "PER_ITEM";
 
-// NOTE: ServiceCategory is a backend enum, not a DB table, so there's no
-// endpoint to list its values yet. Keep this in sync with
-// com.servicelink.core.model.common.ServiceCategory, or add a
-// GET /api/providers/categories endpoint and swap this out for a fetched list.
-export const KNOWN_CATEGORIES = [
-    "ELECTRICAL",
-    "PLUMBING",
-    "CLEANING",
-    "CARPENTRY",
-    "PAINTING",
-    "APPLIANCE_REPAIR",
-] as const;
-
-export type KnownCategory = (typeof KNOWN_CATEGORIES)[number];
+export interface CategoryDTO {
+    id: number;
+    name: string;
+    isActive: boolean;
+    subServiceCount: number;
+}
 
 export interface ServiceCatalogDTO {
     id: number;
-    category: string; // ServiceCategory enum value, e.g. "ELECTRICAL"
+    categoryId: number;
+    categoryName: string;
     subServiceName: string;
     defaultDuration: string | null;
     pricingUnit: PricingUnit;
@@ -27,8 +20,29 @@ export interface ServiceCatalogDTO {
     isActive: boolean;
 }
 
+export interface CreateCategoryPayload {
+    name: string;
+}
+
+export interface UpdateCategoryPayload {
+    name?: string;
+}
+
+export interface SubServiceInput {
+    subServiceName: string;
+    defaultDuration?: string;
+    pricingUnit: PricingUnit;
+    basePrice?: number;
+}
+
+/** Payload for "create a category + its first batch of sub-services" in one shot. */
+export interface CreateCategoryWithServicesPayload {
+    name: string;
+    subServices: SubServiceInput[];
+}
+
 export interface CreateServiceCatalogPayload {
-    category: string;
+    categoryId: number;
     subServiceName: string;
     defaultDuration?: string;
     pricingUnit: PricingUnit;
@@ -36,16 +50,9 @@ export interface CreateServiceCatalogPayload {
 }
 
 export interface UpdateServiceCatalogPayload {
+    categoryId?: number;
     subServiceName?: string;
     defaultDuration?: string;
     pricingUnit?: PricingUnit;
     basePrice?: number;
-}
-
-export function formatCategoryLabel(category: string): string {
-    return category
-        .toLowerCase()
-        .split("_")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
 }

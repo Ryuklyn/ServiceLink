@@ -1,6 +1,5 @@
 package com.servicelink.core.repository.appointment;
 
-import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.provider.ServiceCatalog;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -17,14 +16,14 @@ public interface ServiceCatalogRepository extends JpaRepository<ServiceCatalog, 
      * Active sub-services for a category, sorted alphabetically.
      * Shown to users on the service selection screen before picking a provider.
      */
-    List<ServiceCatalog> findByCategoryAndIsActiveTrueOrderBySubServiceNameAsc(
-            ServiceCategory category);
+    List<ServiceCatalog> findByCategory_IdAndIsActiveTrueOrderBySubServiceNameAsc(
+            Long categoryId);
 
     /**
      * All active sub-services across all categories, sorted by category then name.
-     * Used for admin overview and home screen full catalog display.
+     * Used for user-facing full catalog display.
      */
-    List<ServiceCatalog> findByIsActiveTrueOrderByCategoryAscSubServiceNameAsc();
+    List<ServiceCatalog> findByIsActiveTrueOrderByCategory_NameAscSubServiceNameAsc();
 
     Optional<ServiceCatalog> findByIdAndIsActiveTrue(Long id);
 
@@ -33,11 +32,10 @@ public interface ServiceCatalogRepository extends JpaRepository<ServiceCatalog, 
     /**
      * Duplicate prevention before admin creates a new sub-service entry.
      * Case-insensitive so "Ceiling Fan Installation" and
-     * "ceiling fan installation" are treated as the same entry.
-     * Call this in AdminService.createSubService() before saving.
+     * "ceiling fan installation" are treated as the same entry within a category.
      */
-    boolean existsByCategoryAndSubServiceNameIgnoreCase(
-            ServiceCategory category, String subServiceName);
+    boolean existsByCategory_IdAndSubServiceNameIgnoreCase(
+            Long categoryId, String subServiceName);
 
     /**
      * ALL sub-services (active + inactive) sorted by category then name.
@@ -45,5 +43,8 @@ public interface ServiceCatalogRepository extends JpaRepository<ServiceCatalog, 
      * query above, this must include inactive items so admins can see and
      * re-activate them.
      */
-    List<ServiceCatalog> findAllByOrderByCategoryAscSubServiceNameAsc();
+    List<ServiceCatalog> findAllByOrderByCategory_NameAscSubServiceNameAsc();
+
+    /** Sub-service count per category, shown on the admin category cards. */
+    long countByCategory_Id(Long categoryId);
 }

@@ -1,14 +1,51 @@
 // store/slices/features/categories/categoriesAdminApi.ts
 import axios from "@/utils/axios";
 import {
+    CategoryDTO,
     ServiceCatalogDTO,
+    CreateCategoryPayload,
+    UpdateCategoryPayload,
+    CreateCategoryWithServicesPayload,
     CreateServiceCatalogPayload,
     UpdateServiceCatalogPayload,
 } from "./categoriesTypes";
 
+// ── Categories ───────────────────────────────────────────────────────────
+
+export async function getCategoriesForAdmin(): Promise<CategoryDTO[]> {
+    const { data } = await axios.get<CategoryDTO[]>("/providers/categories/admin");
+    return data;
+}
+
+export async function createCategory(payload: CreateCategoryPayload): Promise<CategoryDTO> {
+    const { data } = await axios.post<CategoryDTO>("/providers/categories", payload);
+    return data;
+}
+
+/** Create a category and its first batch of sub-services in one request. */
+export async function createCategoryWithServices(
+    payload: CreateCategoryWithServicesPayload,
+): Promise<CategoryDTO> {
+    const { data } = await axios.post<CategoryDTO>("/providers/categories/with-services", payload);
+    return data;
+}
+
+export async function updateCategory(
+    id: number,
+    payload: UpdateCategoryPayload,
+): Promise<CategoryDTO> {
+    const { data } = await axios.patch<CategoryDTO>(`/providers/categories/${id}`, payload);
+    return data;
+}
+
+export async function toggleCategory(id: number): Promise<CategoryDTO> {
+    const { data } = await axios.patch<CategoryDTO>(`/providers/categories/${id}/toggle`);
+    return data;
+}
+
+// ── Catalog (sub-services) ──────────────────────────────────────────────
+
 export async function getCatalogForAdmin(): Promise<ServiceCatalogDTO[]> {
-    // Axios appends "/providers/catalog/admin" to "http://localhost:8080/api"
-    // Final URL: http://localhost:8080/api/providers/catalog/admin
     const { data } = await axios.get<ServiceCatalogDTO[]>("/providers/catalog/admin");
     return data;
 }

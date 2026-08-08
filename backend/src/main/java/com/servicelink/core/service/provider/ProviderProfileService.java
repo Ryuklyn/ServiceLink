@@ -3,14 +3,21 @@ package com.servicelink.core.service.provider;
 // com/servicelink/core/service/provider/ProviderProfileService.java
 import com.servicelink.core.dto.request.provider.*;
 import com.servicelink.core.dto.request.provider.portfolio.CreatePortfolioDTO;
+import com.servicelink.core.dto.request.provider.service.CreateCategoryDTO;
+import com.servicelink.core.dto.request.provider.service.CreateCategoryWithServicesDTO;
 import com.servicelink.core.dto.request.provider.service.CreateProviderServiceDTO;
 import com.servicelink.core.dto.request.provider.service.CreateServiceCatalogDTO;
 import com.servicelink.core.dto.request.provider.service.ProviderServiceSelectionDTO;
+import com.servicelink.core.dto.request.provider.service.SubServiceInputDTO;
+import com.servicelink.core.dto.request.provider.service.UpdateCategoryDTO;
 import com.servicelink.core.dto.request.provider.service.UpdateProviderServiceDTO;
 import com.servicelink.core.dto.request.provider.service.UpdateServiceCatalogDTO;
 import com.servicelink.core.dto.response.provider.*;
 import com.servicelink.core.dto.response.provider.onboarding.OnboardingStatusDTO;
 import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
+import com.servicelink.core.dto.response.provider.service.CategoryDTO;
+import com.servicelink.core.dto.response.provider.service.ProviderServiceDTO;
+import com.servicelink.core.dto.response.provider.service.ServiceCatalogDTO;
 import com.servicelink.core.exception.BusinessException;
 import com.servicelink.core.exception.ConflictException;
 import com.servicelink.core.exception.ResourceNotFoundException;
@@ -23,9 +30,11 @@ import com.servicelink.core.model.provider.*;
 import com.servicelink.core.model.provider.portfolio.Portfolio;
 import com.servicelink.core.model.provider.portfolio.PortfolioMedia;
 import com.servicelink.core.model.provider.review.Review;
+import com.servicelink.core.model.provider.service.Category;
 import com.servicelink.core.model.provider.subscription.ProviderSubscription;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
+import com.servicelink.core.repository.provider.service.CategoryRepository;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.appointment.ProviderServiceRepository;
 import com.servicelink.core.repository.appointment.ServiceCatalogRepository;
@@ -57,6 +66,7 @@ public class ProviderProfileService {
     private final ProviderRepository         providerRepo;
     private final ProviderServiceRepository  providerServiceRepo;
     private final ServiceCatalogRepository   catalogRepo;
+    private final CategoryRepository         categoryRepo;
     private final ReviewRepository           reviewRepo;
     private final PortfolioRepository        portfolioRepo;
     private final PortfolioMapper            portfolioMapper;
@@ -94,6 +104,10 @@ public class ProviderProfileService {
      * NOTE: uses an empty review list per provider to avoid N+1 queries across
      * the whole page — full recent reviews are only loaded on the single-provider
      * profile page via getPublicProfile().
+     *
+     * NOTE: still keyed off the ServiceCategory ENUM, not the new Category
+     * entity — Provider.primaryService was not part of the category-management
+     * migration. See class-level notes if/when that gets unified.
      */
     @Transactional(readOnly = true)
     public Page<ProviderProfileDTO> getAllPublicProviders(ServiceCategory category, Pageable pageable) {
@@ -405,13 +419,118 @@ public class ProviderProfileService {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // CATEGORIES  (Admin managed — new)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Transactional(readOnly = true)
+    public List<CategoryDTO> getActiveCategories() {
+        return categoryRepo.findByIsActiveTrueOrderByNameAsc()
+                .stream()
+                .map(c -> mapper.toCategoryDTO(c, (int) catalogRepo.countByCategory_Id(c.getId())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryDTO> getAllCategoriesForAdmin() {
+        return categoryRepo.findAllByOrderByNameAsc()
+                .stream()
+                .map(c -> mapper.toCategoryDTO(c, (int) catalogRepo.countByCategory_Id(c.getId())))
+                .toList();
+    }
+
+    /** Admin creates a bare category (no sub-services yet). */
+    @Transactional
+    public CategoryDTO createCategory(CreateCategoryDTO req) {
+        if (categoryRepo.existsByNameIgnoreCase(req.getName())) {
+            throw new ConflictException(
+                    "A category with this name already exists", "CATEGORY_DUPLICATE");
+        }
+
+        Category category = Category.builder()
+                .name(req.getName())
+                .isActive(true)
+                .build();
+
+        Category saved = categoryRepo.save(category);
+        log.info("Admin created category {} ({})", saved.getId(), saved.getName());
+        return mapper.toCategoryDTO(saved, 0);
+    }
+
+    /**
+     * Admin creates a category AND its initial set of sub-services in one
+     * request — the "add new category with several services + base prices"
+     * flow. Sub-services with a blank name are skipped rather than rejected,
+     * so the frontend can send a spare trailing row from the form.
+     */
+    @Transactional
+    public CategoryDTO createCategoryWithServices(CreateCategoryWithServicesDTO req) {
+        if (categoryRepo.existsByNameIgnoreCase(req.getName())) {
+            throw new ConflictException(
+                    "A category with this name already exists", "CATEGORY_DUPLICATE");
+        }
+
+        Category category = categoryRepo.save(
+                Category.builder().name(req.getName()).isActive(true).build());
+
+        int created = 0;
+        if (req.getSubServices() != null) {
+            for (SubServiceInputDTO sub : req.getSubServices()) {
+                if (sub.getSubServiceName() == null || sub.getSubServiceName().isBlank()) continue;
+
+                ServiceCatalog sc = ServiceCatalog.builder()
+                        .category(category)
+                        .subServiceName(sub.getSubServiceName())
+                        .defaultDuration(sub.getDefaultDuration())
+                        .pricingUnit(sub.getPricingUnit())
+                        .basePrice(sub.getBasePrice())
+                        .isActive(true)
+                        .build();
+                catalogRepo.save(sc);
+                created++;
+            }
+        }
+
+        log.info("Admin created category {} with {} sub-service(s)", category.getName(), created);
+        return mapper.toCategoryDTO(category, created);
+    }
+
+    /** Admin renames a category. */
+    @Transactional
+    public CategoryDTO updateCategory(Long categoryId, UpdateCategoryDTO req) {
+        Category category = categoryRepo.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId));
+
+        if (req.getName() != null) {
+            if (!req.getName().equalsIgnoreCase(category.getName())
+                    && categoryRepo.existsByNameIgnoreCase(req.getName())) {
+                throw new ConflictException(
+                        "A category with this name already exists", "CATEGORY_DUPLICATE");
+            }
+            category.setName(req.getName());
+        }
+
+        Category saved = categoryRepo.save(category);
+        return mapper.toCategoryDTO(saved, (int) catalogRepo.countByCategory_Id(categoryId));
+    }
+
+    /** Admin toggles a category active/inactive (soft delete). */
+    @Transactional
+    public CategoryDTO toggleCategoryActive(Long categoryId) {
+        Category category = categoryRepo.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId));
+        category.setIsActive(!category.getIsActive());
+        Category saved = categoryRepo.save(category);
+        return mapper.toCategoryDTO(saved, (int) catalogRepo.countByCategory_Id(categoryId));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // SERVICE CATALOG  (Admin / Postman managed)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Transactional(readOnly = true)
-    public List<ServiceCatalogDTO> getCatalogByCategory(ServiceCategory category) {
+    public List<ServiceCatalogDTO> getCatalogByCategory(Long categoryId) {
         return catalogRepo
-                .findByCategoryAndIsActiveTrueOrderBySubServiceNameAsc(category)
+                .findByCategory_IdAndIsActiveTrueOrderBySubServiceNameAsc(categoryId)
                 .stream()
                 .map(mapper::toCatalogDTO)
                 .toList();
@@ -420,7 +539,7 @@ public class ProviderProfileService {
     @Transactional(readOnly = true)
     public List<ServiceCatalogDTO> getAllActiveCatalog() {
         return catalogRepo
-                .findByIsActiveTrueOrderByCategoryAscSubServiceNameAsc()
+                .findByIsActiveTrueOrderByCategory_NameAscSubServiceNameAsc()
                 .stream()
                 .map(mapper::toCatalogDTO)
                 .toList();
@@ -434,24 +553,27 @@ public class ProviderProfileService {
     @Transactional(readOnly = true)
     public List<ServiceCatalogDTO> getAllCatalogForAdmin() {
         return catalogRepo
-                .findAllByOrderByCategoryAscSubServiceNameAsc()
+                .findAllByOrderByCategory_NameAscSubServiceNameAsc()
                 .stream()
                 .map(mapper::toCatalogDTO)
                 .toList();
     }
 
-    /** Admin creates a new catalog sub-service entry. */
+    /** Admin adds a sub-service to an existing category. */
     @Transactional
     public ServiceCatalogDTO createCatalogItem(CreateServiceCatalogDTO req) {
-        if (catalogRepo.existsByCategoryAndSubServiceNameIgnoreCase(
-                req.getCategory(), req.getSubServiceName())) {
+        Category category = categoryRepo.findById(req.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category", req.getCategoryId()));
+
+        if (catalogRepo.existsByCategory_IdAndSubServiceNameIgnoreCase(
+                req.getCategoryId(), req.getSubServiceName())) {
             throw new ConflictException(
                     "A catalog item with this name already exists in the category",
                     "CATALOG_DUPLICATE");
         }
 
         ServiceCatalog sc = ServiceCatalog.builder()
-                .category(req.getCategory())
+                .category(category)
                 .subServiceName(req.getSubServiceName())
                 .defaultDuration(req.getDefaultDuration())
                 .pricingUnit(req.getPricingUnit())
@@ -462,12 +584,17 @@ public class ProviderProfileService {
         return mapper.toCatalogDTO(catalogRepo.save(sc));
     }
 
-    /** Admin edits a catalog item's name/duration/pricing unit/base price. */
+    /** Admin edits a catalog item's category/name/duration/pricing unit/base price. */
     @Transactional
     public ServiceCatalogDTO updateCatalogItem(Long catalogId, UpdateServiceCatalogDTO req) {
         ServiceCatalog sc = catalogRepo.findById(catalogId)
                 .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", catalogId));
 
+        if (req.getCategoryId() != null) {
+            Category category = categoryRepo.findById(req.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Category", req.getCategoryId()));
+            sc.setCategory(category);
+        }
         if (req.getSubServiceName() != null) sc.setSubServiceName(req.getSubServiceName());
         if (req.getDefaultDuration() != null) sc.setDefaultDuration(req.getDefaultDuration());
         if (req.getPricingUnit()    != null) sc.setPricingUnit(req.getPricingUnit());

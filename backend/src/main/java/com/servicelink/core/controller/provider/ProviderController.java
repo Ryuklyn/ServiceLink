@@ -2,14 +2,19 @@ package com.servicelink.core.controller.provider;
 
 import com.servicelink.core.dto.request.provider.*;
 import com.servicelink.core.dto.request.provider.portfolio.CreatePortfolioDTO;
+import com.servicelink.core.dto.request.provider.service.CreateCategoryDTO;
+import com.servicelink.core.dto.request.provider.service.CreateCategoryWithServicesDTO;
 import com.servicelink.core.dto.request.provider.service.CreateServiceCatalogDTO;
+import com.servicelink.core.dto.request.provider.service.ProviderServiceSelectionDTO;
+import com.servicelink.core.dto.request.provider.service.UpdateCategoryDTO;
 import com.servicelink.core.dto.request.provider.service.UpdateServiceCatalogDTO;
 import com.servicelink.core.dto.response.provider.*;
 import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
+import com.servicelink.core.dto.response.provider.service.CategoryDTO;
+import com.servicelink.core.dto.response.provider.service.ServiceCatalogDTO;
 import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.service.provider.ProviderProfileService;
-import com.servicelink.core.dto.request.provider.service.ProviderServiceSelectionDTO;
 import com.servicelink.core.dto.response.provider.onboarding.OnboardingStatusDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -63,24 +68,70 @@ public class ProviderController {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // SERVICE CATALOG — public browse
+    // CATEGORIES — public browse + admin management
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Public — active categories only, for user-facing browse/selection screens. */
+    @GetMapping("/categories")
+    public ResponseEntity<List<CategoryDTO>> getActiveCategories() {
+        return ResponseEntity.ok(providerProfileService.getActiveCategories());
+    }
+
+    @GetMapping("/categories/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<CategoryDTO>> getCategoriesForAdmin() {
+        return ResponseEntity.ok(providerProfileService.getAllCategoriesForAdmin());
+    }
+
+    @PostMapping("/categories")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoryDTO> createCategory(@Valid @RequestBody CreateCategoryDTO req) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(providerProfileService.createCategory(req));
+    }
+
+    /** Create a category and its initial sub-services in one request. */
+    @PostMapping("/categories/with-services")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoryDTO> createCategoryWithServices(
+            @Valid @RequestBody CreateCategoryWithServicesDTO req) {
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(providerProfileService.createCategoryWithServices(req));
+    }
+
+    @PatchMapping("/categories/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoryDTO> updateCategory(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateCategoryDTO req) {
+
+        return ResponseEntity.ok(providerProfileService.updateCategory(id, req));
+    }
+
+    @PatchMapping("/categories/{id}/toggle")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoryDTO> toggleCategory(@PathVariable Long id) {
+        return ResponseEntity.ok(providerProfileService.toggleCategoryActive(id));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SERVICE CATALOG — public browse + admin management
+    // NOTE: category is now identified by categoryId (Long), not the old
+    // ServiceCategory enum — update any existing frontend callers of GET
+    // /catalog?category=XXX to use ?categoryId=1 instead.
     // ─────────────────────────────────────────────────────────────────────────
 
     @GetMapping("/catalog")
     public ResponseEntity<List<ServiceCatalogDTO>> getCatalog(
-            @RequestParam(required = false) ServiceCategory category) {
+            @RequestParam(required = false) Long categoryId) {
 
-        List<ServiceCatalogDTO> result = category != null
-                ? providerProfileService.getCatalogByCategory(category)
+        List<ServiceCatalogDTO> result = categoryId != null
+                ? providerProfileService.getCatalogByCategory(categoryId)
                 : providerProfileService.getAllActiveCatalog();
 
         return ResponseEntity.ok(result);
     }
-
-
-    // ─────────────────────────────────────────────────────────────────────────
-// SERVICE CATALOG — admin management (ROLE_ADMIN required)
-// ─────────────────────────────────────────────────────────────────────────
 
     @GetMapping("/catalog/admin")
     @PreAuthorize("hasRole('ADMIN')")

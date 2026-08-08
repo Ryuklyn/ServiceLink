@@ -1,7 +1,6 @@
 package com.servicelink.core.model.provider;
 
-
-import com.servicelink.core.model.common.ServiceCategory;
+import com.servicelink.core.model.provider.service.Category;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,9 +16,11 @@ public class ServiceCatalog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ServiceCategory category;
+    // Was: @Enumerated(EnumType.STRING) private ServiceCategory category;
+    // Categories are now admin-defined rows, not a fixed enum.
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
     @Column(name = "sub_service_name", nullable = false)
     private String subServiceName;
@@ -29,11 +30,10 @@ public class ServiceCatalog {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "pricing_unit", nullable = false)
-    private PricingUnit pricingUnit; // HOURLY, PER_SQFT, PER_JOB, PER_WALL
+    private PricingUnit pricingUnit; // PER_JOB, PER_SQFT, PER_WALL, PER_ITEM
 
     @Column(name = "base_price")
     private Integer basePrice; // in NPR
-
 
     /**
      * Admin can deactivate a sub-service without deleting it.
@@ -51,4 +51,3 @@ public class ServiceCatalog {
         // HOURLY intentionally removed — conflicts with slot-based booking
     }
 }
-

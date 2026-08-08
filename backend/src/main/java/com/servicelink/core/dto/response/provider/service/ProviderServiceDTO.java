@@ -1,6 +1,5 @@
-package com.servicelink.core.dto.response.provider;
+package com.servicelink.core.dto.response.provider.service;
 
-import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.provider.ServiceCatalog;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +11,8 @@ public class ProviderServiceDTO {
     private Long                       id;
     private Long                       catalogId;
     private String                     subServiceName;
-    private ServiceCategory            category;
+    private Long                       categoryId;
+    private String                     categoryName;
     private ServiceCatalog.PricingUnit pricingUnit;
     private Integer                    customPrice;
     private String                     effectiveDuration;

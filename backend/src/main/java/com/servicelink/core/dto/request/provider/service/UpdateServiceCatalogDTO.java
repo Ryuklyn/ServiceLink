@@ -8,6 +8,8 @@ import lombok.Data;
 @Data
 public class UpdateServiceCatalogDTO {
 
+    private Long categoryId;
+
     @Size(max = 200)
     private String subServiceName;
 

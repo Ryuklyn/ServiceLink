@@ -1,36 +1,114 @@
 // store/slices/features/categories/categoriesAdminSlice.ts
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
+    getCategoriesForAdmin,
+    createCategory,
+    createCategoryWithServices,
+    updateCategory,
+    toggleCategory,
     getCatalogForAdmin,
     createCatalogItem,
     updateCatalogItem,
     toggleCatalogItem,
 } from "@/store/slices/features/categories/categoriesAdminApi";
 import {
+    CategoryDTO,
     ServiceCatalogDTO,
+    CreateCategoryPayload,
+    UpdateCategoryPayload,
+    CreateCategoryWithServicesPayload,
     CreateServiceCatalogPayload,
     UpdateServiceCatalogPayload,
 } from "@/store/slices/features/categories/categoriesTypes";
 
 interface CategoriesAdminState {
+    categories: CategoryDTO[];
     items: ServiceCatalogDTO[];
     loading: boolean;
     saving: boolean;
-    togglingId: number | null;
+    togglingCategoryId: number | null;
+    togglingServiceId: number | null;
     error: string | null;
 }
 
 const initialState: CategoriesAdminState = {
+    categories: [],
     items: [],
     loading: false,
     saving: false,
-    togglingId: null,
+    togglingCategoryId: null,
+    togglingServiceId: null,
     error: null,
 };
 
 function extractErrorMessage(err: any, fallback: string): string {
     return err?.response?.data?.message ?? err?.message ?? fallback;
 }
+
+// ── Categories ───────────────────────────────────────────────────────────
+
+export const fetchCategoriesAdmin = createAsyncThunk<
+    CategoryDTO[],
+    void,
+    { rejectValue: string }
+>("categoriesAdmin/fetchCategories", async (_, { rejectWithValue }) => {
+    try {
+        return await getCategoriesForAdmin();
+    } catch (err: any) {
+        return rejectWithValue(extractErrorMessage(err, "Failed to load categories"));
+    }
+});
+
+export const createCategoryThunk = createAsyncThunk<
+    CategoryDTO,
+    CreateCategoryPayload,
+    { rejectValue: string }
+>("categoriesAdmin/createCategory", async (payload, { rejectWithValue }) => {
+    try {
+        return await createCategory(payload);
+    } catch (err: any) {
+        return rejectWithValue(extractErrorMessage(err, "Failed to create category"));
+    }
+});
+
+export const createCategoryWithServicesThunk = createAsyncThunk<
+    { category: CategoryDTO; refetch: true },
+    CreateCategoryWithServicesPayload,
+    { rejectValue: string }
+>("categoriesAdmin/createCategoryWithServices", async (payload, { rejectWithValue }) => {
+    try {
+        const category = await createCategoryWithServices(payload);
+        return { category, refetch: true };
+    } catch (err: any) {
+        return rejectWithValue(extractErrorMessage(err, "Failed to create category"));
+    }
+});
+
+export const updateCategoryThunk = createAsyncThunk<
+    CategoryDTO,
+    { id: number; payload: UpdateCategoryPayload },
+    { rejectValue: string }
+>("categoriesAdmin/updateCategory", async ({ id, payload }, { rejectWithValue }) => {
+    try {
+        return await updateCategory(id, payload);
+    } catch (err: any) {
+        return rejectWithValue(extractErrorMessage(err, "Failed to update category"));
+    }
+});
+
+export const toggleCategoryThunk = createAsyncThunk<
+    CategoryDTO,
+    number,
+    { rejectValue: string }
+>("categoriesAdmin/toggleCategory", async (id, { rejectWithValue }) => {
+    try {
+        return await toggleCategory(id);
+    } catch (err: any) {
+        return rejectWithValue(extractErrorMessage(err, "Failed to update category status"));
+    }
+});
+
+// ── Catalog (sub-services) ──────────────────────────────────────────────
 
 export const fetchCatalogAdmin = createAsyncThunk<
     ServiceCatalogDTO[],
@@ -90,7 +168,73 @@ const categoriesAdminSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            // fetch
+            // fetch categories
+            .addCase(fetchCategoriesAdmin.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchCategoriesAdmin.fulfilled, (state, action: PayloadAction<CategoryDTO[]>) => {
+                state.loading = false;
+                state.categories = action.payload;
+            })
+            .addCase(fetchCategoriesAdmin.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload ?? "Unknown error";
+            })
+
+            // create bare category
+            .addCase(createCategoryThunk.pending, (state) => {
+                state.saving = true;
+                state.error = null;
+            })
+            .addCase(createCategoryThunk.fulfilled, (state, action: PayloadAction<CategoryDTO>) => {
+                state.saving = false;
+                state.categories.push(action.payload);
+            })
+            .addCase(createCategoryThunk.rejected, (state, action) => {
+                state.saving = false;
+                state.error = action.payload ?? "Unknown error";
+            })
+
+            // create category + services (caller re-fetches both lists after this resolves)
+            .addCase(createCategoryWithServicesThunk.pending, (state) => {
+                state.saving = true;
+                state.error = null;
+            })
+            .addCase(createCategoryWithServicesThunk.fulfilled, (state, action) => {
+                state.saving = false;
+                state.categories.push(action.payload.category);
+            })
+            .addCase(createCategoryWithServicesThunk.rejected, (state, action) => {
+                state.saving = false;
+                state.error = action.payload ?? "Unknown error";
+            })
+
+            // update category
+            .addCase(updateCategoryThunk.fulfilled, (state, action: PayloadAction<CategoryDTO>) => {
+                const idx = state.categories.findIndex((c) => c.id === action.payload.id);
+                if (idx !== -1) state.categories[idx] = action.payload;
+            })
+            .addCase(updateCategoryThunk.rejected, (state, action) => {
+                state.error = action.payload ?? "Unknown error";
+            })
+
+            // toggle category
+            .addCase(toggleCategoryThunk.pending, (state, action) => {
+                state.togglingCategoryId = action.meta.arg;
+                state.error = null;
+            })
+            .addCase(toggleCategoryThunk.fulfilled, (state, action: PayloadAction<CategoryDTO>) => {
+                state.togglingCategoryId = null;
+                const idx = state.categories.findIndex((c) => c.id === action.payload.id);
+                if (idx !== -1) state.categories[idx] = action.payload;
+            })
+            .addCase(toggleCategoryThunk.rejected, (state, action) => {
+                state.togglingCategoryId = null;
+                state.error = action.payload ?? "Unknown error";
+            })
+
+            // fetch catalog
             .addCase(fetchCatalogAdmin.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -104,7 +248,7 @@ const categoriesAdminSlice = createSlice({
                 state.error = action.payload ?? "Unknown error";
             })
 
-            // create
+            // create sub-service
             .addCase(createCatalogItemThunk.pending, (state) => {
                 state.saving = true;
                 state.error = null;
@@ -112,16 +256,15 @@ const categoriesAdminSlice = createSlice({
             .addCase(createCatalogItemThunk.fulfilled, (state, action: PayloadAction<ServiceCatalogDTO>) => {
                 state.saving = false;
                 state.items.push(action.payload);
+                const cat = state.categories.find((c) => c.id === action.payload.categoryId);
+                if (cat) cat.subServiceCount += 1;
             })
             .addCase(createCatalogItemThunk.rejected, (state, action) => {
                 state.saving = false;
                 state.error = action.payload ?? "Unknown error";
             })
 
-            // update
-            .addCase(updateCatalogItemThunk.pending, (state) => {
-                state.error = null;
-            })
+            // update sub-service
             .addCase(updateCatalogItemThunk.fulfilled, (state, action: PayloadAction<ServiceCatalogDTO>) => {
                 const idx = state.items.findIndex((i) => i.id === action.payload.id);
                 if (idx !== -1) state.items[idx] = action.payload;
@@ -130,18 +273,18 @@ const categoriesAdminSlice = createSlice({
                 state.error = action.payload ?? "Unknown error";
             })
 
-            // toggle
+            // toggle sub-service
             .addCase(toggleCatalogItemThunk.pending, (state, action) => {
-                state.togglingId = action.meta.arg;
+                state.togglingServiceId = action.meta.arg;
                 state.error = null;
             })
             .addCase(toggleCatalogItemThunk.fulfilled, (state, action: PayloadAction<ServiceCatalogDTO>) => {
-                state.togglingId = null;
+                state.togglingServiceId = null;
                 const idx = state.items.findIndex((i) => i.id === action.payload.id);
                 if (idx !== -1) state.items[idx] = action.payload;
             })
             .addCase(toggleCatalogItemThunk.rejected, (state, action) => {
-                state.togglingId = null;
+                state.togglingServiceId = null;
                 state.error = action.payload ?? "Unknown error";
             });
     },

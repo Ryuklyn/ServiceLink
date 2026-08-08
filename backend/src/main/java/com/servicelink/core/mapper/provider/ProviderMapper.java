@@ -3,10 +3,14 @@ package com.servicelink.core.mapper.provider;
 // com/servicelink/core/mapper/provider/ProviderMapper.java
 import com.servicelink.core.dto.response.provider.*;
 import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
+import com.servicelink.core.dto.response.provider.service.CategoryDTO;
+import com.servicelink.core.dto.response.provider.service.ProviderServiceDTO;
+import com.servicelink.core.dto.response.provider.service.ServiceCatalogDTO;
 import com.servicelink.core.mapper.provider.portfolio.PortfolioMapper;
 import com.servicelink.core.model.provider.*;
 import com.servicelink.core.model.provider.portfolio.Portfolio;
 import com.servicelink.core.model.provider.review.Review;
+import com.servicelink.core.model.provider.service.Category;
 import com.servicelink.core.model.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -72,7 +76,8 @@ public class ProviderMapper {
                 .id(ps.getId())
                 .catalogId(c.getId())
                 .subServiceName(c.getSubServiceName())
-                .category(c.getCategory())
+                .categoryId(c.getCategory().getId())
+                .categoryName(c.getCategory().getName())
                 .pricingUnit(c.getPricingUnit())
                 .customPrice(ps.getCustomPrice())
                 .effectiveDuration(ps.getEffectiveDuration())
@@ -113,12 +118,24 @@ public class ProviderMapper {
     public ServiceCatalogDTO toCatalogDTO(ServiceCatalog sc) {
         return ServiceCatalogDTO.builder()
                 .id(sc.getId())
-                .category(sc.getCategory())
+                .categoryId(sc.getCategory().getId())
+                .categoryName(sc.getCategory().getName())
                 .subServiceName(sc.getSubServiceName())
                 .defaultDuration(sc.getDefaultDuration())
                 .pricingUnit(sc.getPricingUnit())
                 .basePrice(sc.getBasePrice())
                 .isActive(sc.getIsActive())
+                .build();
+    }
+
+    // ── Category ──────────────────────────────────────────────────────────────
+
+    public CategoryDTO toCategoryDTO(Category category, int subServiceCount) {
+        return CategoryDTO.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .isActive(category.getIsActive())
+                .subServiceCount(subServiceCount)
                 .build();
     }
 }
