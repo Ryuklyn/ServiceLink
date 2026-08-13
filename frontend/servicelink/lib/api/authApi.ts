@@ -34,17 +34,23 @@ export interface OtpSendResponse {
 
 export async function login(
     email: string,
-    password: string,
+    password: string
 ): Promise<LoginResponse> {
   const { data } = await api.post<LoginResponse>(
       "/auth/login",
       { email, password },
-      { _skipAuth: true },
+      { _skipAuth: true }
   );
 
-  localStorage.setItem("accessToken", data.token);
-  localStorage.setItem("refreshToken", data.refreshToken);
-  api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
+  if (typeof window !== "undefined") {
+    if (data.token) {
+      localStorage.setItem("accessToken", data.token);
+      api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
+    }
+    if (data.refreshToken) {
+      localStorage.setItem("refreshToken", data.refreshToken);
+    }
+  }
 
   return data;
 }
@@ -53,8 +59,10 @@ export async function logout(): Promise<void> {
   try {
     await api.post("/auth/logout");
   } finally {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+    }
     delete api.defaults.headers.common["Authorization"];
   }
 }
@@ -66,7 +74,7 @@ export async function getMe(): Promise<MeResponse> {
 
 export async function resetPassword(
     email: string,
-    newPassword: string,
+    newPassword: string
 ): Promise<void> {
   await api.post("/auth/reset-password", { email, newPassword });
 }
@@ -99,7 +107,7 @@ export async function sendPhoneOtp(phone: string): Promise<OtpSendResponse> {
 
 export async function verifyPhoneOtpForMe(
     phone: string,
-    otp: string,
+    otp: string
 ): Promise<MeResponse> {
   const { data } = await api.post<MeResponse>("/auth/me/verify-phone-otp", {
     phone,
