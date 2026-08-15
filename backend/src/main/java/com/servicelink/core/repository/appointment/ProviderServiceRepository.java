@@ -24,6 +24,13 @@ public interface ProviderServiceRepository extends JpaRepository<ProviderService
     List<ProviderService> findByProvider_Id(Long providerId);
 
     /**
+     * How many providers currently offer a given catalog item — used to
+     * block deleting a catalog item that's still in use (see
+     * ProviderProfileService.deleteCatalogItem).
+     */
+    long countByCatalogItem_Id(Long catalogId);
+
+    /**
      * Only available services — used for public-facing profile display
      * and booking flow service selection.
      */

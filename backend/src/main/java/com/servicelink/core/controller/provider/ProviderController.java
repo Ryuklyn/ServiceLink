@@ -115,6 +115,20 @@ public class ProviderController {
         return ResponseEntity.ok(providerProfileService.toggleCategoryActive(id));
     }
 
+    @DeleteMapping("/categories/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        providerProfileService.deleteCategory(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/catalog/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteCatalogItem(@PathVariable Long id) {
+        providerProfileService.deleteCatalogItem(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // SERVICE CATALOG — public browse + admin management
     // NOTE: category is now identified by categoryId (Long), not the old

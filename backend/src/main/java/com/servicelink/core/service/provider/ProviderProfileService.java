@@ -801,4 +801,44 @@ public class ProviderProfileService {
                 .history(history)
                 .build();
     }
+
+    /**
+     * Admin hard-deletes a category. Blocked if it still has sub-services —
+     * those must be deleted or moved first, so a category is never removed
+     * out from under catalog items that reference it.
+     */
+    @Transactional
+    public void deleteCategory(Long categoryId) {
+        Category category = categoryRepo.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId));
+
+        long subServiceCount = catalogRepo.countByCategory_Id(categoryId);
+        if (subServiceCount > 0) {
+            throw new BusinessException(
+                    "Cannot delete a category with " + subServiceCount + " sub-service(s) — delete or move them first.",
+                    "CATEGORY_HAS_SERVICES");
+        }
+
+        categoryRepo.delete(category);
+    }
+
+    /**
+     * Admin hard-deletes a catalog sub-service. Blocked if any provider
+     * currently offers it — deactivate instead so existing
+     * ProviderService rows don't dangle.
+     */
+    @Transactional
+    public void deleteCatalogItem(Long catalogId) {
+        ServiceCatalog sc = catalogRepo.findById(catalogId)
+                .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", catalogId));
+
+        long providerCount = providerServiceRepo.countByCatalogItem_Id(catalogId);
+        if (providerCount > 0) {
+            throw new BusinessException(
+                    "Cannot delete — " + providerCount + " provider(s) currently offer this service. Deactivate it instead.",
+                    "CATALOG_ITEM_IN_USE");
+        }
+
+        catalogRepo.delete(sc);
+    }
 }

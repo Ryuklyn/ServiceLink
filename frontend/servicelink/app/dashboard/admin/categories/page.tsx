@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import {
     Search,
     Plus,
@@ -238,15 +239,37 @@ export default function CategoriesPage() {
     }
 
     // ── Delete confirm flow (shared for category + service) ────────────────
+    //
+    // Deleting a category is only allowed by the backend once it has zero
+    // sub-services left (see ProviderProfileService.deleteCategory — it
+    // throws CATEGORY_HAS_SERVICES otherwise). Rather than let admins hit
+    // that error blind, deleting a category from here first deletes every
+    // sub-service still under it (one by one, so a single failure doesn't
+    // silently skip the rest), then deletes the now-empty category. If any
+    // sub-service delete fails partway through (e.g. a provider still
+    // offers it), the whole flow stops and the error banner explains why —
+    // the category itself is left alone rather than deleted in an
+    // inconsistent state.
 
     async function handleConfirmDelete() {
         if (!deleteTarget) return;
 
         if (deleteTarget.kind === "category") {
+            const childServices = itemsByCategory.get(deleteTarget.id) ?? [];
+
+            for (const service of childServices) {
+                const childResult = await dispatch(
+                    deleteCatalogItemThunk({ id: service.id, categoryId: deleteTarget.id }),
+                );
+                if (!deleteCatalogItemThunk.fulfilled.match(childResult)) {
+                    // Stop here — leave the category and any remaining
+                    // sub-services untouched, error banner shows why.
+                    return;
+                }
+            }
+
             const result = await dispatch(deleteCategoryThunk(deleteTarget.id));
             if (deleteCategoryThunk.fulfilled.match(result)) setDeleteTarget(null);
-            // on rejection, the error banner shows the reason (e.g. "still has sub-services")
-            // and the dialog stays open so the user can cancel deliberately.
         } else {
             const result = await dispatch(
                 deleteCatalogItemThunk({ id: deleteTarget.id, categoryId: deleteTarget.categoryId }),
@@ -257,7 +280,7 @@ export default function CategoriesPage() {
 
     const isDeleting =
         deleteTarget?.kind === "category"
-            ? deletingCategoryId === deleteTarget.id
+            ? deletingCategoryId === deleteTarget.id || deletingServiceId !== null
             : deleteTarget?.kind === "service"
                 ? deletingServiceId === deleteTarget.id
                 : false;
@@ -603,7 +626,8 @@ export default function CategoriesPage() {
                                     </div>
                                 ))}
                                 <p className="text-slate-400">
-                                    Rows with a blank service name are skipped — leave extra rows empty if you don't need them.
+                                    Rows with a blank service name are skipped — leave extra rows empty if you
+                                    don&apos;t need them.
                                 </p>
                             </div>
 
@@ -899,20 +923,25 @@ export default function CategoriesPage() {
 
                         <p className="text-sm text-slate-600">
                             Are you sure you want to delete{" "}
-                            <span className="font-semibold text-slate-900">"{deleteTarget.name}"</span>? This can't
-                            be undone.
-                            {deleteTarget.kind === "category" && (
-                                <>
-                                    {" "}
-                                    Categories that still have sub-services can't be deleted — remove or move those
-                                    first.
-                                </>
-                            )}
+                            <span className="font-semibold text-slate-900">
+                                &quot;{deleteTarget.name}&quot;
+                            </span>
+                            ? This can&apos;t be undone.
+                            {deleteTarget.kind === "category" && (() => {
+                                const childCount = (itemsByCategory.get(deleteTarget.id) ?? []).length;
+                                return childCount > 0 ? (
+                                    <>
+                                        {" "}
+                                        This will also permanently delete all {childCount} sub-service
+                                        {childCount === 1 ? "" : "s"} under this category.
+                                    </>
+                                ) : null;
+                            })()}
                             {deleteTarget.kind === "service" && (
                                 <>
                                     {" "}
-                                    Services currently offered by a provider can't be deleted — deactivate them
-                                    instead.
+                                    Services currently offered by a provider can&apos;t be deleted — deactivate
+                                    them instead.
                                 </>
                             )}
                         </p>
@@ -921,7 +950,8 @@ export default function CategoriesPage() {
                             <button
                                 type="button"
                                 onClick={() => setDeleteTarget(null)}
-                                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
+                                disabled={isDeleting}
+                                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition disabled:opacity-50"
                             >
                                 Cancel
                             </button>
