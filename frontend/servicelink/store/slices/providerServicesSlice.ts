@@ -1,48 +1,66 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import {
+    getCategories,
     getServiceCatalog,
     saveProviderServicesBatch,
+    CategoryDTO,
     ServiceCatalogItem,
-    ServiceCategoryKey,
     ServiceSelectionPayload,
-    ProviderServiceDTO,
 } from "@/lib/api/providersApi";
 
-export type { ServiceCatalogItem, ServiceCategoryKey, ServiceSelectionPayload };
+export type { CategoryDTO, ServiceCatalogItem, ServiceSelectionPayload };
 
 interface ProviderServicesState {
-    byCategory: Partial<Record<ServiceCategoryKey, ServiceCatalogItem[]>>;
+    categories: CategoryDTO[];
+    categoriesLoading: boolean;
+    byCategory: Record<number, ServiceCatalogItem[]>;
     loading: boolean;
     saving: boolean;
     error: string | null;
 }
 
 const initialState: ProviderServicesState = {
+    categories: [],
+    categoriesLoading: false,
     byCategory: {},
     loading: false,
     saving: false,
     error: null,
 };
 
-export const fetchCatalog = createAsyncThunk<
-{ category: ServiceCategoryKey; items: ServiceCatalogItem[] },
-ServiceCategoryKey,
-{ rejectValue: string }
->("providerServices/fetchCatalog", async (category, { rejectWithValue }) => {
+export const fetchCategories = createAsyncThunk<
+    CategoryDTO[],
+    void,
+    { rejectValue: string }
+>("providerServices/fetchCategories", async (_, { rejectWithValue }) => {
     try {
-        const items = await getServiceCatalog(category);
-        return { category, items };
+        return await getCategories();
     } catch (err: any) {
         return rejectWithValue(
-            err?.response?.data?.message ?? err?.message ?? `Failed to load ${category} catalog`,
+            err?.response?.data?.message ?? err?.message ?? "Failed to load categories",
+        );
+    }
+});
+
+export const fetchCatalog = createAsyncThunk<
+    { categoryId: number; items: ServiceCatalogItem[] },
+    number,
+    { rejectValue: string }
+>("providerServices/fetchCatalog", async (categoryId, { rejectWithValue }) => {
+    try {
+        const items = await getServiceCatalog(categoryId);
+        return { categoryId, items };
+    } catch (err: any) {
+        return rejectWithValue(
+            err?.response?.data?.message ?? err?.message ?? `Failed to load catalog for category ${categoryId}`,
         );
     }
 });
 
 export const saveServicesBatch = createAsyncThunk<
-void,
+    void,
     ServiceSelectionPayload[],
-{ rejectValue: string }
+    { rejectValue: string }
 >("providerServices/saveBatch", async (selections, { rejectWithValue }) => {
     try {
         await saveProviderServicesBatch(selections);
@@ -59,12 +77,24 @@ const providerServicesSlice = createSlice({
     reducers: {},
     extraReducers: (builder) => {
         builder
+            .addCase(fetchCategories.pending, (state) => {
+                state.categoriesLoading = true;
+                state.error = null;
+            })
+            .addCase(fetchCategories.fulfilled, (state, action) => {
+                state.categoriesLoading = false;
+                state.categories = action.payload;
+            })
+            .addCase(fetchCategories.rejected, (state, action) => {
+                state.categoriesLoading = false;
+                state.error = action.payload ?? "Unknown error";
+            })
             .addCase(fetchCatalog.pending, (state) => {
                 state.loading = true;
                 state.error = null;
             })
             .addCase(fetchCatalog.fulfilled, (state, action) => {
-                state.byCategory[action.payload.category] = action.payload.items;
+                state.byCategory[action.payload.categoryId] = action.payload.items;
                 state.loading = false;
             })
             .addCase(fetchCatalog.rejected, (state, action) => {

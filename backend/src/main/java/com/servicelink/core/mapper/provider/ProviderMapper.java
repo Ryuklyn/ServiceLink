@@ -65,25 +65,26 @@ public class ProviderMapper {
                 .services(p.getServices().stream().map(this::toProviderServiceDTO).toList())
                 .portfolio(p.getPortfolio().stream().map(this::toPortfolioDTO).toList())
                 .recentReviews(recentReviews)
+                .certifiedCategoryIds(p.getCertifiedCategoryIds())
                 .build();
     }
 
     // ── ProviderService ───────────────────────────────────────────────────────
-
-    public ProviderServiceDTO toProviderServiceDTO(ProviderService ps) {
-        ServiceCatalog c = ps.getCatalogItem();
-        return ProviderServiceDTO.builder()
-                .id(ps.getId())
-                .catalogId(c.getId())
-                .subServiceName(c.getSubServiceName())
-                .categoryId(c.getCategory().getId())
-                .categoryName(c.getCategory().getName())
-                .pricingUnit(c.getPricingUnit())
-                .customPrice(ps.getCustomPrice())
-                .effectiveDuration(ps.getEffectiveDuration())
-                .isAvailable(ps.getIsAvailable())
-                .build();
-    }
+//
+//    public ProviderServiceDTO toProviderServiceDTO(ProviderService ps) {
+//        ServiceCatalog c = ps.getCatalogItem();
+//        return ProviderServiceDTO.builder()
+//                .id(ps.getId())
+//                .catalogId(c.getId())
+//                .subServiceName(c.getSubServiceName())
+//                .categoryId(c.getCategory().getId())
+//                .categoryName(c.getCategory().getName())
+//                .pricingUnit(c.getPricingUnit())
+//                .customPrice(ps.getCustomPrice())
+//                .effectiveDuration(ps.getEffectiveDuration())
+//                .isAvailable(ps.getIsAvailable())
+//                .build();
+//    }
 
     // ── Portfolio ─────────────────────────────────────────────────────────────
 
@@ -115,17 +116,78 @@ public class ProviderMapper {
 
     // ── ServiceCatalog ────────────────────────────────────────────────────────
 
+//    public ServiceCatalogDTO toCatalogDTO(ServiceCatalog sc) {
+//        return ServiceCatalogDTO.builder()
+//                .id(sc.getId())
+//                .categoryId(sc.getCategory().getId())
+//                .categoryName(sc.getCategory().getName())
+//                .subServiceName(sc.getSubServiceName())
+//                .defaultDuration(sc.getDefaultDuration())
+//                .pricingUnit(sc.getPricingUnit())
+//                .basePrice(sc.getBasePrice())
+//                .isActive(sc.getIsActive())
+//                .build();
+//    }
+
+    // ProviderMapper.java
+//
+//    public ServiceCatalogDTO toCatalogDTO(ServiceCatalog sc) {
+//        return ServiceCatalogDTO.builder()
+//                .id(sc.getId())
+//                .categoryId(sc.getCategory() != null ? sc.getCategory().getId() : null)
+//                .categoryName(sc.getCategory() != null ? sc.getCategory().getName() : null)
+//                .subServiceName(sc.getSubServiceName())
+//                .defaultDuration(sc.getDefaultDuration())
+//                .pricingUnit(sc.getPricingUnit())
+//                .basePrice(sc.getBasePrice())
+//                .isActive(sc.getIsActive())
+//                .build();
+//    }
+
+    // ── ProviderService ───────────────────────────────────────────────────────
+
+    public ProviderServiceDTO toProviderServiceDTO(ProviderService ps) {
+        ServiceCatalog c = ps.getCatalogItem();
+        Category category = (c != null) ? c.getCategory() : null;
+
+        return ProviderServiceDTO.builder()
+                .id(ps.getId())
+                .catalogId(c != null ? c.getId() : null)
+                .subServiceName(c != null ? c.getSubServiceName() : null)
+                .categoryId(category != null ? category.getId() : null)
+                .categoryName(category != null ? category.getName() : null)
+                .pricingUnit(c != null ? c.getPricingUnit() : null)
+                .customPrice(ps.getCustomPrice())
+                .effectiveDuration(ps.getEffectiveDuration())
+                .isAvailable(ps.getIsAvailable())
+                .build();
+    }
+
+// ── ServiceCatalog ────────────────────────────────────────────────────────
+
     public ServiceCatalogDTO toCatalogDTO(ServiceCatalog sc) {
+        Category category = sc.getCategory();
+
         return ServiceCatalogDTO.builder()
                 .id(sc.getId())
-                .categoryId(sc.getCategory().getId())
-                .categoryName(sc.getCategory().getName())
+                .categoryId(category != null ? category.getId() : null)
+                .categoryName(category != null ? category.getName() : null)
                 .subServiceName(sc.getSubServiceName())
                 .defaultDuration(sc.getDefaultDuration())
                 .pricingUnit(sc.getPricingUnit())
                 .basePrice(sc.getBasePrice())
                 .isActive(sc.getIsActive())
                 .build();
+    }
+
+    private String toCategoryKey(String name) {
+        if (name == null) return "";
+        String upper = name.toUpperCase();
+        if (upper.contains("ELECTR")) return "ELECTRICIAN";
+        if (upper.contains("PLUMB")) return "PLUMBER";
+        if (upper.contains("CARPENT")) return "CARPENTER";
+        if (upper.contains("PAINT")) return "PAINTER";
+        return upper;
     }
 
     // ── Category ──────────────────────────────────────────────────────────────

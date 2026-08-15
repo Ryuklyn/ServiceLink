@@ -101,6 +101,7 @@ export interface ProviderProfile {
     services?: ProviderServiceSummary[];
     portfolio?: unknown[];
     recentReviews?: unknown[];
+    certifiedCategoryIds?: number[];
 }
 
 export interface ProviderProfileUpdatePayload {

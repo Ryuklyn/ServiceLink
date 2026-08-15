@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   X,
   Briefcase,
@@ -11,7 +11,7 @@ import {
   Camera,
 } from "lucide-react";
 import { storageApi } from "@/lib/api/storageApi";
-import { SERVICE_OPTIONS } from "@/lib/constants/serviceCategory";
+import { getCategories, CategoryDTO } from "@/lib/api/providersApi";
 
 /* ========================= TYPES ========================= */
 type FormState = {
@@ -28,9 +28,7 @@ type FormState = {
 };
 
 /* ========================= CONSTANTS ========================= */
-const primaryServiceOptions = SERVICE_OPTIONS;
-
-const additionalServiceOptions = primaryServiceOptions;
+const OTHER_OPTION = { value: "other", label: "Other (please specify)" };
 
 const districts = [
   "Kathmandu", "Bhaktapur", "Lalitpur", "Chitwan", "Sunsari", "Bardiya",
@@ -97,6 +95,37 @@ export default function SkillsServicesForm({ onNext, onBack, initialData, draftS
   const [photoError, setPhotoError] = useState("");
   const [formError, setFormError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Service categories now come from admin-managed data instead of a
+  // hardcoded constants file — this is a real fetch from GET /providers/categories.
+  const [categoryOptions, setCategoryOptions] = useState<{ value: string; label: string }[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    getCategories()
+        .then((cats: CategoryDTO[]) => {
+          if (!active) return;
+          setCategoryOptions(
+              cats
+                  .filter((c) => c.isActive)
+                  .map((c) => ({ value: String(c.id), label: c.name })),
+          );
+        })
+        .catch(() => {
+          if (active) setCategoriesError("Could not load service categories. Please refresh.");
+        })
+        .finally(() => {
+          if (active) setCategoriesLoading(false);
+        });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const primaryServiceOptions = [...categoryOptions, OTHER_OPTION];
+  const additionalServiceOptions = categoryOptions; // "Other" doesn't make sense as an additional pick
 
   const toggleAdditional = useCallback(
       (value: string) => {
@@ -208,6 +237,12 @@ export default function SkillsServicesForm({ onNext, onBack, initialData, draftS
           <p className="text-xs sm:text-sm text-stone-500">Tell customers what you can do</p>
         </div>
 
+        {categoriesError && (
+            <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-600">
+              {categoriesError}
+            </div>
+        )}
+
         {/* PRIMARY SERVICE */}
         <div className="mb-5">
           <label htmlFor="primaryService" className="text-sm font-semibold text-stone-700 flex items-center gap-1">
@@ -219,13 +254,16 @@ export default function SkillsServicesForm({ onNext, onBack, initialData, draftS
             <select
                 id="primaryService"
                 value={primaryService}
+                disabled={categoriesLoading}
                 onChange={(e) => {
                   setPrimaryService(e.target.value);
                   setOtherService("");
                 }}
-                className="w-full appearance-none px-3 py-3 sm:py-2.5 pr-10 border border-stone-200 rounded-xl text-stone-900 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#e8683f]"
+                className="w-full appearance-none px-3 py-3 sm:py-2.5 pr-10 border border-stone-200 rounded-xl text-stone-900 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#e8683f] disabled:opacity-50"
             >
-              <option value="">-- Select primary service --</option>
+              <option value="">
+                {categoriesLoading ? "Loading services..." : "-- Select primary service --"}
+              </option>
               {primaryServiceOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
@@ -257,7 +295,10 @@ export default function SkillsServicesForm({ onNext, onBack, initialData, draftS
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 p-3 border border-stone-100 rounded-xl max-h-48 overflow-y-auto">
-            {additionalServiceOptions
+            {categoriesLoading && (
+                <p className="text-xs text-stone-400 col-span-full py-2">Loading categories…</p>
+            )}
+            {!categoriesLoading && additionalServiceOptions
                 .filter((opt) => opt.value !== primaryService)
                 .map((opt) => {
                   const isChecked = additionalServices.includes(opt.value);

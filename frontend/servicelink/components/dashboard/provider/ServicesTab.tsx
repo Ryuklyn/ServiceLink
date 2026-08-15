@@ -8,34 +8,54 @@ import {
     Wrench,
     Sparkles,
     Wind,
+    Layers,
     Users,
     Trash2,
     ChevronUp,
     ChevronDown,
     Info,
     FileText,
-    Lightbulb,
-    HelpCircle,
+    Loader2,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { toast } from "react-toastify";
+import { toast as toastify } from "react-toastify";
 import { fetchProviderProfile } from "@/store/slices/providerProfileSlice";
 import {
+    fetchCategories,
     fetchCatalog,
     saveServicesBatch,
+    CategoryDTO,
     ServiceCatalogItem,
-    ServiceCategoryKey,
     ServiceSelectionPayload,
 } from "@/store/slices/providerServicesSlice";
 
-const CATEGORIES: { key: ServiceCategoryKey; label: string; icon: React.ElementType }[] = [
-    { key: "ELECTRICIAN", label: "Electrician", icon: Zap },
-    { key: "PLUMBER", label: "Plumber", icon: Wrench },
-    { key: "CARPENTER", label: "Carpenter", icon: Hammer },
-    { key: "PAINTER", label: "Painter", icon: Paintbrush },
-    { key: "CLEANER", label: "Cleaner", icon: Sparkles },
-    { key: "AC_REPAIR", label: "AC Repair", icon: Wind },
-];
+interface ProviderServiceItem {
+    catalogId: number;
+    isAvailable: boolean;
+    customPrice: number;
+}
+
+interface SelectionState {
+    enabled: boolean;
+    price: string;
+}
+
+/**
+ * Purely cosmetic — picks an icon based on keywords in the category name.
+ * This is NOT used for filtering anything; catalog items are already
+ * correctly scoped to their category via categoryId on the backend, so
+ * there's nothing here that can leak items across categories.
+ */
+function iconForCategory(name: string) {
+    const upper = name.toUpperCase();
+    if (upper.includes("ELECTR")) return Zap;
+    if (upper.includes("PLUMB")) return Wrench;
+    if (upper.includes("CARPENT")) return Hammer;
+    if (upper.includes("PAINT")) return Paintbrush;
+    if (upper.includes("CLEAN")) return Sparkles;
+    if (upper.includes("AC") || upper.includes("HVAC") || upper.includes("COOL")) return Wind;
+    return Layers;
+}
 
 function ToggleSwitch({
                           checked,
@@ -65,39 +85,28 @@ function ToggleSwitch({
     );
 }
 
-interface SelectionState {
-    enabled: boolean;
-    price: string;
-}
-
 export default function ServicesTab() {
     const dispatch = useAppDispatch();
     const { data: profile } = useAppSelector((state) => state.providerProfile);
-    const { byCategory, loading, saving, error } = useAppSelector(
-        (state) => state.providerServices,
+    const { categories, categoriesLoading, byCategory, loading, saving, error } = useAppSelector(
+        (state) => state.providerServices
     );
 
-    // ── Which categories this provider is actually certified for ──────────────
-    // certifiedCategories is a comma-separated list of ServiceCategory values,
-    // built server-side from primaryService + KYC additionalServices at
-    // approval time. Falls back to primaryService alone for providers approved
-    // before this field existed (certifiedCategories will be null for them).
-    const certifiedKeys = useMemo<ServiceCategoryKey[]>(() => {
-        if (profile?.certifiedCategories) {
-            return profile.certifiedCategories
-                .split(",")
-                .map((c) => c.trim())
-                .filter(Boolean) as ServiceCategoryKey[];
-        }
-        return profile?.primaryService ? [profile.primaryService as ServiceCategoryKey] : [];
-    }, [profile]);
+    // NOTE: this now shows every ACTIVE category admin has created — the old
+    // certifiedCategories/primaryService enum gating is gone, since that
+    // field has no real link to the new Category table's ids. If you want
+    // providers restricted to specific categories again, that needs a real
+    // certifiedCategoryIds field on Provider (a list of Category ids) and a
+    // filter here against it — this is the natural place to add that filter
+    // once that field exists.
+    const certifiedCategoryIds = profile?.certifiedCategoryIds;
 
-    const visibleCategories = useMemo(
-        () => CATEGORIES.filter((c) => certifiedKeys.includes(c.key)),
-        [certifiedKeys],
+    const visibleCategories: CategoryDTO[] = useMemo(
+        () => categories.filter((c) => c.isActive && (certifiedCategoryIds ?? []).includes(c.id)),
+        [categories, certifiedCategoryIds]
     );
 
-    const [expanded, setExpanded] = useState<ServiceCategoryKey | "">("");
+    const [expanded, setExpanded] = useState<number | "">("");
     const [selections, setSelections] = useState<Record<number, SelectionState>>({});
     const [priceWarning, setPriceWarning] = useState<string | null>(null);
 
@@ -105,127 +114,80 @@ export default function ServicesTab() {
         if (!profile) dispatch(fetchProviderProfile());
     }, [dispatch, profile]);
 
-    // Only fetch catalogs for categories the provider is actually certified
-    // for — no point loading Plumber's sub-services for an Electrician-only
-    // provider who will never see that panel.
     useEffect(() => {
-        visibleCategories.forEach((c) => dispatch(fetchCatalog(c.key)));
+        dispatch(fetchCategories());
+    }, [dispatch]);
+
+    useEffect(() => {
+        visibleCategories.forEach((c) => dispatch(fetchCatalog(c.id)));
     }, [dispatch, visibleCategories]);
 
-    // Default the expanded panel to the provider's first certified category
-    // once it's known, instead of hardcoding "ELECTRICIAN".
-    useEffect(() => {
-        if (!expanded && visibleCategories.length > 0) {
-            setExpanded(visibleCategories[0].key);
+    const activeCategoryId = expanded || (visibleCategories[0]?.id ?? "");
+
+    const activeCatalogItems: ServiceCatalogItem[] = useMemo(() => {
+        if (!activeCategoryId) return [];
+        return byCategory[activeCategoryId] ?? [];
+    }, [activeCategoryId, byCategory]);
+
+    const getSelection = (item: ServiceCatalogItem): SelectionState => {
+        if (selections[item.id] !== undefined) {
+            return selections[item.id];
         }
-    }, [expanded, visibleCategories]);
-
-    useEffect(() => {
-        const next: Record<number, SelectionState> = { ...selections };
-        let changed = false;
-
-        Object.values(byCategory).forEach((items) => {
-            items?.forEach((item) => {
-                if (next[item.id] !== undefined) return;
-                const existing = profile?.services?.find((s) => s.catalogId === item.id);
-                next[item.id] = {
-                    enabled: existing?.isAvailable ?? false,
-                    price: existing?.customPrice != null
-                        ? String(existing.customPrice)
-                        : item.basePrice != null
-                            ? String(item.basePrice)
-                            : "",
-                };
-                changed = true;
-            });
-        });
-
-        if (changed) setSelections(next);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [byCategory, profile?.services]);
+        const existing = profile?.services?.find((s) => s.catalogId === item.id);
+        return {
+            enabled: existing?.isAvailable ?? false,
+            price:
+                existing?.customPrice != null
+                    ? String(existing.customPrice)
+                    : item.basePrice != null
+                        ? String(item.basePrice)
+                        : "",
+        };
+    };
 
     const toggleService = (catalogId: number) => {
-        setSelections((prev) => ({
-            ...prev,
-            [catalogId]: { ...prev[catalogId], enabled: !prev[catalogId]?.enabled },
-        }));
+        setSelections((prev) => {
+            const current = prev[catalogId] ?? { enabled: false, price: "" };
+            return {
+                ...prev,
+                [catalogId]: { ...current, enabled: !current.enabled },
+            };
+        });
     };
 
     const updatePrice = (catalogId: number, value: string) => {
-        setSelections((prev) => ({
-            ...prev,
-            [catalogId]: { ...prev[catalogId], price: value },
-        }));
+        setSelections((prev) => {
+            const current = prev[catalogId] ?? { enabled: false, price: "" };
+            return {
+                ...prev,
+                [catalogId]: { ...current, price: value },
+            };
+        });
     };
 
-    const enabledCountFor = (category: ServiceCategoryKey) => {
-        const items = byCategory[category] ?? [];
-        const enabled = items.filter((i) => selections[i.id]?.enabled).length;
+    const enabledCountFor = (categoryId: number) => {
+        const items = byCategory[categoryId] ?? [];
+        const enabled = items.filter((i) => getSelection(i).enabled).length;
         return { enabled, total: items.length };
     };
 
-    // const handleSave = async () => {
-    //     const payload: ServiceSelectionPayload[] = [];
-    //     let missingPrice = false;
-    //
-    //     Object.values(byCategory).forEach((items) => {
-    //         items?.forEach((item) => {
-    //             const sel = selections[item.id];
-    //             if (!sel) return;
-    //             if (sel.enabled && (sel.price.trim() === "" || Number.isNaN(Number(sel.price)))) {
-    //                 missingPrice = true;
-    //             }
-    //             payload.push({
-    //                 catalogId: item.id,
-    //                 isAvailable: sel.enabled,
-    //                 customPrice: sel.enabled ? Number(sel.price) || 0 : 0,
-    //             });
-    //         });
-    //     });
-    //
-    //     console.log("SAVE PAYLOAD:", payload);
-    //
-    //     if (missingPrice) {
-    //         setPriceWarning("Set a price for every enabled service before saving.");
-    //         return;
-    //     }
-    //     setPriceWarning(null);
-    //
-    //     try {
-    //         await dispatch(saveServicesBatch(payload)).unwrap();
-    //         const refreshed = await dispatch(fetchProviderProfile()).unwrap();
-    //
-    //         // Force re-sync local selections from the just-saved server truth.
-    //         // The population effect above skips any catalogId already present
-    //         // in `selections`, so without this, toggles/prices shown after
-    //         // Save would keep reflecting stale local state instead of what
-    //         // actually got persisted to the backend.
-    //         setSelections((prev) => {
-    //             const next = { ...prev };
-    //             refreshed?.services?.forEach((s: any) => {
-    //                 next[s.catalogId] = {
-    //                     enabled: s.isAvailable,
-    //                     price: String(s.customPrice),
-    //                 };
-    //             });
-    //             return next;
-    //         });
-    //     } catch {
-    //         // error is already captured in redux state via saveServicesBatch.rejected
-    //     }
-    // };
-
     const handleSave = async () => {
         const payload: ServiceSelectionPayload[] = [];
+        const processedIds = new Set<number>();
         let missingPrice = false;
 
-        Object.values(byCategory).forEach((items) => {
-            items?.forEach((item) => {
-                const sel = selections[item.id];
-                if (!sel) return;
+        visibleCategories.forEach((category) => {
+            const items = byCategory[category.id] ?? [];
+            items.forEach((item) => {
+                if (processedIds.has(item.id)) return;
+                processedIds.add(item.id);
+
+                const sel = getSelection(item);
+
                 if (sel.enabled && (sel.price.trim() === "" || Number.isNaN(Number(sel.price)))) {
                     missingPrice = true;
                 }
+
                 payload.push({
                     catalogId: item.id,
                     isAvailable: sel.enabled,
@@ -236,7 +198,7 @@ export default function ServicesTab() {
 
         if (missingPrice) {
             setPriceWarning("Set a price for every enabled service before saving.");
-            toast.warn("Set a price for every enabled service before saving.");
+            toastify.warn("Set a price for every enabled service before saving.");
             return;
         }
         setPriceWarning(null);
@@ -247,10 +209,9 @@ export default function ServicesTab() {
             await dispatch(saveServicesBatch(payload)).unwrap();
             const refreshed = await dispatch(fetchProviderProfile()).unwrap();
 
-            // Force re-sync local selections from the just-saved server truth.
             setSelections((prev) => {
                 const next = { ...prev };
-                refreshed?.services?.forEach((s: any) => {
+                refreshed?.services?.forEach((s: ProviderServiceItem) => {
                     next[s.catalogId] = {
                         enabled: s.isAvailable,
                         price: String(s.customPrice),
@@ -259,20 +220,16 @@ export default function ServicesTab() {
                 return next;
             });
 
-            toast.success(
+            toastify.success(
                 enabledCount > 0
                     ? `Saved — ${enabledCount} service${enabledCount > 1 ? "s" : ""} now enabled.`
-                    : "Saved — all services are currently disabled.",
+                    : "Saved — all services are currently disabled."
             );
-        } catch (err: any) {
-            toast.error(err ?? "Failed to save services. Please try again.");
+        } catch (err: unknown) {
+            const message = typeof err === "string" ? err : "Failed to save services. Please try again.";
+            toastify.error(message);
         }
     };
-
-    const activeCatalogItems: ServiceCatalogItem[] = useMemo(
-        () => (expanded ? byCategory[expanded] ?? [] : []),
-        [expanded, byCategory],
-    );
 
     return (
         <div className="space-y-6">
@@ -283,8 +240,7 @@ export default function ServicesTab() {
                             Services &amp; Pricing
                         </h2>
                         <p className="mt-0.5 text-sm text-slate-500">
-                            Manage the services you offer and set your prices. Enable or
-                            disable services based on your expertise.
+                            Manage the services you offer and set your prices.
                         </p>
                     </div>
                     <button className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-[#1e3a8a] hover:bg-slate-50">
@@ -293,39 +249,41 @@ export default function ServicesTab() {
                     </button>
                 </div>
 
-                <p className="mb-2 text-xs font-medium text-slate-500">
-                    Your Service Categories
-                </p>
+                <p className="mb-2 text-xs font-medium text-slate-500">Your Service Categories</p>
                 <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {visibleCategories.map(({ key, label, icon: Icon }) => {
-                        const { enabled, total } = enabledCountFor(key);
-                        return (
-                            <div
-                                key={key}
-                                className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3"
-                            >
-                                <span className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                                    <Icon className="h-4 w-4 text-[#e8683f]" />
-                                    {label}
-                                </span>
-                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">
-                                    {total > 0 ? `${enabled}/${total} Enabled` : "—"}
-                                </span>
-                            </div>
-                        );
-                    })}
+                    {categoriesLoading && (
+                        <div className="col-span-full flex items-center gap-2 text-sm text-slate-400 py-2">
+                            <Loader2 className="h-4 w-4 animate-spin" /> Loading categories…
+                        </div>
+                    )}
+
+                    {!categoriesLoading &&
+                        visibleCategories.map((category) => {
+                            const { enabled, total } = enabledCountFor(category.id);
+                            const Icon = iconForCategory(category.name);
+                            return (
+                                <div
+                                    key={category.id}
+                                    className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3"
+                                >
+                                    <span className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                                        <Icon className="h-4 w-4 text-[#e8683f]" />
+                                        {category.name}
+                                    </span>
+                                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">
+                                        {total > 0 ? `${enabled}/${total} Enabled` : "—"}
+                                    </span>
+                                </div>
+                            );
+                        })}
 
                     <div className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
                             <Users className="h-4 w-4" />
                         </div>
                         <div className="flex-1">
-                            <p className="text-xs font-medium text-slate-700">
-                                Request New Category
-                            </p>
-                            <p className="text-[11px] text-slate-400">
-                                Not seeing your expertise?
-                            </p>
+                            <p className="text-xs font-medium text-slate-700">Request New Category</p>
+                            <p className="text-[11px] text-slate-400">Not seeing your expertise?</p>
                             <button className="mt-1 text-xs font-medium text-[#1e3a8a] hover:underline">
                                 Request Category
                             </button>
@@ -339,26 +297,29 @@ export default function ServicesTab() {
                     </div>
                 )}
 
-                {visibleCategories.length === 0 && !error && (
+                {!categoriesLoading && visibleCategories.length === 0 && !error && (
                     <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                        No certified service categories found on your profile yet.
+                        No active service categories exist yet.
                     </div>
                 )}
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
                     <div className="space-y-4">
-                        {visibleCategories.map(({ key, label, icon: Icon }) => {
-                            const { enabled, total } = enabledCountFor(key);
-                            const isOpen = expanded === key;
+                        {visibleCategories.map((category) => {
+                            const { enabled, total } = enabledCountFor(category.id);
+                            const isOpen = (expanded || visibleCategories[0]?.id) === category.id;
+                            const Icon = iconForCategory(category.name);
+                            const itemsForThisCategory = byCategory[category.id] ?? [];
+
                             return (
-                                <div key={key} className="rounded-xl border border-slate-200">
+                                <div key={category.id} className="rounded-xl border border-slate-200">
                                     <button
-                                        onClick={() => setExpanded(isOpen ? "" : key)}
+                                        onClick={() => setExpanded(isOpen ? "" : category.id)}
                                         className="flex w-full items-center justify-between px-5 py-4"
                                     >
                                         <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                                             <Icon className="h-4 w-4 text-[#e8683f]" />
-                                            {label}
+                                            {category.name}
                                             <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">
                                                 {total > 0 ? `${enabled}/${total} Services Enabled` : "No services yet"}
                                             </span>
@@ -372,15 +333,15 @@ export default function ServicesTab() {
 
                                     {isOpen && (
                                         <div className="border-t border-slate-200 px-5 pb-5">
-                                            {loading && !byCategory[key] && (
+                                            {loading && !byCategory[category.id] && (
                                                 <p className="py-4 text-sm text-slate-400">Loading services…</p>
                                             )}
-                                            {byCategory[key] && byCategory[key]!.length === 0 && (
+                                            {byCategory[category.id] && itemsForThisCategory.length === 0 && (
                                                 <p className="py-4 text-sm text-slate-400">
                                                     No sub-services defined for this category yet.
                                                 </p>
                                             )}
-                                            {activeCatalogItems.length > 0 && (
+                                            {itemsForThisCategory.length > 0 && (
                                                 <div className="overflow-x-auto">
                                                     <table className="w-full text-left text-sm">
                                                         <thead>
@@ -393,8 +354,8 @@ export default function ServicesTab() {
                                                         </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-100">
-                                                        {activeCatalogItems.map((item) => {
-                                                            const sel = selections[item.id] ?? { enabled: false, price: "" };
+                                                        {itemsForThisCategory.map((item) => {
+                                                            const sel = getSelection(item);
                                                             return (
                                                                 <tr key={item.id}>
                                                                     <td className="py-4 align-middle font-medium text-slate-800">
@@ -420,15 +381,13 @@ export default function ServicesTab() {
                                                                         />
                                                                     </td>
                                                                     <td className="py-4 align-middle">
-                                                                        <div className="flex items-center gap-3 text-slate-400">
-                                                                            <button
-                                                                                onClick={() => toggleService(item.id)}
-                                                                                title="Disable this service"
-                                                                                className="hover:text-red-500"
-                                                                            >
-                                                                                <Trash2 className="h-4 w-4" />
-                                                                            </button>
-                                                                        </div>
+                                                                        <button
+                                                                            onClick={() => toggleService(item.id)}
+                                                                            title="Disable this service"
+                                                                            className="text-slate-400 hover:text-red-500"
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </button>
                                                                     </td>
                                                                 </tr>
                                                             );
@@ -450,72 +409,11 @@ export default function ServicesTab() {
                                 <FileText className="h-4 w-4 text-[#e8683f]" />
                                 Pricing Guidelines
                             </h3>
-                            <p className="mb-3 text-xs text-slate-500">
-                                Set competitive prices to get more bookings.
-                            </p>
                             <ul className="space-y-2 text-sm text-slate-600">
-                                <li className="flex gap-2">
-                                    <span className="text-[#e8683f]">+</span>
-                                    Research market rates in your area
-                                </li>
-                                <li className="flex gap-2">
-                                    <span className="text-[#e8683f]">+</span>
-                                    Consider your experience and skill level
-                                </li>
-                                <li className="flex gap-2">
-                                    <span className="text-[#e8683f]">+</span>
-                                    Keep prices updated with market trends
-                                </li>
-                                <li className="flex gap-2">
-                                    <span className="text-[#e8683f]">+</span>
-                                    Higher quality often justifies higher price
-                                </li>
+                                <li className="flex gap-2"><span className="text-[#e8683f]">+</span>Research market rates in your area</li>
+                                <li className="flex gap-2"><span className="text-[#e8683f]">+</span>Consider your experience and skill level</li>
+                                <li className="flex gap-2"><span className="text-[#e8683f]">+</span>Keep prices updated with market trends</li>
                             </ul>
-                        </div>
-
-                        <div className="rounded-xl border border-slate-200 p-5">
-                            <h3 className="mb-3 text-sm font-semibold text-slate-900">
-                                Service Tips
-                            </h3>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex gap-3">
-                                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#1e3a8a]/10 text-[#1e3a8a]">
-                                        ✎
-                                    </span>
-                                    <p className="text-slate-600">
-                                        Enable only the services you can deliver with high quality.
-                                    </p>
-                                </div>
-                                <div className="flex gap-3">
-                                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
-                                        <Lightbulb className="h-3.5 w-3.5" />
-                                    </span>
-                                    <p className="text-slate-600">
-                                        Keep your prices competitive and fair.
-                                    </p>
-                                </div>
-                                <div className="flex gap-3">
-                                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
-                                        ✓
-                                    </span>
-                                    <p className="text-slate-600">
-                                        Update your availability to get more bookings.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="rounded-xl border border-slate-200 p-5">
-                            <h3 className="mb-2 text-sm font-semibold text-slate-900">
-                                Need Help?
-                            </h3>
-                            <p className="mb-3 text-sm text-slate-500">
-                                If you need help with services or pricing, contact our support.
-                            </p>
-                            <button className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                                <HelpCircle className="h-4 w-4" />
-                                Contact Support
-                            </button>
                         </div>
                     </div>
                 </div>

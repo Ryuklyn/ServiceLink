@@ -6,10 +6,12 @@ import {
     createCategoryWithServices,
     updateCategory,
     toggleCategory,
+    deleteCategory,
     getCatalogForAdmin,
     createCatalogItem,
     updateCatalogItem,
     toggleCatalogItem,
+    deleteCatalogItem,
 } from "@/store/slices/features/categories/categoriesAdminApi";
 import {
     CategoryDTO,
@@ -28,6 +30,8 @@ interface CategoriesAdminState {
     saving: boolean;
     togglingCategoryId: number | null;
     togglingServiceId: number | null;
+    deletingCategoryId: number | null;
+    deletingServiceId: number | null;
     error: string | null;
 }
 
@@ -38,6 +42,8 @@ const initialState: CategoriesAdminState = {
     saving: false,
     togglingCategoryId: null,
     togglingServiceId: null,
+    deletingCategoryId: null,
+    deletingServiceId: null,
     error: null,
 };
 
@@ -48,9 +54,9 @@ function extractErrorMessage(err: any, fallback: string): string {
 // ── Categories ───────────────────────────────────────────────────────────
 
 export const fetchCategoriesAdmin = createAsyncThunk<
-    CategoryDTO[],
+CategoryDTO[],
     void,
-    { rejectValue: string }
+{ rejectValue: string }
 >("categoriesAdmin/fetchCategories", async (_, { rejectWithValue }) => {
     try {
         return await getCategoriesForAdmin();
@@ -60,9 +66,9 @@ export const fetchCategoriesAdmin = createAsyncThunk<
 });
 
 export const createCategoryThunk = createAsyncThunk<
-    CategoryDTO,
+CategoryDTO,
     CreateCategoryPayload,
-    { rejectValue: string }
+{ rejectValue: string }
 >("categoriesAdmin/createCategory", async (payload, { rejectWithValue }) => {
     try {
         return await createCategory(payload);
@@ -72,9 +78,9 @@ export const createCategoryThunk = createAsyncThunk<
 });
 
 export const createCategoryWithServicesThunk = createAsyncThunk<
-    { category: CategoryDTO; refetch: true },
-    CreateCategoryWithServicesPayload,
-    { rejectValue: string }
+{ category: CategoryDTO; refetch: true },
+CreateCategoryWithServicesPayload,
+{ rejectValue: string }
 >("categoriesAdmin/createCategoryWithServices", async (payload, { rejectWithValue }) => {
     try {
         const category = await createCategoryWithServices(payload);
@@ -85,9 +91,9 @@ export const createCategoryWithServicesThunk = createAsyncThunk<
 });
 
 export const updateCategoryThunk = createAsyncThunk<
-    CategoryDTO,
+CategoryDTO,
     { id: number; payload: UpdateCategoryPayload },
-    { rejectValue: string }
+{ rejectValue: string }
 >("categoriesAdmin/updateCategory", async ({ id, payload }, { rejectWithValue }) => {
     try {
         return await updateCategory(id, payload);
@@ -97,9 +103,9 @@ export const updateCategoryThunk = createAsyncThunk<
 });
 
 export const toggleCategoryThunk = createAsyncThunk<
-    CategoryDTO,
+CategoryDTO,
     number,
-    { rejectValue: string }
+{ rejectValue: string }
 >("categoriesAdmin/toggleCategory", async (id, { rejectWithValue }) => {
     try {
         return await toggleCategory(id);
@@ -108,12 +114,25 @@ export const toggleCategoryThunk = createAsyncThunk<
     }
 });
 
+export const deleteCategoryThunk = createAsyncThunk<
+number,
+    number,
+{ rejectValue: string }
+>("categoriesAdmin/deleteCategory", async (id, { rejectWithValue }) => {
+    try {
+        await deleteCategory(id);
+        return id;
+    } catch (err: any) {
+        return rejectWithValue(extractErrorMessage(err, "Failed to delete category"));
+    }
+});
+
 // ── Catalog (sub-services) ──────────────────────────────────────────────
 
 export const fetchCatalogAdmin = createAsyncThunk<
-    ServiceCatalogDTO[],
+ServiceCatalogDTO[],
     void,
-    { rejectValue: string }
+{ rejectValue: string }
 >("categoriesAdmin/fetchCatalog", async (_, { rejectWithValue }) => {
     try {
         return await getCatalogForAdmin();
@@ -123,9 +142,9 @@ export const fetchCatalogAdmin = createAsyncThunk<
 });
 
 export const createCatalogItemThunk = createAsyncThunk<
-    ServiceCatalogDTO,
+ServiceCatalogDTO,
     CreateServiceCatalogPayload,
-    { rejectValue: string }
+{ rejectValue: string }
 >("categoriesAdmin/createCatalogItem", async (payload, { rejectWithValue }) => {
     try {
         return await createCatalogItem(payload);
@@ -135,9 +154,9 @@ export const createCatalogItemThunk = createAsyncThunk<
 });
 
 export const updateCatalogItemThunk = createAsyncThunk<
-    ServiceCatalogDTO,
+ServiceCatalogDTO,
     { id: number; payload: UpdateServiceCatalogPayload },
-    { rejectValue: string }
+{ rejectValue: string }
 >("categoriesAdmin/updateCatalogItem", async ({ id, payload }, { rejectWithValue }) => {
     try {
         return await updateCatalogItem(id, payload);
@@ -147,14 +166,27 @@ export const updateCatalogItemThunk = createAsyncThunk<
 });
 
 export const toggleCatalogItemThunk = createAsyncThunk<
-    ServiceCatalogDTO,
+ServiceCatalogDTO,
     number,
-    { rejectValue: string }
+{ rejectValue: string }
 >("categoriesAdmin/toggleCatalogItem", async (id, { rejectWithValue }) => {
     try {
         return await toggleCatalogItem(id);
     } catch (err: any) {
         return rejectWithValue(extractErrorMessage(err, "Failed to update status"));
+    }
+});
+
+export const deleteCatalogItemThunk = createAsyncThunk<
+{ id: number; categoryId: number },
+{ id: number; categoryId: number },
+{ rejectValue: string }
+>("categoriesAdmin/deleteCatalogItem", async ({ id, categoryId }, { rejectWithValue }) => {
+    try {
+        await deleteCatalogItem(id);
+        return { id, categoryId };
+    } catch (err: any) {
+        return rejectWithValue(extractErrorMessage(err, "Failed to delete sub-service"));
     }
 });
 
@@ -196,7 +228,7 @@ const categoriesAdminSlice = createSlice({
                 state.error = action.payload ?? "Unknown error";
             })
 
-            // create category + services (caller re-fetches both lists after this resolves)
+            // create category + services
             .addCase(createCategoryWithServicesThunk.pending, (state) => {
                 state.saving = true;
                 state.error = null;
@@ -211,11 +243,17 @@ const categoriesAdminSlice = createSlice({
             })
 
             // update category
+            .addCase(updateCategoryThunk.pending, (state) => {
+                state.saving = true;
+                state.error = null;
+            })
             .addCase(updateCategoryThunk.fulfilled, (state, action: PayloadAction<CategoryDTO>) => {
+                state.saving = false;
                 const idx = state.categories.findIndex((c) => c.id === action.payload.id);
                 if (idx !== -1) state.categories[idx] = action.payload;
             })
             .addCase(updateCategoryThunk.rejected, (state, action) => {
+                state.saving = false;
                 state.error = action.payload ?? "Unknown error";
             })
 
@@ -231,6 +269,20 @@ const categoriesAdminSlice = createSlice({
             })
             .addCase(toggleCategoryThunk.rejected, (state, action) => {
                 state.togglingCategoryId = null;
+                state.error = action.payload ?? "Unknown error";
+            })
+
+            // delete category
+            .addCase(deleteCategoryThunk.pending, (state, action) => {
+                state.deletingCategoryId = action.meta.arg;
+                state.error = null;
+            })
+            .addCase(deleteCategoryThunk.fulfilled, (state, action: PayloadAction<number>) => {
+                state.deletingCategoryId = null;
+                state.categories = state.categories.filter((c) => c.id !== action.payload);
+            })
+            .addCase(deleteCategoryThunk.rejected, (state, action) => {
+                state.deletingCategoryId = null;
                 state.error = action.payload ?? "Unknown error";
             })
 
@@ -265,11 +317,17 @@ const categoriesAdminSlice = createSlice({
             })
 
             // update sub-service
+            .addCase(updateCatalogItemThunk.pending, (state) => {
+                state.saving = true;
+                state.error = null;
+            })
             .addCase(updateCatalogItemThunk.fulfilled, (state, action: PayloadAction<ServiceCatalogDTO>) => {
+                state.saving = false;
                 const idx = state.items.findIndex((i) => i.id === action.payload.id);
                 if (idx !== -1) state.items[idx] = action.payload;
             })
             .addCase(updateCatalogItemThunk.rejected, (state, action) => {
+                state.saving = false;
                 state.error = action.payload ?? "Unknown error";
             })
 
@@ -285,6 +343,22 @@ const categoriesAdminSlice = createSlice({
             })
             .addCase(toggleCatalogItemThunk.rejected, (state, action) => {
                 state.togglingServiceId = null;
+                state.error = action.payload ?? "Unknown error";
+            })
+
+            // delete sub-service
+            .addCase(deleteCatalogItemThunk.pending, (state, action) => {
+                state.deletingServiceId = action.meta.arg.id;
+                state.error = null;
+            })
+            .addCase(deleteCatalogItemThunk.fulfilled, (state, action) => {
+                state.deletingServiceId = null;
+                state.items = state.items.filter((i) => i.id !== action.payload.id);
+                const cat = state.categories.find((c) => c.id === action.payload.categoryId);
+                if (cat) cat.subServiceCount = Math.max(0, cat.subServiceCount - 1);
+            })
+            .addCase(deleteCatalogItemThunk.rejected, (state, action) => {
+                state.deletingServiceId = null;
                 state.error = action.payload ?? "Unknown error";
             });
     },

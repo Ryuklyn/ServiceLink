@@ -20,6 +20,6 @@ export function mapServicesForDisplay(
             priceMin: s.customPrice,
             priceMax: s.customPrice, // single price ho, range hoina — same value dinu
             duration: s.effectiveDuration ?? "—",
-            category: s.category,
+            category: s.categoryName,
         }));
 }

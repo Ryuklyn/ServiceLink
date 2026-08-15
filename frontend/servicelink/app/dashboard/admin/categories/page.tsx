@@ -12,6 +12,7 @@ import {
     Loader2,
     X,
     Trash2,
+    AlertTriangle,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks"; // adjust if your typed hooks live elsewhere
 import {
@@ -19,12 +20,16 @@ import {
     fetchCatalogAdmin,
     createCategoryWithServicesThunk,
     createCatalogItemThunk,
+    updateCategoryThunk,
     updateCatalogItemThunk,
     toggleCatalogItemThunk,
     toggleCategoryThunk,
+    deleteCategoryThunk,
+    deleteCatalogItemThunk,
     clearCategoriesAdminError,
 } from "@/store/slices/categoriesAdminSlice"; // must match the actual file location
 import {
+    CategoryDTO,
     PricingUnit,
     ServiceCatalogDTO,
     SubServiceInput,
@@ -36,10 +41,24 @@ function emptyRow(): SubServiceInput {
     return { subServiceName: "", defaultDuration: "", pricingUnit: "PER_JOB", basePrice: undefined };
 }
 
+// What's being confirmed for deletion — a category or a single sub-service.
+type DeleteTarget =
+    | { kind: "category"; id: number; name: string }
+    | { kind: "service"; id: number; categoryId: number; name: string };
+
 export default function CategoriesPage() {
     const dispatch = useAppDispatch();
-    const { categories, items, loading, saving, togglingCategoryId, togglingServiceId, error } =
-        useAppSelector((state) => state.categoriesAdmin);
+    const {
+        categories,
+        items,
+        loading,
+        saving,
+        togglingCategoryId,
+        togglingServiceId,
+        deletingCategoryId,
+        deletingServiceId,
+        error,
+    } = useAppSelector((state) => state.categoriesAdmin);
 
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -51,6 +70,17 @@ export default function CategoriesPage() {
     // "Add Service to existing category" modal
     const [addServiceCategoryId, setAddServiceCategoryId] = useState<number | null>(null);
     const [singleService, setSingleService] = useState<SubServiceInput>(emptyRow());
+
+    // "Edit Category" modal — pre-filled with the clicked category's current name
+    const [editCategory, setEditCategory] = useState<CategoryDTO | null>(null);
+    const [editCategoryName, setEditCategoryName] = useState("");
+
+    // "Edit Service" modal — pre-filled with the clicked sub-service's current values
+    const [editService, setEditService] = useState<ServiceCatalogDTO | null>(null);
+    const [editServiceForm, setEditServiceForm] = useState<SubServiceInput>(emptyRow());
+
+    // Shared delete-confirmation dialog target (category or service)
+    const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
     useEffect(() => {
         dispatch(fetchCategoriesAdmin());
@@ -141,7 +171,63 @@ export default function CategoriesPage() {
         }
     }
 
-    // ── Existing service actions ────────────────────────────────────────────
+    // ── Edit category (rename) — pre-filled ─────────────────────────────────
+
+    function openEditCategory(category: CategoryDTO) {
+        setEditCategory(category);
+        setEditCategoryName(category.name);
+    }
+
+    async function handleEditCategory(e: FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        if (!editCategory || !editCategoryName.trim()) return;
+
+        const result = await dispatch(
+            updateCategoryThunk({
+                id: editCategory.id,
+                payload: { name: editCategoryName.trim() },
+            }),
+        );
+
+        if (updateCategoryThunk.fulfilled.match(result)) {
+            setEditCategory(null);
+        }
+    }
+
+    // ── Edit sub-service — pre-filled ───────────────────────────────────────
+
+    function openEditService(service: ServiceCatalogDTO) {
+        setEditService(service);
+        setEditServiceForm({
+            subServiceName: service.subServiceName,
+            defaultDuration: service.defaultDuration ?? "",
+            pricingUnit: service.pricingUnit,
+            basePrice: service.basePrice ?? undefined,
+        });
+    }
+
+    async function handleEditService(e: FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        if (!editService || !editServiceForm.subServiceName.trim()) return;
+
+        const result = await dispatch(
+            updateCatalogItemThunk({
+                id: editService.id,
+                payload: {
+                    subServiceName: editServiceForm.subServiceName.trim(),
+                    defaultDuration: editServiceForm.defaultDuration?.trim() || undefined,
+                    pricingUnit: editServiceForm.pricingUnit,
+                    basePrice: editServiceForm.basePrice,
+                },
+            }),
+        );
+
+        if (updateCatalogItemThunk.fulfilled.match(result)) {
+            setEditService(null);
+        }
+    }
+
+    // ── Existing service/category actions ───────────────────────────────────
 
     function handleToggleService(id: number) {
         dispatch(toggleCatalogItemThunk(id));
@@ -151,17 +237,30 @@ export default function CategoriesPage() {
         dispatch(toggleCategoryThunk(id));
     }
 
-    function handleInlinePriceEdit(item: ServiceCatalogDTO) {
-        const value = window.prompt(
-            `New base price (NPR) for "${item.subServiceName}"`,
-            String(item.basePrice ?? ""),
-        );
-        if (value === null) return;
-        const basePrice = Number(value);
-        if (Number.isNaN(basePrice) || basePrice < 0) return;
+    // ── Delete confirm flow (shared for category + service) ────────────────
 
-        dispatch(updateCatalogItemThunk({ id: item.id, payload: { basePrice } }));
+    async function handleConfirmDelete() {
+        if (!deleteTarget) return;
+
+        if (deleteTarget.kind === "category") {
+            const result = await dispatch(deleteCategoryThunk(deleteTarget.id));
+            if (deleteCategoryThunk.fulfilled.match(result)) setDeleteTarget(null);
+            // on rejection, the error banner shows the reason (e.g. "still has sub-services")
+            // and the dialog stays open so the user can cancel deliberately.
+        } else {
+            const result = await dispatch(
+                deleteCatalogItemThunk({ id: deleteTarget.id, categoryId: deleteTarget.categoryId }),
+            );
+            if (deleteCatalogItemThunk.fulfilled.match(result)) setDeleteTarget(null);
+        }
     }
+
+    const isDeleting =
+        deleteTarget?.kind === "category"
+            ? deletingCategoryId === deleteTarget.id
+            : deleteTarget?.kind === "service"
+                ? deletingServiceId === deleteTarget.id
+                : false;
 
     return (
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -244,40 +343,64 @@ export default function CategoriesPage() {
                                 {/* CARD HEADER */}
                                 <div className="p-5 border-b border-slate-100 space-y-3">
                                     <div className="flex items-start justify-between gap-2">
-                                        <div className="flex items-center gap-2.5">
+                                        <div className="flex items-center gap-2.5 min-w-0">
                                             <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                                                 <Layers size={18} />
                                             </div>
-                                            <div>
-                                                <h3 className="font-bold text-slate-900 text-base">{category.name}</h3>
+                                            <div className="min-w-0">
+                                                <h3 className="font-bold text-slate-900 text-base truncate">
+                                                    {category.name}
+                                                </h3>
                                                 <span className="text-[10px] text-slate-400">
                                                     {activeCount} of {services.length} service{services.length === 1 ? "" : "s"} active
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <button
-                                            onClick={() => handleToggleCategory(category.id)}
-                                            disabled={togglingCategoryId === category.id}
-                                            title={category.isActive ? "Deactivate category" : "Activate category"}
-                                            className={`px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 shrink-0 disabled:opacity-40 ${
-                                                category.isActive
-                                                    ? "bg-emerald-50 text-emerald-700"
-                                                    : "bg-slate-100 text-slate-500"
-                                            }`}
-                                        >
-                                            {togglingCategoryId === category.id ? (
-                                                <Loader2 size={12} className="animate-spin" />
-                                            ) : category.isActive ? (
-                                                <>
-                                                    <CheckCircle2 size={12} /> Active
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <XCircle size={12} /> Inactive
-                                                </>
-                                            )}
-                                        </button>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                                onClick={() => openEditCategory(category)}
+                                                title="Rename category"
+                                                className="p-1.5 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                                            >
+                                                <Edit2 size={13} />
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    setDeleteTarget({
+                                                        kind: "category",
+                                                        id: category.id,
+                                                        name: category.name,
+                                                    })
+                                                }
+                                                title="Delete category"
+                                                className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleToggleCategory(category.id)}
+                                                disabled={togglingCategoryId === category.id}
+                                                title={category.isActive ? "Deactivate category" : "Activate category"}
+                                                className={`px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 shrink-0 disabled:opacity-40 ${
+                                                    category.isActive
+                                                        ? "bg-emerald-50 text-emerald-700"
+                                                        : "bg-slate-100 text-slate-500"
+                                                }`}
+                                            >
+                                                {togglingCategoryId === category.id ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : category.isActive ? (
+                                                    <>
+                                                        <CheckCircle2 size={12} /> Active
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <XCircle size={12} /> Inactive
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -310,17 +433,31 @@ export default function CategoriesPage() {
                                                         </p>
                                                     </div>
 
-                                                    <div className="flex items-center gap-2 shrink-0">
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <span className="font-mono text-slate-900 font-semibold mr-1">
+                                                            NPR {(service.basePrice ?? 0).toLocaleString()}
+                                                        </span>
                                                         <button
-                                                            onClick={() => handleInlinePriceEdit(service)}
-                                                            title="Edit base price"
+                                                            onClick={() => openEditService(service)}
+                                                            title="Edit service"
                                                             className="text-slate-400 hover:text-blue-600 transition"
                                                         >
                                                             <Edit2 size={12} />
                                                         </button>
-                                                        <span className="font-mono text-slate-900 font-semibold">
-                                                            NPR {(service.basePrice ?? 0).toLocaleString()}
-                                                        </span>
+                                                        <button
+                                                            onClick={() =>
+                                                                setDeleteTarget({
+                                                                    kind: "service",
+                                                                    id: service.id,
+                                                                    categoryId: service.categoryId,
+                                                                    name: service.subServiceName,
+                                                                })
+                                                            }
+                                                            title="Delete service"
+                                                            className="text-slate-400 hover:text-red-600 transition"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
                                                         <button
                                                             onClick={() => handleToggleService(service.id)}
                                                             disabled={togglingServiceId === service.id}
@@ -592,6 +729,212 @@ export default function CategoriesPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* EDIT CATEGORY MODAL — pre-filled */}
+            {editCategory && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-xl border border-slate-200">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <Edit2 className="text-blue-600" size={20} /> Edit Category
+                            </h3>
+                            <button
+                                onClick={() => setEditCategory(null)}
+                                className="text-slate-400 hover:text-slate-600 transition"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleEditCategory} className="space-y-4 text-xs">
+                            <div>
+                                <label className="font-semibold text-slate-700 block mb-1">Category Name *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={editCategoryName}
+                                    onChange={(e) => setEditCategoryName(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditCategory(null)}
+                                    className="px-4 py-2 rounded-lg border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {saving && <Loader2 size={14} className="animate-spin" />}
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* EDIT SERVICE MODAL — pre-filled */}
+            {editService && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-xl border border-slate-200">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <Wrench className="text-blue-600" size={20} /> Edit Service
+                            </h3>
+                            <button
+                                onClick={() => setEditService(null)}
+                                className="text-slate-400 hover:text-slate-600 transition"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleEditService} className="space-y-4 text-xs">
+                            <div>
+                                <label className="font-semibold text-slate-700 block mb-1">Service Name *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={editServiceForm.subServiceName}
+                                    onChange={(e) =>
+                                        setEditServiceForm((s) => ({ ...s, subServiceName: e.target.value }))
+                                    }
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="font-semibold text-slate-700 block mb-1">Pricing Unit *</label>
+                                    <select
+                                        value={editServiceForm.pricingUnit}
+                                        onChange={(e) =>
+                                            setEditServiceForm((s) => ({
+                                                ...s,
+                                                pricingUnit: e.target.value as PricingUnit,
+                                            }))
+                                        }
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    >
+                                        {PRICING_UNITS.map((u) => (
+                                            <option key={u} value={u}>
+                                                {u.replace("_", " ")}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="font-semibold text-slate-700 block mb-1">Base Price (NPR)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={editServiceForm.basePrice ?? ""}
+                                        onChange={(e) =>
+                                            setEditServiceForm((s) => ({
+                                                ...s,
+                                                basePrice: e.target.value ? Number(e.target.value) : undefined,
+                                            }))
+                                        }
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="font-semibold text-slate-700 block mb-1">Default Duration</label>
+                                <input
+                                    type="text"
+                                    value={editServiceForm.defaultDuration ?? ""}
+                                    onChange={(e) =>
+                                        setEditServiceForm((s) => ({ ...s, defaultDuration: e.target.value }))
+                                    }
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditService(null)}
+                                    className="px-4 py-2 rounded-lg border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {saving && <Loader2 size={14} className="animate-spin" />}
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* DELETE CONFIRMATION — shared for category + service */}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl border border-slate-200">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                                <AlertTriangle size={20} />
+                            </div>
+                            <h3 className="text-base font-bold text-slate-900">
+                                Delete {deleteTarget.kind === "category" ? "category" : "service"}?
+                            </h3>
+                        </div>
+
+                        <p className="text-sm text-slate-600">
+                            Are you sure you want to delete{" "}
+                            <span className="font-semibold text-slate-900">"{deleteTarget.name}"</span>? This can't
+                            be undone.
+                            {deleteTarget.kind === "category" && (
+                                <>
+                                    {" "}
+                                    Categories that still have sub-services can't be deleted — remove or move those
+                                    first.
+                                </>
+                            )}
+                            {deleteTarget.kind === "service" && (
+                                <>
+                                    {" "}
+                                    Services currently offered by a provider can't be deleted — deactivate them
+                                    instead.
+                                </>
+                            )}
+                        </p>
+
+                        <div className="flex items-center justify-end gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmDelete}
+                                disabled={isDeleting}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isDeleting && <Loader2 size={14} className="animate-spin" />}
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -494,6 +494,68 @@ public class ProviderProfileService {
         return mapper.toCategoryDTO(category, created);
     }
 
+    // Add this method inside ProviderProfileService.java
+
+//    @Transactional(readOnly = true)
+//    public List<ServiceCatalogDTO> getCatalogByCategoryOrName(Long categoryId, String categoryName) {
+//        if (categoryId != null) {
+//            return getCatalogByCategory(categoryId);
+//        }
+//
+//        if (categoryName != null && !categoryName.isBlank()) {
+//            // Find category by matching name (e.g. ELECTRICIAN -> Electrical)
+//            String search = mapFrontendKeyToCategoryName(categoryName);
+//            return categoryRepo.findAllByOrderByNameAsc().stream()
+//                    .filter(c -> c.getName().equalsIgnoreCase(search) ||
+//                            c.getName().toUpperCase().contains(search.toUpperCase()))
+//                    .findFirst()
+//                    .map(c -> getCatalogByCategory(c.getId()))
+//                    .orElse(List.of());
+//        }
+//
+//        return getAllActiveCatalog();
+//    }
+//
+//    private String mapFrontendKeyToCategoryName(String key) {
+//        String upper = key.toUpperCase();
+//        if (upper.equals("ELECTRICIAN")) return "Electrical";
+//        if (upper.equals("PLUMBER")) return "Plumbing";
+//        if (upper.equals("CARPENTER")) return "Carpentry";
+//        if (upper.equals("PAINTER")) return "Painting";
+//        return key;
+//    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceCatalogDTO> getCatalogByCategoryOrName(Long categoryId, String categoryName) {
+        if (categoryId != null) {
+            return getCatalogByCategory(categoryId);
+        }
+
+        if (categoryName != null && !categoryName.isBlank()) {
+            String search = mapFrontendKeyToCategoryName(categoryName);
+
+            return categoryRepo.findAllByOrderByNameAsc().stream()
+                    .filter(c -> Boolean.TRUE.equals(c.getIsActive()))
+                    .filter(c -> c.getName().equalsIgnoreCase(search) ||
+                            c.getName().toUpperCase().contains(search.toUpperCase()))
+                    .findFirst()
+                    .map(c -> getCatalogByCategory(c.getId()))
+                    .orElse(List.of()); // Crucial: returns empty list on mismatch to prevent leaking other categories
+        }
+
+        return getAllActiveCatalog();
+    }
+
+    private String mapFrontendKeyToCategoryName(String key) {
+        if (key == null) return "";
+        String upper = key.toUpperCase();
+        if (upper.equals("ELECTRICIAN")) return "Electrical";
+        if (upper.equals("PLUMBER")) return "Plumbing";
+        if (upper.equals("CARPENTER")) return "Carpentry";
+        if (upper.equals("PAINTER")) return "Painting";
+        return key;
+    }
+
     /** Admin renames a category. */
     @Transactional
     public CategoryDTO updateCategory(Long categoryId, UpdateCategoryDTO req) {

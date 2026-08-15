@@ -121,15 +121,43 @@ public class ProviderController {
     // ServiceCategory enum — update any existing frontend callers of GET
     // /catalog?category=XXX to use ?categoryId=1 instead.
     // ─────────────────────────────────────────────────────────────────────────
+//
+//    @GetMapping("/catalog")
+//    public ResponseEntity<List<ServiceCatalogDTO>> getCatalog(
+//            @RequestParam(required = false) Long categoryId) {
+//
+//        List<ServiceCatalogDTO> result = categoryId != null
+//                ? providerProfileService.getCatalogByCategory(categoryId)
+//                : providerProfileService.getAllActiveCatalog();
+//
+//        return ResponseEntity.ok(result);
+//    }
+
+//    @GetMapping("/catalog")
+//    public ResponseEntity<List<ServiceCatalogDTO>> getCatalog(
+//            @RequestParam(required = false) Long categoryId,
+//            @RequestParam(required = false) String category) {
+//
+//        List<ServiceCatalogDTO> result;
+//
+//        if (categoryId != null) {
+//            result = providerProfileService.getCatalogByCategory(categoryId);
+//        } else if (category != null && !category.isBlank()) {
+//            // Handle String category key passed by legacy / provider callers
+//            result = providerProfileService.getCatalogByCategoryNameOrKey(category);
+//        } else {
+//            result = providerProfileService.getAllActiveCatalog();
+//        }
+//
+//        return ResponseEntity.ok(result);
+//    }
 
     @GetMapping("/catalog")
     public ResponseEntity<List<ServiceCatalogDTO>> getCatalog(
-            @RequestParam(required = false) Long categoryId) {
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String category) {
 
-        List<ServiceCatalogDTO> result = categoryId != null
-                ? providerProfileService.getCatalogByCategory(categoryId)
-                : providerProfileService.getAllActiveCatalog();
-
+        List<ServiceCatalogDTO> result = providerProfileService.getCatalogByCategoryOrName(categoryId, category);
         return ResponseEntity.ok(result);
     }
 

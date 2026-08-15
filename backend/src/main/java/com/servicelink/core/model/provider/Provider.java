@@ -165,7 +165,20 @@ public class Provider {
         this.kycSubmission = kyc;
         this.fullName = kyc.getFullName();
         this.phone = kyc.getPhone();
-        this.primaryService = ServiceCategory.valueOf(kyc.getPrimaryService());
+
+        // The KYC form now sends the admin-created Category's numeric id
+        // (e.g. "3") as primaryService instead of a legacy enum key (e.g.
+        // "ELECTRICIAN"). ServiceCategory.valueOf() throws on the former, so
+        // this is now guarded — legacy enum-key submissions still populate
+        // this field as before; new categoryId-based submissions simply
+        // don't touch it (getCertifiedCategoryIds() below is the source of
+        // truth for those going forward).
+        try {
+            this.primaryService = ServiceCategory.valueOf(kyc.getPrimaryService());
+        } catch (IllegalArgumentException | NullPointerException ignored) {
+            // Not a legacy enum key — expected for new categoryId-based submissions.
+        }
+
         this.otherService = kyc.getOtherService();
         this.experienceYears = kyc.getExperienceYears();
         this.bio = kyc.getBio();
@@ -186,6 +199,36 @@ public class Provider {
         if (this.coveredDistricts == null) {
             this.coveredDistricts = kyc.getSecondaryDistricts();
         }
+    }
+
+    /**
+     * Parses certifiedCategories (CSV, set by KycService.buildCertifiedCategories()
+     * during approval) into real Category ids. Once the KYC form sends category
+     * ids instead of legacy enum keys, this naturally becomes a clean id list —
+     * any entry that doesn't parse as a number (old enum-key submissions, e.g.
+     * "ELECTRICIAN") is silently skipped rather than breaking the whole list.
+     *
+     * Hand-written on purpose — Lombok's @Data only generates accessors for
+     * actual fields (certifiedCategories -> getCertifiedCategories()); since
+     * there's no certifiedCategoryIds field, there's nothing for Lombok to
+     * generate here, so this coexists with the Lombok-generated getters
+     * without any conflict.
+     */
+    public List<Long> getCertifiedCategoryIds() {
+        if (certifiedCategories == null || certifiedCategories.isBlank()) return List.of();
+        return Arrays.stream(certifiedCategories.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(s -> {
+                    try {
+                        return Long.valueOf(s);
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
     }
 
     public Double calculateAverageRating() {

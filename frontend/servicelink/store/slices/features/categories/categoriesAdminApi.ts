@@ -69,3 +69,11 @@ export async function toggleCatalogItem(id: number): Promise<ServiceCatalogDTO> 
     const { data } = await axios.patch<ServiceCatalogDTO>(`/providers/catalog/${id}/toggle`);
     return data;
 }
+
+export async function deleteCategory(id: number): Promise<void> {
+    await axios.delete(`/providers/categories/${id}`);
+}
+
+export async function deleteCatalogItem(id: number): Promise<void> {
+    await axios.delete(`/providers/catalog/${id}`);
+}

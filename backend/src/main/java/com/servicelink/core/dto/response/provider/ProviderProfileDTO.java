@@ -23,6 +23,7 @@ public class ProviderProfileDTO {
     private String profilePictureUrl;
 
     private ServiceCategory primaryService;
+    private List<Long> certifiedCategoryIds;
     private String          otherService;
     private String certifiedCategories;
     private Integer         experienceYears;

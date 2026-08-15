@@ -1,17 +1,21 @@
 import api from "@/utils/axios";
 
 export type PricingUnit = "PER_JOB" | "PER_SQFT" | "PER_WALL" | "PER_ITEM";
-export type ServiceCategoryKey =
-    | "ELECTRICIAN"
-    | "PLUMBER"
-    | "CARPENTER"
-    | "PAINTER"
-    | "CLEANER"
-    | "AC_REPAIR";
+
+// Categories are now admin-defined DB rows (see Category entity), not a
+// fixed enum — there's no more ServiceCategoryKey union. Fetch the real
+// list via getCategories() instead of importing a hardcoded set of keys.
+export interface CategoryDTO {
+    id: number;
+    name: string;
+    isActive: boolean;
+    subServiceCount: number;
+}
 
 export interface ServiceCatalogItem {
     id: number;
-    category: ServiceCategoryKey;
+    categoryId: number;
+    categoryName: string;
     subServiceName: string;
     defaultDuration?: string | null;
     pricingUnit: PricingUnit;
@@ -26,7 +30,8 @@ export interface ProviderServiceDTO {
     id: number;
     catalogId: number;
     subServiceName: string;
-    category: ServiceCategoryKey;
+    categoryId: number;
+    categoryName: string;
     pricingUnit: PricingUnit;
     customPrice: number;
     effectiveDuration: string | null;
@@ -41,15 +46,23 @@ export interface ServiceSelectionPayload {
 }
 
 /**
- * GET /providers/catalog?category=X — no @PreAuthorize on the backend, so this
- * works whether or not a token is attached. Using the shared `api` instance is
- * fine here even though auth isn't required.
+ * GET /providers/categories — public, active categories only. No
+ * @PreAuthorize on the backend, so this works whether or not a token is
+ * attached.
  */
-export async function getServiceCatalog(
-    category: ServiceCategoryKey,
-): Promise<ServiceCatalogItem[]> {
+export async function getCategories(): Promise<CategoryDTO[]> {
+    const { data } = await api.get<CategoryDTO[]>("/providers/categories");
+    return data;
+}
+
+/**
+ * GET /providers/catalog?categoryId=X — no @PreAuthorize on the backend, so
+ * this works whether or not a token is attached. categoryId is a real FK
+ * now, so the backend does an exact join — no name/key matching involved.
+ */
+export async function getServiceCatalog(categoryId: number): Promise<ServiceCatalogItem[]> {
     const { data } = await api.get<ServiceCatalogItem[]>("/providers/catalog", {
-        params: { category },
+        params: { categoryId },
     });
     return data;
 }
