@@ -12,7 +12,7 @@ import com.servicelink.core.dto.response.provider.*;
 import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
 import com.servicelink.core.dto.response.provider.service.CategoryDTO;
 import com.servicelink.core.dto.response.provider.service.ServiceCatalogDTO;
-import com.servicelink.core.model.common.ServiceCategory;
+//import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.service.provider.ProviderProfileService;
 import com.servicelink.core.dto.response.provider.onboarding.OnboardingStatusDTO;
@@ -44,12 +44,12 @@ public class ProviderController {
 
     @GetMapping
     public ResponseEntity<Page<ProviderProfileDTO>> getAllProviders(
-            @RequestParam(required = false) ServiceCategory category,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size) {
 
         return ResponseEntity.ok(
-                providerProfileService.getAllPublicProviders(category, PageRequest.of(page, size)));
+                providerProfileService.getAllPublicProviders(categoryId, PageRequest.of(page, size)));
     }
 
     @GetMapping("/{id}")

@@ -30,11 +30,23 @@ export default function CheckStatusModal({ onClose, onValidReference }: CheckSta
             // here in the modal instead, with a chance to correct a typo.
             await kycApi.getKycStatusByReference(ref);
             onValidReference(ref);
-        } catch (err) {
+        } catch (err: any) {
+        console.error("KYC status lookup failed:", err);
+
+        if (err?.response?.status === 404) {
             setError("We couldn't find an application with that reference number. Please check and try again.");
-        } finally {
-            setChecking(false);
+        } else if (err?.response) {
+            // Server responded, but with something other than 404 — a real backend problem
+            setError("Something went wrong on our end. Please try again in a moment.");
+        } else if (err?.request) {
+            // Request went out but no response came back — network/CORS
+            setError("Couldn't reach the server. Check your connection and try again.");
+        } else {
+            // Thrown before the request even completed — e.g. assertKycStatusResponse
+            // in kycApi rejecting a malformed-but-200 payload
+            setError("Something went wrong checking your status. Please try again.");
         }
+    }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

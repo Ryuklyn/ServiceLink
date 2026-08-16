@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { X, FileDown, ShieldCheck } from "lucide-react";
 import ReceiptContent from "./ReceiptContent";
 import { generateReceiptPDF } from "./ReceiptPDF";
+import type { KycStatus } from "@/lib/api/kycApi";
 
 interface ReceiptModalProps {
     onClose: () => void;
@@ -12,7 +13,7 @@ interface ReceiptModalProps {
     formattedTime: string;
     applicantName: string;
     applicantEmail: string;
-    status: "PENDING" | "APPROVED" | "REJECTED";
+    status: KycStatus;
 }
 
 export default function ReceiptModal({

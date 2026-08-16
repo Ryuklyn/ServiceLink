@@ -69,7 +69,8 @@ export interface ProviderProfile {
     profilePictureUrl?: string | null;
     email?: string | null;
 
-    primaryService?: string;
+    primaryCategoryId?: number;      // was: primaryService?: string;
+    primaryCategoryName?: string;    // ← new
     otherService?: string | null;
     certifiedCategories?: string | null;
     experienceYears?: number | null;
@@ -81,7 +82,7 @@ export interface ProviderProfile {
 
     baseDistrict?: string | null;
     serviceAreaText?: string | null;
-    coveredDistricts?: string | null; // comma-separated, per UpdateProviderProfileDTO
+    coveredDistricts?: string | null;
     latitude?: number | null;
     longitude?: number | null;
     travelRadiusKm?: number | null;
@@ -103,7 +104,6 @@ export interface ProviderProfile {
     recentReviews?: unknown[];
     certifiedCategoryIds?: number[];
 }
-
 export interface ProviderProfileUpdatePayload {
     businessName?: string;
     bio?: string;

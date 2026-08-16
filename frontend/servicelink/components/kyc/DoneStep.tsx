@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Clipboard, ClipboardCheck, ArrowRight, Eye, Download, RotateCcw, AlertTriangle } from "lucide-react";
 import ReceiptModal from "./ReceiptModal";
-import { kycApi, PublicKycStatusResponse } from "@/lib/api/kycApi";
+import { kycApi, PublicKycStatusResponse, KycStatus } from "@/lib/api/kycApi";
 
 interface DoneStepProps {
   onRestart?: () => void;
-  allData?: Record<string, any>;
+  allData?: Record<string, unknown>;
   referenceNumber?: string | null;
 }
 
@@ -19,6 +19,13 @@ const STATUS_META = {
     headerText: "Application Submitted",
     headerAccent: "Successfully",
     subtext: "Your KYC verification documentation has been securely indexed.",
+  },
+  UNDER_REVIEW: {
+    badgeLabel: "Under Review",
+    dotClass: "bg-amber-400 animate-ping",
+    headerText: "Application",
+    headerAccent: "Under Review",
+    subtext: "Our team is reviewing your submitted documents.",
   },
   APPROVED: {
     badgeLabel: "Approved",
@@ -34,12 +41,11 @@ const STATUS_META = {
     headerAccent: "Rejected",
     subtext: "Your application needs attention. See notes below.",
   },
-} as const;
+} as const satisfies Record<KycStatus, unknown>;
 
-type Status = keyof typeof STATUS_META;
-
-const STEP_INDEX: Record<Status, number> = {
+const STEP_INDEX: Record<KycStatus, number> = {
   PENDING: 1,
+  UNDER_REVIEW: 2,
   APPROVED: 3,
   REJECTED: 1,
 };
@@ -51,12 +57,21 @@ export default function DoneStep({ onRestart, allData, referenceNumber }: DoneSt
   const [copied, setCopied] = useState(false);
 
   const [statusData, setStatusData] = useState<PublicKycStatusResponse | null>(null);
-  const [statusLoading, setStatusLoading] = useState(true);
+  // Initial value is derived from the referenceNumber prop (the only thing we
+  // know on first render — statusData is always null at that point), so the
+  // effect below never needs to synchronously flip this in the "no ref"
+  // branch. Avoids react-hooks/set-state-in-effect.
+  const [statusLoading, setStatusLoading] = useState<boolean>(() => Boolean(referenceNumber));
   const [statusError, setStatusError] = useState(false);
 
-  // No more fake fallback ref. If we don't have a real reference, displayRef is null.
+  // No fake fallback ref. If we don't have a real reference, displayRef is null.
   const displayRef = statusData?.referenceNumber || referenceNumber || null;
-  const submittedAt = useRef(new Date());
+
+  // Lazily-initialized state (computed once, on mount) instead of a ref —
+  // reading ref.current during render is unsafe (react-hooks/refs). This
+  // only matters as a fallback for the rare case statusData.submittedAt
+  // hasn't loaded yet.
+  const [fallbackSubmittedAt] = useState(() => new Date());
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 100);
@@ -65,12 +80,19 @@ export default function DoneStep({ onRestart, allData, referenceNumber }: DoneSt
 
   useEffect(() => {
     if (!displayRef) {
-      setStatusLoading(false);
-      return; // never poll a reference number we made up
+      // Initial statusLoading state already accounts for "no reference to
+      // poll" — nothing to set here.
+      return;
     }
 
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting
+    // loading/error state at the start of a fetch is unavoidable here: the
+    // fetch is inherently async, so something must flip "loading" on before
+    // the promise resolves. This isn't the derived-state anti-pattern the
+    // rule targets.
     setStatusLoading(true);
+    setStatusError(false);
 
     kycApi.getKycStatusByReference(displayRef)
         .then((data) => {
@@ -93,25 +115,36 @@ export default function DoneStep({ onRestart, allData, referenceNumber }: DoneSt
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const submittedDate = statusData?.submittedAt ? new Date(statusData.submittedAt) : submittedAt.current;
-
-  const formattedDate = submittedDate.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-
-  const formattedTime = submittedDate.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const applicantName = allData?.personal?.fullName || "—";
-  const applicantEmail = allData?.personal?.email || "—";
-
-  const currentStatus: Status = (statusData?.status as Status) || "PENDING";
+  // kycApi validates the response shape at the network boundary (throws on a
+  // bad payload instead of resolving), but that guard doesn't survive the
+  // TypeScript compile step for callers — a stale cached value, a future
+  // refactor of kycApi, or a change to STATUS_META keys could all reintroduce
+  // a mismatch. `in STATUS_META` keeps this component safe even if any of
+  // those upstream guarantees ever slip.
+  const currentStatus: KycStatus =
+      statusData?.status && statusData.status in STATUS_META
+          ? statusData.status
+          : "PENDING";
   const meta = STATUS_META[currentStatus];
   const activeStep = STEP_INDEX[currentStatus];
+
+  const submittedDate = statusData?.submittedAt ? new Date(statusData.submittedAt) : fallbackSubmittedAt;
+  const isValidSubmittedDate = !isNaN(submittedDate.getTime());
+
+  const formattedDate = isValidSubmittedDate
+      ? submittedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+      : "—";
+
+  const formattedTime = isValidSubmittedDate
+      ? submittedDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+      : "—";
+
+  // Prefer server-confirmed applicant details (durable, correct on refresh/
+  // shared links) and fall back to in-memory form state (only present if the
+  // user is still in the same session that just submitted).
+  const personalData = allData?.personal as { fullName?: string; email?: string } | undefined;
+  const applicantName = statusData?.fullName || personalData?.fullName || "—";
+  const applicantEmail = statusData?.email || personalData?.email || "—";
 
   const steps = [
     { label: "Submitted", sub: "Logs Captured" },
@@ -121,9 +154,6 @@ export default function DoneStep({ onRestart, allData, referenceNumber }: DoneSt
   ];
 
   // ── Missing reference state ────────────────────────────────────────────────
-  // This replaces the old silent fake-reference fallback. If we truly have no
-  // reference number (not in props, not in Redux/localStorage), show this
-  // instead of guessing.
   if (!displayRef) {
     return (
         <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center px-4 py-6 sm:py-12 font-sans antialiased">
@@ -131,7 +161,7 @@ export default function DoneStep({ onRestart, allData, referenceNumber }: DoneSt
             <div className="w-12 h-12 mx-auto rounded-full bg-amber-100 flex items-center justify-center mb-4">
               <AlertTriangle className="w-6 h-6 text-amber-600" />
             </div>
-            <h1 className="text-lg font-bold text-slate-800 mb-2">We couldn't find your submission reference</h1>
+            <h1 className="text-lg font-bold text-slate-800 mb-2">We couldn&apos;t find your submission reference</h1>
             <p className="text-sm text-slate-500 mb-6">
               This can happen if the page was refreshed before your reference number loaded.
               Check your confirmation email, or restart your application below.
@@ -196,7 +226,7 @@ export default function DoneStep({ onRestart, allData, referenceNumber }: DoneSt
 
             {statusError && (
                 <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-700">
-                  Couldn't refresh live status — showing your submission details. Pull to refresh or check back shortly.
+                  Couldn&apos;t refresh live status — showing your submission details. Pull to refresh or check back shortly.
                 </div>
             )}
 
@@ -259,9 +289,9 @@ export default function DoneStep({ onRestart, allData, referenceNumber }: DoneSt
               <p className="text-[10px] uppercase font-extrabold tracking-widest text-[#1e3a8a] mb-4 text-center sm:text-left">Verification Journey Map</p>
 
               <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 relative">
-                <div className="hidden sm:block absolute left-4 right-4 top-[15px] h-[2px] bg-slate-200 z-0" />
+                <div className="hidden sm:block absolute left-4 right-4 top-3.75 h-0.5 bg-slate-200 z-0" />
                 <div
-                    className="hidden sm:block absolute left-4 top-[15px] h-[2px] bg-[#1e3a8a] z-0 transition-all duration-500"
+                    className="hidden sm:block absolute left-4 top-3.75 h-0.5 bg-[#1e3a8a] z-0 transition-all duration-500"
                     style={{ width: `${(activeStep / (steps.length - 1)) * 75}%` }}
                 />
 
@@ -305,13 +335,7 @@ export default function DoneStep({ onRestart, allData, referenceNumber }: DoneSt
                   View Receipt
                 </button>
                 <button
-                    onClick={() => {
-                      setShowModal(true);
-                      setTimeout(() => {
-                        const downloadBtn = document.querySelector('[disabled]:not([className*="opacity-50"])') || document.querySelector('button[className*="bg-[#1e3a8a]"]');
-                        if (downloadBtn) (downloadBtn as HTMLButtonElement).click();
-                      }, 300);
-                    }}
+                    onClick={() => setShowModal(true)}
                     className="w-full border border-slate-300 text-slate-700 bg-white rounded-xl py-2.5 text-xs font-semibold hover:border-[#1e3a8a] hover:bg-slate-50 transition flex items-center justify-center gap-1.5 active:scale-[0.98]"
                 >
                   <Download className="w-4 h-4 text-slate-400" />

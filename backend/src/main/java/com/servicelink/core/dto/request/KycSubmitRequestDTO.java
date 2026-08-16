@@ -24,7 +24,8 @@ public class KycSubmitRequestDTO {
     private String tole;
 
     // Professional
-    private String primaryService;
+//    private String primaryService;
+    private Long primaryCategoryId;
     private String otherService;
     private List<String> additionalServices;
     private Integer experienceYears;

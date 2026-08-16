@@ -11,20 +11,92 @@ export interface KycSubmitResponse {
   message: string;
 }
 
+export const KYC_STATUSES = ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"] as const;
+export type KycStatus = (typeof KYC_STATUSES)[number];
+
+// Authenticated status shape — tied to a real session (provider token or
+// login), so it's safe to include PII here.
 export interface KycStatusResponse {
   referenceNumber: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  status: KycStatus;
   submittedAt: string;
   reviewedAt: string | null;
   reviewNotes: string | null;
-  fullName: string;  // NEW
-  email: string;     // NEW
+  fullName: string;
+  email: string;
 }
 
-// Public, token-independent status shape — same fields as KycStatusResponse,
-// kept as a separate type in case the backend intentionally omits fields
-// (e.g. reviewNotes) from the public endpoint later.
-export type PublicKycStatusResponse = KycStatusResponse;
+// Public, token-independent status shape. Deliberately narrower than
+// KycStatusResponse — this endpoint is queryable by anyone holding a
+// reference number string, with no auth, so the backend correctly omits
+// PII (fullName, email) from it. Callers (DoneStep, the receipt views)
+// already fall back to locally-held form data when these are absent.
+export interface PublicKycStatusResponse {
+  referenceNumber: string;
+  status: KycStatus;
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  fullName?: string;
+  email?: string;
+}
+
+// ─── Runtime validation ────────────────────────────────────────────────────────
+// TypeScript's generic on axios.get<T>() is a compile-time-only assertion —
+// it does not validate the response body. Without this check, a backend typo,
+// a new status value, or a malformed payload would silently produce an object
+// that TypeScript believes matches the response type but doesn't, and the
+// failure would only surface downstream (e.g. STATUS_META[currentStatus]
+// being undefined in DoneStep). Fail fast at the API boundary instead.
+//
+// Two separate checks because the two endpoints have genuinely different
+// contracts: the authenticated endpoint always includes PII, the public one
+// deliberately may not. Validating the public response against the stricter
+// (PII-required) shape is what caused it to falsely reject a real,
+// well-formed "UNDER_REVIEW" response — the fields it flagged as missing
+// were never supposed to be there in the first place.
+function hasCommonFields(data: any): boolean {
+  return (
+      !!data &&
+      typeof data.referenceNumber === "string" &&
+      typeof data.status === "string" &&
+      (KYC_STATUSES as readonly string[]).includes(data.status) &&
+      typeof data.submittedAt === "string"
+  );
+}
+
+function isValidKycStatusResponse(data: any): data is KycStatusResponse {
+  return (
+      hasCommonFields(data) &&
+      typeof data.fullName === "string" &&
+      typeof data.email === "string"
+  );
+}
+
+function isValidPublicKycStatusResponse(data: any): data is PublicKycStatusResponse {
+  // fullName/email are optional here — only type-check them if present.
+  return (
+      hasCommonFields(data) &&
+      (data.fullName === undefined || typeof data.fullName === "string") &&
+      (data.email === undefined || typeof data.email === "string")
+  );
+}
+
+function assertKycStatusResponse(data: any): asserts data is KycStatusResponse {
+  if (!isValidKycStatusResponse(data)) {
+    throw new Error(
+        `Invalid KYC status response from API: ${JSON.stringify(data)}`
+    );
+  }
+}
+
+function assertPublicKycStatusResponse(data: any): asserts data is PublicKycStatusResponse {
+  if (!isValidPublicKycStatusResponse(data)) {
+    throw new Error(
+        `Invalid public KYC status response from API: ${JSON.stringify(data)}`
+    );
+  }
+}
 
 // ─── KYC API ──────────────────────────────────────────────────────────────────
 export interface KycSubmitPayload {
@@ -39,7 +111,8 @@ export interface KycSubmitPayload {
   municipality?: string;
   ward?: string;
   tole?: string;
-  primaryService?: string;
+  // primaryService?: string;
+  primaryCategoryId?: number;
   otherService?: string;
   additionalServices?: string[];
   experienceYears?: number;
@@ -70,21 +143,25 @@ export const kycApi = {
 
   // Token-based status — works for logged-in users, or applicants still
   // within their 15-minute provider-token window. Kept for future use
-  // (e.g. a logged-in "My Applications" dashboard).
+  // (e.g. a logged-in "My Applications" dashboard). Includes PII since the
+  // caller is authenticated.
   getKycStatus: async (): Promise<KycStatusResponse> => {
     const { data } = await statusClient.get<KycStatusResponse>("/kyc/status");
+    assertKycStatusResponse(data);
     return data;
   },
 
   // Token-independent status lookup by reference number. Used by the
-  // post-submission confirmation page (DoneStep) and the receipt view,
-  // which must keep working long after the applicant's short-lived
-  // provider token has expired.
+  // post-submission confirmation page (DoneStep), the receipt view, and
+  // CheckStatusModal — all of which must keep working long after the
+  // applicant's short-lived provider token has expired, and none of which
+  // are authenticated, so PII is intentionally not guaranteed here.
   getKycStatusByReference: async (referenceNumber: string): Promise<PublicKycStatusResponse> => {
     const { data } = await publicClient.get<PublicKycStatusResponse>(
         "/kyc/status/by-reference",
         { params: { ref: referenceNumber } }
     );
+    assertPublicKycStatusResponse(data);
     return data;
   },
 };

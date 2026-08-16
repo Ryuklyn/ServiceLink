@@ -10,7 +10,9 @@ import {
 import { useState } from "react";
 import { kycApi } from "@/lib/api/kycApi";
 import type { KycSubmitResponse, KycSubmitPayload  } from "@/lib/api/kycApi";
-import { toBackendServiceCategory } from "@/lib/constants/serviceCategory";
+// import { toBackendServiceCategory } from "@/lib/constants/serviceCategory";
+
+
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -156,9 +158,9 @@ function buildKycPayload(allData: AllData, draftSessionId?: string | null): KycS
     ward: personal.currentAddress?.ward,
     tole: personal.currentAddress?.tole,
     // primaryService: professional.primaryService,
-    primaryService: toBackendServiceCategory(
-        professional.primaryService
-    ),
+    primaryCategoryId: professional.primaryService
+        ? Number(professional.primaryService)
+        : undefined,
     otherService: professional.otherService,
     additionalServices: professional.additionalServices ?? [],
     experienceYears: professional.experienceYears,

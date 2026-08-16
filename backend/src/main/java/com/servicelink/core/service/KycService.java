@@ -13,11 +13,13 @@ import com.servicelink.core.model.auth.AuthProvider;
 import com.servicelink.core.model.common.KycSubmission;
 import com.servicelink.core.model.common.KycStatus;
 import com.servicelink.core.model.provider.Provider;
+import com.servicelink.core.model.provider.service.Category;
 import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.KycRepository;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.UserRepository;
+import com.servicelink.core.repository.provider.service.CategoryRepository;
 import com.servicelink.core.storage.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -42,6 +44,7 @@ public class KycService {
     private static final Logger log = LoggerFactory.getLogger(KycService.class);
 
     private final KycRepository          kycRepository;
+    private final CategoryRepository categoryRepository;
     private final UserRepository         userRepository;
     private final ProviderRepository     providerRepository;
     private final SupabaseStorageService storageService;
@@ -77,6 +80,7 @@ public class KycService {
             KycSubmitRequestDTO dto,
             String applicantIdentifier
     ) {
+        Category primaryCategory = resolveActiveCategory(dto.getPrimaryCategoryId());
 
         Optional<User> userOpt = userRepository.findByEmail(applicantIdentifier);
 
@@ -118,6 +122,18 @@ public class KycService {
         log.info("Returned reference = {}", response.getReferenceNumber());
 
         return response;
+    }
+
+    private Category resolveActiveCategory(Long categoryId) {
+        if (categoryId == null) {
+            throw new IllegalArgumentException("Primary service category is required.");
+        }
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Selected primary category does not exist."));
+        if (!Boolean.TRUE.equals(category.getIsActive())) {
+            throw new IllegalArgumentException("Selected primary category is no longer active.");
+        }
+        return category;
     }
 
     // ─── Admin Infrastructure ─────────────────────────────────────────────────
@@ -169,10 +185,10 @@ public class KycService {
 
         User user = resolveOrCreateProviderUser(submission, submission.getApplicantIdentifier());
 
-        Provider provider = Provider.builder()
-                .user(user)
-                .build();
-        provider.syncFromKyc(submission);
+        Category primaryCategory = resolveActiveCategory(submission.getPrimaryCategoryId());
+
+        Provider provider = Provider.builder().user(user).build();
+        provider.syncFromKyc(submission, primaryCategory);
 
         provider.setEmail(user.getEmail());
         provider.setBaseDistrict(submission.getPrimaryDistrict());
@@ -318,8 +334,8 @@ public class KycService {
 
     private String buildCertifiedCategories(KycSubmission submission) {
         Set<String> categories = new LinkedHashSet<>();
-        if (submission.getPrimaryService() != null) {
-            categories.add(submission.getPrimaryService());
+        if (submission.getPrimaryCategoryId() != null) {
+            categories.add(String.valueOf(submission.getPrimaryCategoryId()));
         }
         categories.addAll(kycMapper.fromJson(submission.getAdditionalServices()));
         return String.join(",", categories);

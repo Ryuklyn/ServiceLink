@@ -49,7 +49,9 @@ export default function ProviderDashboardLayout({ children }: { children: React.
             </div>
             {showWizard && (
                 <OnboardingWizard
-                    categories={profile.primaryService ? [profile.primaryService] : []}
+                    categories={profile.primaryCategoryId
+                        ? [{ id: profile.primaryCategoryId, name: profile.primaryCategoryName ?? "" }]
+                        : []}
                     onComplete={() => dispatch(fetchProviderProfile())}
                 />
             )}

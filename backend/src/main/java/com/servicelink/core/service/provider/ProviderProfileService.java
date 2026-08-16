@@ -110,9 +110,9 @@ public class ProviderProfileService {
      * migration. See class-level notes if/when that gets unified.
      */
     @Transactional(readOnly = true)
-    public Page<ProviderProfileDTO> getAllPublicProviders(ServiceCategory category, Pageable pageable) {
-        Page<Provider> providers = (category != null)
-                ? providerRepo.findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(category, pageable)
+    public Page<ProviderProfileDTO> getAllPublicProviders(Long primaryCategoryId, Pageable pageable) {
+        Page<Provider> providers = (primaryCategoryId != null)
+                ? providerRepo.findByPrimaryCategory_IdAndIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(primaryCategoryId, pageable)
                 : providerRepo.findByIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(pageable);
 
         return providers.map(p -> {
@@ -781,7 +781,7 @@ public class ProviderProfileService {
 
                     return ReferralHistoryDTO.builder()
                             .name(p.getFullName())
-                            .category(p.getPrimaryService() != null ? p.getPrimaryService().name() : "UNKNOWN")
+                            .category(p.getPrimaryCategory() != null ? p.getPrimaryCategory().getName() : "UNKNOWN")
                             .joinedDate(p.getMemberSince())
                             .kycStatus(kycStatus)
                             .paymentStatus(paymentStatus)

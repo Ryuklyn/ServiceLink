@@ -54,7 +54,9 @@ public class KycSubmission {
     private String tole;
 
     // ── Professional ──────────────────────────────────────────────────────────
-    private String primaryService;
+//    private String primaryService;
+    @Column(name = "primary_category_id")
+    private Long primaryCategoryId;
     private String otherService;
 
     @Column(columnDefinition = "TEXT")

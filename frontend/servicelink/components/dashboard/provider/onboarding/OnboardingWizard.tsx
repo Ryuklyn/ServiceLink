@@ -21,7 +21,7 @@ const STEP_ORDER = ["welcome", "services", "referral"] as const;
 
 interface OnboardingWizardProps {
     // category: string;
-    categories: string[];
+    categories: { id: number; name: string }[];
     /** Called once the parent should re-check hasCompletedOnboarding (layout owns that fetch). */
     onComplete: () => void;
 }

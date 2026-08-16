@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import type { KycStatus } from "@/lib/api/kycApi";
 
 interface ReceiptContentProps {
     referenceNumber: string;
@@ -9,15 +10,19 @@ interface ReceiptContentProps {
     formattedTime: string;
     applicantName: string;
     applicantEmail: string;
-    status: "PENDING" | "APPROVED" | "REJECTED";
+    status: KycStatus;
     reviewNotes?: string | null;
 }
 
+// `satisfies Record<KycStatus, ...>` makes this a compile error (not a
+// runtime undefined.title crash) the next time a status is added to
+// KycStatus without a matching entry here.
 const STATUS_CONFIG = {
-    PENDING:  { label: "Under Review", title: "Submitted successfully", color: "#047857", bg: "#d1fae5", border: "#a7f3d0" },
-    APPROVED: { label: "Approved",     title: "Application approved",   color: "#047857", bg: "#d1fae5", border: "#a7f3d0" },
-    REJECTED: { label: "Rejected",     title: "Application rejected",   color: "#b91c1c", bg: "#fee2e2", border: "#fecaca" },
-} as const;
+    PENDING:       { label: "Under Review", title: "Submitted successfully",  color: "#047857", bg: "#d1fae5", border: "#a7f3d0" },
+    UNDER_REVIEW:  { label: "Under Review", title: "Currently under review",  color: "#b45309", bg: "#fef3c7", border: "#fde68a" },
+    APPROVED:      { label: "Approved",     title: "Application approved",    color: "#047857", bg: "#d1fae5", border: "#a7f3d0" },
+    REJECTED:      { label: "Rejected",     title: "Application rejected",    color: "#b91c1c", bg: "#fee2e2", border: "#fecaca" },
+} as const satisfies Record<KycStatus, { label: string; title: string; color: string; bg: string; border: string }>;
 
 export default function ReceiptContent({
                                            referenceNumber,
@@ -29,13 +34,14 @@ export default function ReceiptContent({
                                            reviewNotes,
                                        }: ReceiptContentProps) {
 
-    const qrValue = JSON.stringify({
-        ref: referenceNumber,
-        name: applicantName,
-        date: `${formattedDate} ${formattedTime}`,
-        verifiedBy: "ServiceLink Core Engine",
-        status,
-    });
+    // Computed client-side only — window isn't available during SSR/RSC render.
+    const [origin, setOrigin] = useState("");
+
+    useEffect(() => {
+        setOrigin(window.location.origin);
+    }, []);
+
+    const qrValue = origin ? `${origin}/verify/${referenceNumber}` : "";
 
     const statusConfig = STATUS_CONFIG[status];
     const isApproved = status === "APPROVED";
@@ -171,12 +177,16 @@ export default function ReceiptContent({
                 <div className="text-center sm:text-left">
                     <p className="text-xs font-semibold text-slate-700">Thank you for choosing ServiceLink.</p>
                     <p className="text-[11px] text-slate-400 mt-1 max-w-sm leading-relaxed">
-                        This auto-generated receipt is a cryptographically trackable registration statement. For immediate issues, write directly to support@servicelink.com.
+                        This auto-generated receipt is a trackable registration statement. For immediate issues, write directly to support@servicelink.com.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-xl p-3 shrink-0" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                    <QRCodeSVG value={qrValue} size={64} level="M" includeMargin={false} />
+                    {qrValue ? (
+                        <QRCodeSVG value={qrValue} size={64} level="M" includeMargin={false} />
+                    ) : (
+                        <div className="w-16 h-16 rounded-md animate-pulse" style={{ backgroundColor: "#e2e8f0" }} />
+                    )}
                     <div className="text-left">
                         <span className="text-[10px] uppercase font-bold text-[#1e3a8a] tracking-wider block" style={{ color: "#1e3a8a" }}>Digital Verification</span>
                         <span className="text-[9px] text-slate-400 block mt-0.5 max-w-[120px] leading-tight">Scan with any standard device to verify token status.</span>

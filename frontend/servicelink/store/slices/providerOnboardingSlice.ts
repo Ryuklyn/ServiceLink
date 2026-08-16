@@ -16,10 +16,9 @@ interface ProviderOnboardingState {
     currentStep: OnboardingStep;
     history: OnboardingStep[];
     status: OnboardingStatus | null;
-    // catalog: CatalogItem[];
-    catalogByCategory: Record<string, CatalogItem[]>;
+    catalogByCategory: Record<number, CatalogItem[]>;   // was Record<string, ...>
     selections: Record<number, ProviderServiceSelection>;
-    hasSeenOnboarding: boolean; // persisted flag - true once wizard is fully finished
+    hasSeenOnboarding: boolean;
     loadingStatus: boolean;
     loadingCatalog: boolean;
     savingServices: boolean;
@@ -60,14 +59,13 @@ export const fetchOnboardingStatus = createAsyncThunk<
 });
 
 export const fetchCatalog = createAsyncThunk<
-    { category: string; items: CatalogItem[] },
-    string,
+{ categoryId: number; items: CatalogItem[] },
+number,
 { rejectValue: string }
->("providerOnboarding/fetchCatalog", async (category, { rejectWithValue }) => {
+>("providerOnboarding/fetchCatalog", async (categoryId, { rejectWithValue }) => {
     try {
-        // return await onboardingApi.getCatalog(category);
-        const items = await onboardingApi.getCatalog(category);
-        return { category, items };
+        const items = await onboardingApi.getCatalog(categoryId);
+        return { categoryId, items };
     } catch (err: any) {
         return rejectWithValue(
             err?.response?.data?.message ?? err?.message ?? "Couldn't load services for your category.",
@@ -201,7 +199,7 @@ const providerOnboardingSlice = createSlice({
             //     state.loadingCatalog = false;
             // })
             .addCase(fetchCatalog.fulfilled, (state, action) => {
-                state.catalogByCategory[action.payload.category] = action.payload.items;
+                state.catalogByCategory[action.payload.categoryId] = action.payload.items;
                 state.loadingCatalog = false;
             })
             .addCase(fetchCatalog.rejected, (state, action) => {

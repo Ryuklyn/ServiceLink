@@ -2,7 +2,8 @@ package com.servicelink.core.model.provider;
 
 import com.servicelink.core.model.common.KycStatus;
 import com.servicelink.core.model.common.KycSubmission;
-import com.servicelink.core.model.common.ServiceCategory;
+//import com.servicelink.core.model.common.ServiceCategory;
+import com.servicelink.core.model.provider.service.Category;
 import com.servicelink.core.model.provider.portfolio.Portfolio;
 import com.servicelink.core.model.provider.portfolio.PortfolioMedia;
 import com.servicelink.core.model.provider.review.Review;
@@ -44,9 +45,12 @@ public class Provider {
     @Column(name = "email", nullable = false)
     private String email;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "primary_service", nullable = false)
-    private ServiceCategory primaryService;
+//    @Enumerated(EnumType.STRING)
+//    @Column(name = "primary_service", nullable = false)
+//    private ServiceCategory primaryService;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "primary_category_id", nullable = false)
+    private Category primaryCategory;
 
     @Column(name = "certified_categories", columnDefinition = "TEXT")
     private String certifiedCategories;
@@ -161,44 +165,19 @@ public class Provider {
     }
 
 
-    public void syncFromKyc(KycSubmission kyc) {
+    public void syncFromKyc(KycSubmission kyc, Category primaryCategory) {
         this.kycSubmission = kyc;
         this.fullName = kyc.getFullName();
         this.phone = kyc.getPhone();
-
-        // The KYC form now sends the admin-created Category's numeric id
-        // (e.g. "3") as primaryService instead of a legacy enum key (e.g.
-        // "ELECTRICIAN"). ServiceCategory.valueOf() throws on the former, so
-        // this is now guarded — legacy enum-key submissions still populate
-        // this field as before; new categoryId-based submissions simply
-        // don't touch it (getCertifiedCategoryIds() below is the source of
-        // truth for those going forward).
-        try {
-            this.primaryService = ServiceCategory.valueOf(kyc.getPrimaryService());
-        } catch (IllegalArgumentException | NullPointerException ignored) {
-            // Not a legacy enum key — expected for new categoryId-based submissions.
-        }
-
+        this.primaryCategory = primaryCategory;
         this.otherService = kyc.getOtherService();
         this.experienceYears = kyc.getExperienceYears();
         this.bio = kyc.getBio();
         this.isVerified = kyc.getStatus() == KycStatus.APPROVED;
 
-        // Business name isn't a KYC concept — default to legal name, never
-        // overwrite a value the provider has already customized.
-        if (this.businessName == null) {
-            this.businessName = kyc.getFullName();
-        }
-
-        // Service area — genuinely sourced from KYC, same guard logic: only
-        // seed on first sync, don't clobber a provider's later Settings edits
-        // if syncFromKyc is ever re-run (re-verification, admin correction).
-        if (this.baseDistrict == null) {
-            this.baseDistrict = kyc.getPrimaryDistrict();
-        }
-        if (this.coveredDistricts == null) {
-            this.coveredDistricts = kyc.getSecondaryDistricts();
-        }
+        if (this.businessName == null) this.businessName = kyc.getFullName();
+        if (this.baseDistrict == null) this.baseDistrict = kyc.getPrimaryDistrict();
+        if (this.coveredDistricts == null) this.coveredDistricts = kyc.getSecondaryDistricts();
     }
 
     /**
@@ -294,9 +273,9 @@ public class Provider {
                 .collect(Collectors.toList());
     }
 
-    public List<Portfolio> getPortfolioByCategory(ServiceCategory category) {
+    public List<Portfolio> getPortfolioByCategory(Category category) {
         return portfolio.stream()
-                .filter(p -> category.name().equals(p.getServiceCategory()))
+                .filter(p -> category.getName().equalsIgnoreCase(p.getServiceCategory()))
                 .collect(Collectors.toList());
     }
 

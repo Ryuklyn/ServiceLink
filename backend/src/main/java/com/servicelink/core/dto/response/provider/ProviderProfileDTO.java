@@ -2,7 +2,6 @@ package com.servicelink.core.dto.response.provider;
 
 import com.servicelink.core.dto.response.provider.portfolio.PortfolioResponseDTO;
 import com.servicelink.core.dto.response.provider.service.ProviderServiceDTO;
-import com.servicelink.core.model.common.ServiceCategory;
 import lombok.Builder;
 import lombok.Data;
 
@@ -22,7 +21,9 @@ public class ProviderProfileDTO {
     private String bio;
     private String profilePictureUrl;
 
-    private ServiceCategory primaryService;
+//    private ServiceCategory primaryService;
+    private Long   primaryCategoryId;
+    private String primaryCategoryName;
     private List<Long> certifiedCategoryIds;
     private String          otherService;
     private String certifiedCategories;

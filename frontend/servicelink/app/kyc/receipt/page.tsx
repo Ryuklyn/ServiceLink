@@ -5,23 +5,25 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 import ReceiptContent from "@/components/kyc/ReceiptContent";
 import { generateReceiptPDF } from "@/components/kyc/ReceiptPDF";
-
-type Status = "PENDING" | "APPROVED" | "REJECTED";
+import { KycStatus } from "@/lib/api/kycApi";
 
 interface KycStatusResponse {
     referenceNumber: string;
-    status: Status;
+    status: KycStatus;
     submittedAt: string;
     reviewedAt: string | null;
     reviewNotes: string | null;
+    fullName: string;
+    email: string;
 }
 
 function ReceiptPageCore() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    const applicantName = searchParams.get("name") || "—";
-    const applicantEmail = searchParams.get("email") || "—";
+    // Fallback only — server-confirmed fullName/email (once loaded) take priority.
+    const fallbackName = searchParams.get("name") || "—";
+    const fallbackEmail = searchParams.get("email") || "—";
 
     const [statusData, setStatusData] = useState<KycStatusResponse | null>(null);
     const [loadingStatus, setLoadingStatus] = useState(true);
@@ -33,7 +35,7 @@ function ReceiptPageCore() {
 
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/kyc/status`, {
             headers: providerToken ? { "X-Provider-Token": providerToken } : {},
-            credentials: "include", // JWT session cookie भएको खण्डमा पनि काम गर्छ
+            credentials: "include", // works even when a JWT session cookie is present
         })
             .then((res) => {
                 if (!res.ok) throw new Error("Failed to fetch status");
@@ -65,18 +67,18 @@ function ReceiptPageCore() {
     }
 
     const submittedDate = new Date(statusData.submittedAt);
+    const isValidSubmittedDate = !isNaN(submittedDate.getTime());
 
-    const formattedDate = submittedDate.toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    });
+    const formattedDate = isValidSubmittedDate
+        ? submittedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+        : "—";
 
-    const formattedTime = submittedDate.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+    const formattedTime = isValidSubmittedDate
+        ? submittedDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+        : "—";
+
+    const applicantName = statusData.fullName || fallbackName;
+    const applicantEmail = statusData.email || fallbackEmail;
 
     return (
         <div className="min-h-screen bg-slate-100 py-8 px-4">

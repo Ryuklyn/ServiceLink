@@ -22,7 +22,6 @@ export interface CatalogItem {
     basePrice: number;
     pricingUnit?: string | null;
 }
-
 // What gets sent to /providers/me/services/batch
 export interface ProviderServiceSelection {
     catalogId: number;
@@ -38,9 +37,9 @@ export const onboardingApi = {
         return data;
     },
 
-    getCatalog: async (category: string): Promise<CatalogItem[]> => {
+    getCatalog: async (categoryId: number): Promise<CatalogItem[]> => {
         const { data } = await api.get<CatalogItem[]>("/providers/catalog", {
-            params: { category },
+            params: { categoryId },
         });
         return data;
     },

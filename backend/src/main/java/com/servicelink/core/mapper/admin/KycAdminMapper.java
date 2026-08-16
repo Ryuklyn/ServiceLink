@@ -4,6 +4,8 @@ import com.servicelink.core.dto.response.admin.KycAdminDetailDTO;
 import com.servicelink.core.dto.response.admin.KycAdminListItemDTO;
 import com.servicelink.core.mapper.KycMapper;
 import com.servicelink.core.model.common.KycSubmission;
+import com.servicelink.core.model.provider.service.Category;
+import com.servicelink.core.repository.provider.service.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +14,12 @@ import org.springframework.stereotype.Component;
 public class KycAdminMapper {
 
     private final KycMapper kycMapper; // reuses fromJson() for additionalServices / secondaryDistricts / certPaths
+    private final CategoryRepository categoryRepository;
+
+    private String resolvePrimaryServiceName(Long categoryId) {
+        if (categoryId == null) return null;
+        return categoryRepository.findById(categoryId).map(Category::getName).orElse(null);
+    }
 
     public KycAdminListItemDTO toListItem(KycSubmission s) {
         return KycAdminListItemDTO.builder()
@@ -22,7 +30,7 @@ public class KycAdminMapper {
                 .email(s.getEmail())
                 .phone(s.getPhone())
                 .photoUrl(resolvePhotoUrl(s)) // Fixed: Added missing photoUrl mapping
-                .primaryService(s.getPrimaryService())
+                .primaryService(resolvePrimaryServiceName(s.getPrimaryCategoryId()))
                 .status(s.getStatus().name())
                 .submittedAt(s.getSubmittedAt())
                 .build();
@@ -44,7 +52,7 @@ public class KycAdminMapper {
                 .municipality(s.getMunicipality())
                 .ward(s.getWard())
                 .tole(s.getTole())
-                .primaryService(s.getPrimaryService())
+                .primaryService(resolvePrimaryServiceName(s.getPrimaryCategoryId()))
                 .otherService(s.getOtherService())
                 .additionalServices(kycMapper.fromJson(s.getAdditionalServices()))
                 .experienceYears(s.getExperienceYears())

@@ -1,7 +1,7 @@
 package com.servicelink.core.repository.provider;
 
-import com.servicelink.core.model.common.ServiceCategory;
 import com.servicelink.core.model.provider.Provider;
+import com.servicelink.core.model.provider.service.Category;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,18 +17,15 @@ import java.util.Optional;
 public interface ProviderRepository extends JpaRepository<Provider, Long>,
         JpaSpecificationExecutor<Provider> {
 
-    Page<Provider> findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(
-            ServiceCategory category, Pageable pageable);
+    Page<Provider> findByPrimaryCategory_IdAndIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(
+            Long primaryCategoryId, Pageable pageable);
 
     Page<Provider> findByIsVerifiedTrueAndIsActiveTrueAndHasCompletedOnboardingTrueOrderByAverageRatingDesc(
             Pageable pageable);
 
     Optional<Provider> findByPhone(String phone);
     Optional<Provider> findByReferralCode(String referralCode);
-
     Optional<Provider> findByUser_Email(String email);
-
-    // ── Profile fetches ───────────────────────────────────────────────────────
 
     @Query("""
             SELECT DISTINCT p FROM Provider p
@@ -54,37 +51,28 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
             """)
     Optional<Provider> findProfileWithPortfolioById(@Param("id") Long id);
 
-    // ── User account resolution ───────────────────────────────────────────────
-
-    /**
-     * Resolve provider from JWT userId.
-     * Field is `user` (@OneToOne), so Spring Data requires underscore: findByUser_Id.
-     * findByUserId will fail at startup — do not use that form.
-     */
     Optional<Provider> findByUser_Id(Long userId);
-
-    // ── Search: district + category ───────────────────────────────────────────
 
     @Query("""
             SELECT p FROM Provider p
-            WHERE p.primaryService = :category
+            WHERE p.primaryCategory.id = :categoryId
               AND p.baseDistrict = :district
               AND p.isActive = true
               AND p.isVerified = true
             ORDER BY p.averageRating DESC, p.totalJobs DESC
             """)
     List<Provider> findByCategoryAndDistrict(
-            @Param("category") ServiceCategory category,
+            @Param("categoryId") Long categoryId,
             @Param("district") String district);
 
     @Query("""
             SELECT p FROM Provider p
-            WHERE p.primaryService = :category
+            WHERE p.primaryCategory.id = :categoryId
               AND p.isActive = true
               AND p.isVerified = true
             ORDER BY p.averageRating DESC, p.totalJobs DESC
             """)
-    List<Provider> findByCategory(@Param("category") ServiceCategory category);
+    List<Provider> findByCategory(@Param("categoryId") Long categoryId);
 
     @Query("""
             SELECT DISTINCT p FROM Provider p
@@ -97,14 +85,9 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
             """)
     List<Provider> findByCatalogSubService(@Param("catalogId") Long catalogId);
 
-    // ── Online / availability ─────────────────────────────────────────────────
-
     List<Provider> findByBaseDistrictAndIsActiveTrueAndIsOnlineTrue(String baseDistrict);
 
-    List<Provider> findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrue(
-            ServiceCategory primaryService);
-
-    // ── Geospatial ────────────────────────────────────────────────────────────
+    List<Provider> findByPrimaryCategory_IdAndIsVerifiedTrueAndIsActiveTrue(Long primaryCategoryId);
 
     @Query("""
             SELECT p FROM Provider p
@@ -118,13 +101,11 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
             @Param("minLng") Double minLng,
             @Param("maxLng") Double maxLng);
 
-    // ── Paginated / featured ──────────────────────────────────────────────────
-
     Page<Provider> findByIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(
             Pageable pageable);
 
-    Page<Provider> findByPrimaryServiceAndIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(
-            ServiceCategory primaryService, Pageable pageable);
+    Page<Provider> findByPrimaryCategory_IdAndIsVerifiedTrueAndIsActiveTrueOrderByAverageRatingDesc(
+            Long primaryCategoryId, Pageable pageable);
 
     List<Provider> findByReferredById(Long referrerId);
 }
