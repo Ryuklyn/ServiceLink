@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { MeResponse } from "@/lib/api/authApi";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchUser, updateUserLocally } from "@/store/slices/userSlice";
@@ -36,6 +35,10 @@ import {
   FileText,
   Smartphone,
 } from "lucide-react";
+import Link from "next/link";
+import DeleteAccountModal from "@/components/dashboard/user/settings/DeleteAccountModal";
+import TwoFactorSetupModal from "@/components/dashboard/user/settings/TwoFactorSetupModal";
+import DisableTwoFactorModal from "@/components/dashboard/user/settings/DisableTwoFactorModal";
 
 interface SavedAddress {
   id: string;
@@ -68,6 +71,9 @@ export default function SettingsPage() {
   // ── Modal visibility states ──
   const [showAddPhoneModal, setShowAddPhoneModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [showDisable2FAModal, setShowDisable2FAModal] = useState(false);
 
   // ── Flex Token Wallet — reschedule tokens are real; cancellation tokens
   // have no backend yet (no CancelToken entity/endpoint exists), so that
@@ -138,7 +144,14 @@ export default function SettingsPage() {
   );
   const [language, setLanguage] = useState<"ENG" | "NEP">("ENG");
 
-  const [is2FAEnabled, setIs2FAEnabled] = useState(true);
+  // ── 2FA state — hydrated from real user data once it loads, not hardcoded ──
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setIs2FAEnabled((user as any).is2FAEnabled ?? false);
+    }
+  }, [user]);
 
   // ── Helper: initials fallback for avatar ──
   const getInitials = (fullName: string) => {
@@ -374,7 +387,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Cancellation token — NOT wired yet: no CancelToken backend exists.
-                Left static intentionally until that entity/endpoint is built. */}
+                Left static intentionally until that's built. */}
             <div className="bg-[#fff2ee]/60 border border-[#ffe3da] rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-[#fff2ee]/80">
               <div className="w-14 h-14 rounded-full bg-[#ffe3da] flex items-center justify-center text-[#e8683f] shrink-0 shadow-2xs">
                 <Ticket size={24} className="-rotate-45" />
@@ -596,25 +609,28 @@ export default function SettingsPage() {
           </div>
 
           <div className="divide-y divide-gray-50 text-xs font-medium">
-            <button className="w-full flex items-center justify-between py-3.5 px-1 hover:bg-gray-50/70 text-left transition-colors group rounded-xl">
+            <Link
+                href="/dashboard/user/settings/security"
+                className="w-full flex items-center justify-between py-3.5 px-1 hover:bg-gray-50/70 text-left transition-colors group rounded-xl"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 group-hover:bg-slate-100 transition-colors">
                   <Key size={15} />
                 </div>
                 <div className="space-y-0.5">
-                <span className="text-gray-800 font-bold block">
-                  Change Password
-                </span>
+                  <span className="text-gray-800 font-bold block">
+                    Change Password
+                  </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                  Update your master security passphrase regularly
-                </span>
+                    Update your master security passphrase regularly
+                  </span>
                 </div>
               </div>
               <ChevronRight
                   size={14}
                   className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all"
               />
-            </button>
+            </Link>
 
             <button
                 onClick={() => setShowAddPhoneModal(true)}
@@ -625,12 +641,12 @@ export default function SettingsPage() {
                   <Smartphone size={15} />
                 </div>
                 <div className="space-y-0.5">
-                <span className="text-gray-800 font-bold block">
-                  {user?.phoneNumber ? "Update Contact Number" : "Add Contact Number"}
-                </span>
+                  <span className="text-gray-800 font-bold block">
+                    {user?.phoneNumber ? "Update Contact Number" : "Add Contact Number"}
+                  </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                  Modify linked phone for emergency token dynamic alerts
-                </span>
+                    Modify linked phone for emergency token dynamic alerts
+                  </span>
                 </div>
               </div>
               <ChevronRight
@@ -646,22 +662,24 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                  <span className="text-gray-800 font-bold">
-                    Two-Factor Authentication
-                  </span>
+                    <span className="text-gray-800 font-bold">
+                      Two-Factor Authentication
+                    </span>
                     <span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1.5 py-0.5 rounded-md font-bold">
-                    {is2FAEnabled ? "Enabled" : "Disabled"}
-                  </span>
+                      {is2FAEnabled ? "Enabled" : "Disabled"}
+                    </span>
                   </div>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                  Secure login sessions using secondary verification strings
-                </span>
+                    Secure login sessions using secondary verification strings
+                  </span>
                 </div>
               </div>
 
               <button
                   type="button"
-                  onClick={() => setIs2FAEnabled(!is2FAEnabled)}
+                  onClick={() =>
+                      is2FAEnabled ? setShowDisable2FAModal(true) : setShow2FAModal(true)
+                  }
                   className={`relative inline-flex h-[22px] w-10 flex-shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${
                       is2FAEnabled ? "bg-[#1e3a8a]" : "bg-gray-200"
                   }`}
@@ -680,12 +698,12 @@ export default function SettingsPage() {
                   <AlertCircle size={15} />
                 </div>
                 <div className="space-y-0.5">
-                <span className="text-gray-800 font-bold block">
-                  Report an Issue
-                </span>
+                  <span className="text-gray-800 font-bold block">
+                    Report an Issue
+                  </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                  Flag bugs, incorrect metrics, or provider exceptions
-                </span>
+                    Flag bugs, incorrect metrics, or provider exceptions
+                  </span>
                 </div>
               </div>
               <ChevronRight
@@ -700,12 +718,12 @@ export default function SettingsPage() {
                   <HelpCircle size={15} />
                 </div>
                 <div className="space-y-0.5">
-                <span className="text-gray-800 font-bold block">
-                  Contact Support
-                </span>
+                  <span className="text-gray-800 font-bold block">
+                    Contact Support
+                  </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                  Connect with operations teams regarding flex transactions
-                </span>
+                    Connect with operations teams regarding flex transactions
+                  </span>
                 </div>
               </div>
               <ChevronRight
@@ -720,13 +738,13 @@ export default function SettingsPage() {
                   <FileText size={15} />
                 </div>
                 <div className="space-y-0.5">
-                <span className="text-gray-800 font-bold block">
-                  Terms of Service & Privacy Policy
-                </span>
+                  <span className="text-gray-800 font-bold block">
+                    Terms of Service & Privacy Policy
+                  </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                  Review cancellation legalities and account privacy
-                  parameters
-                </span>
+                    Review cancellation legalities and account privacy
+                    parameters
+                  </span>
                 </div>
               </div>
               <ChevronRight
@@ -738,14 +756,17 @@ export default function SettingsPage() {
 
           <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
             <button
-                onClick={logout}   // ✅ ADD THIS — previously had no onClick at all
+                onClick={logout}
                 className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors group"
             >
               <LogOut size={14} className="text-slate-500 group-hover:text-slate-700" />
               <span>Sign Out</span>
             </button>
 
-            <button className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-red-50/40 hover:bg-red-50 text-red-600 border border-transparent hover:border-red-100 font-bold text-xs transition-all group">
+            <button
+                onClick={() => setShowDeleteModal(true)}
+                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-red-50/40 hover:bg-red-50 text-red-600 border border-transparent hover:border-red-100 font-bold text-xs transition-all group"
+            >
               <Trash2 size={14} className="text-red-500" />
               <span>Delete Account</span>
             </button>
@@ -756,7 +777,7 @@ export default function SettingsPage() {
             <EditProfileModal
                 currentName={user?.fullName || ""}
                 currentImage={user?.profileImage || null}
-                userId={user?.id ?? 0}    // 👈 थप्ने
+                userId={user?.id ?? 0}
                 onClose={() => setShowEditProfileModal(false)}
                 onSaved={(data) => {
                   dispatch(updateUserLocally(data));
@@ -766,13 +787,33 @@ export default function SettingsPage() {
 
         {showAddPhoneModal && (
             <AddPhoneModal
+                currentNumber={user?.phoneNumber ?? null}
+                currentVerified={user?.phoneVerified ?? false}
                 onClose={() => setShowAddPhoneModal(false)}
                 onVerified={(verifiedPhone) => {
-                  dispatch(updateUserLocally({         // ✅ Redux dispatch
+                  dispatch(updateUserLocally({
                     phoneNumber: verifiedPhone,
                     phoneVerified: true,
                   }));
                 }}
+            />
+        )}
+
+        {showDeleteModal && (
+            <DeleteAccountModal onClose={() => setShowDeleteModal(false)} />
+        )}
+
+        {show2FAModal && (
+            <TwoFactorSetupModal
+                onClose={() => setShow2FAModal(false)}
+                onEnabled={() => setIs2FAEnabled(true)}
+            />
+        )}
+
+        {showDisable2FAModal && (
+            <DisableTwoFactorModal
+                onClose={() => setShowDisable2FAModal(false)}
+                onDisabled={() => setIs2FAEnabled(false)}
             />
         )}
 

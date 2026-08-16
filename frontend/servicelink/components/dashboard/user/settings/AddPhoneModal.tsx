@@ -7,19 +7,32 @@ import { sendPhoneOtp, verifyPhoneOtpForMe } from "@/lib/api/authApi";
 interface AddPhoneModalProps {
     onClose: () => void;
     onVerified: (phone: string) => void;
+    currentNumber?: string | null;  
+    currentVerified?: boolean;
 }
 
-export default function AddPhoneModal({ onClose, onVerified }: AddPhoneModalProps) {
+export default function AddPhoneModal({
+                                          onClose,
+                                          onVerified,
+                                          currentNumber = null,
+                                          currentVerified = false,
+                                      }: AddPhoneModalProps) {
     const [step, setStep] = useState<"phone" | "otp">("phone");
-    const [phone, setPhone] = useState("+977");
+    const [phone, setPhone] = useState(currentNumber ?? "+977");
     const [otp, setOtp] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const isUpdate = Boolean(currentNumber);
 
     const handleSendOtp = async () => {
         setError(null);
         if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
             setError("Enter a valid phone number, e.g. +9779812345678");
+            return;
+        }
+        if (currentNumber && phone === currentNumber) {
+            setError("This is already your current number");
             return;
         }
         try {
@@ -67,13 +80,26 @@ export default function AddPhoneModal({ onClose, onVerified }: AddPhoneModalProp
 
                 {step === "phone" ? (
                     <>
-                        <h3 className="text-lg font-bold text-gray-900 mb-1">Add Phone Number</h3>
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                            {isUpdate ? "Update Phone Number" : "Add Phone Number"}
+                        </h3>
                         <p className="text-xs text-gray-500 mb-5">
                             We'll send a 6-digit code to this number via WhatsApp.
                         </p>
 
+                        {isUpdate && (
+                            <div className="mb-4 flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5">
+                                <span className="text-xs text-slate-600">{currentNumber}</span>
+                                {currentVerified && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                                        <ShieldCheck size={12} /> Verified
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
                         <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
-                            Phone Number
+                            {isUpdate ? "New Phone Number" : "Phone Number"}
                         </label>
                         <input
                             type="text"

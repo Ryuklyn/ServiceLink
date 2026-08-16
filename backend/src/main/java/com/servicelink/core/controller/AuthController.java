@@ -31,7 +31,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -204,11 +206,27 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
             profile = new UserProfile();
             profile.setUser(user);
         }
+
+        String oldPhone = profile.getPhoneNumber(); // capture BEFORE overwrite — may be null
+
         profile.setPhoneNumber(phone);
         profile.setPhoneVerified(true);
         user.setProfile(profile);
 
         userRepository.save(user);
+
+        // 🔔 Audit alert — fires only when this is an actual CHANGE (old number existed and differs),
+        // not on first-time "Add Contact Number" (oldPhone == null).
+        try {
+            if (oldPhone != null && !oldPhone.isBlank() && !oldPhone.equals(phone)) {
+                String alertText = "Security Alert: A request to change your phone number was initiated. "
+                        + "If this wasn't you, contact support immediately.";
+                phoneOtpService.sendPlainAlert(oldPhone, alertText);
+                emailService.sendPhoneChangedAlert(user.getEmail(), phone);
+            }
+        } catch (Exception ex) {
+            log.warn("Failed to send phone-change audit alert for user {}", user.getId(), ex);
+        }
 
         return ResponseEntity.ok(userMapper.toResponseDTO(user));
     }
@@ -475,5 +493,30 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
                 .refreshToken(refreshToken)
                 .email(user.getEmail())
                 .build();
+    }
+
+    @PostMapping("/2fa/login-verify")
+    public ResponseEntity<AuthResponseDTO> verifyLoginTwoFactor(@RequestBody Map<String, String> body) {
+
+        String preAuthToken = body.get("preAuthToken");
+        String code = body.get("code");
+
+        if (preAuthToken == null || code == null) {
+            throw new IllegalArgumentException("preAuthToken and code are required");
+        }
+
+        return ResponseEntity.ok(authService.completeTwoFactorLogin(preAuthToken, code));
+    }
+
+    @PostMapping("/2fa/login-resend")
+    public ResponseEntity<Map<String, String>> resendLoginTwoFactor(@RequestBody Map<String, String> body) {
+
+        String preAuthToken = body.get("preAuthToken");
+        if (preAuthToken == null) {
+            throw new IllegalArgumentException("preAuthToken is required");
+        }
+
+        authService.resendLoginTwoFactorCode(preAuthToken);
+        return ResponseEntity.ok(Map.of("message", "Code resent"));
     }
 }

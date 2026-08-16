@@ -63,6 +63,7 @@ public class ProviderMapper {
                 .communicationScore(p.getCommunicationScore())
                 .valueScore(p.getValueScore())
                 .memberSince(p.getMemberSince())
+                .kycReferenceNumber(p.getKycSubmission() != null ? p.getKycSubmission().getReferenceNumber() : null)
                 .services(p.getServices().stream().map(this::toProviderServiceDTO).toList())
                 .portfolio(p.getPortfolio().stream().map(this::toPortfolioDTO).toList())
                 .recentReviews(recentReviews)

@@ -5,43 +5,32 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 import ReceiptContent from "@/components/kyc/ReceiptContent";
 import { generateReceiptPDF } from "@/components/kyc/ReceiptPDF";
-import { KycStatus } from "@/lib/api/kycApi";
-
-interface KycStatusResponse {
-    referenceNumber: string;
-    status: KycStatus;
-    submittedAt: string;
-    reviewedAt: string | null;
-    reviewNotes: string | null;
-    fullName: string;
-    email: string;
-}
+import { kycApi, PublicKycStatusResponse } from "@/lib/api/kycApi";
 
 function ReceiptPageCore() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
+    const referenceNumber = searchParams.get("ref");
+
     // Fallback only — server-confirmed fullName/email (once loaded) take priority.
     const fallbackName = searchParams.get("name") || "—";
     const fallbackEmail = searchParams.get("email") || "—";
 
-    const [statusData, setStatusData] = useState<KycStatusResponse | null>(null);
+    const [statusData, setStatusData] = useState<PublicKycStatusResponse | null>(null);
     const [loadingStatus, setLoadingStatus] = useState(true);
     const [fetchError, setFetchError] = useState(false);
 
     useEffect(() => {
-        let cancelled = false;
-        const providerToken = localStorage.getItem("providerToken");
+        if (!referenceNumber) {
+            setFetchError(true);
+            setLoadingStatus(false);
+            return;
+        }
 
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/kyc/status`, {
-            headers: providerToken ? { "X-Provider-Token": providerToken } : {},
-            credentials: "include", // works even when a JWT session cookie is present
-        })
-            .then((res) => {
-                if (!res.ok) throw new Error("Failed to fetch status");
-                return res.json();
-            })
-            .then((data: KycStatusResponse) => {
+        let cancelled = false;
+        kycApi.getKycStatusByReference(referenceNumber)
+            .then((data) => {
                 if (!cancelled) setStatusData(data);
             })
             .catch(() => {
@@ -52,7 +41,7 @@ function ReceiptPageCore() {
             });
 
         return () => { cancelled = true; };
-    }, []);
+    }, [referenceNumber]);
 
     if (loadingStatus) {
         return <div className="p-12 text-center text-sm text-slate-500">Loading receipt...</div>;
@@ -61,7 +50,7 @@ function ReceiptPageCore() {
     if (fetchError || !statusData) {
         return (
             <div className="p-12 text-center text-sm text-red-500">
-                Unable to load your KYC status. Please log in again or contact support.
+                Unable to load your KYC status. Please check the link and try again.
             </div>
         );
     }

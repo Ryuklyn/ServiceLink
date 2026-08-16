@@ -50,8 +50,8 @@ function mapBackendToProvider(data: any): Provider {
     id: String(data.id),
     initials: getInitials(data.fullName ?? ""),
     name: data.businessName ?? data.fullName,
-    specialty: mapCategory(data.primaryService),
-    category: mapCategory(data.primaryService),
+    specialty: data.primaryCategoryName ?? "General",
+    category: data.primaryCategoryName ?? "General",
     rating: data.averageRating ?? 5.0,
     reviews: data.totalReviews ?? 0,
     experience: data.experienceYears ?? 0,
@@ -65,9 +65,11 @@ function mapBackendToProvider(data: any): Provider {
         : [data.baseDistrict ?? "Kathmandu"],
     bgColor: "#1e3a8a",
     avatarUrl: data.profilePictureUrl?.trim() ? data.profilePictureUrl : null,
-    phone: data.phone ?? "", // ← Mapped backend phone field
+    phone: data.phone ?? "",
   };
 }
+
+// remove mapCategory entirely — no longer needed
 
 const renderStars = (r: number) =>
     Array.from({ length: 5 }).map((_, i) => (

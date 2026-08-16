@@ -3,12 +3,15 @@ import api from "@/utils/axios";
 // ── Auth Response Types ─────────────────────────────────────────────────────
 
 export interface LoginResponse {
-  token: string;
-  refreshToken: string;
+  token?: string;
+  refreshToken?: string;
   email: string;
   fullName: string | null;
   profileImage: string | null;
   requiresProfileImage: boolean;
+  requiresTwoFactor?: boolean;
+  preAuthToken?: string;
+  twoFactorMethod?: "TOTP" | "EMAIL";
 }
 
 export interface MeResponse {
@@ -22,6 +25,7 @@ export interface MeResponse {
   verified: boolean;
   provider: string;
   createdAt: string;
+  is2FAEnabled: boolean;
 }
 
 export interface OtpSendResponse {
@@ -30,7 +34,26 @@ export interface OtpSendResponse {
   whatsappLink?: string;
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+  logoutOtherDevices?: boolean;
+}
+
+export interface DeleteAccountPayload {
+  currentPassword?: string;
+  confirmationText: string;
+}
+
 // ── Login / Logout / Me ─────────────────────────────────────────────────────
+
+export async function deleteAccount(
+    userId: number,
+    payload: DeleteAccountPayload
+): Promise<void> {
+  await api.delete(`/users/${userId}`, { data: payload });
+}
 
 export async function login(
     email: string,
@@ -42,11 +65,31 @@ export async function login(
       { _skipAuth: true }
   );
 
-  if (typeof window !== "undefined") {
-    if (data.token) {
-      localStorage.setItem("accessToken", data.token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
+  // Only persist tokens if a real session was issued (2FA not required)
+  if (typeof window !== "undefined" && data.token) {
+    localStorage.setItem("accessToken", data.token);
+    api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
+    if (data.refreshToken) {
+      localStorage.setItem("refreshToken", data.refreshToken);
     }
+  }
+
+  return data;
+}
+
+export async function verifyLoginTwoFactor(
+    preAuthToken: string,
+    code: string
+): Promise<LoginResponse> {
+  const { data } = await api.post<LoginResponse>(
+      "/auth/2fa/login-verify",
+      { preAuthToken, code },
+      { _skipAuth: true }
+  );
+
+  if (typeof window !== "undefined" && data.token) {
+    localStorage.setItem("accessToken", data.token);
+    api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
     if (data.refreshToken) {
       localStorage.setItem("refreshToken", data.refreshToken);
     }
@@ -70,6 +113,13 @@ export async function logout(): Promise<void> {
 export async function getMe(): Promise<MeResponse> {
   const { data } = await api.get<MeResponse>("/auth/me");
   return data;
+}
+
+export async function changePassword(
+    userId: number,
+    payload: ChangePasswordPayload
+): Promise<void> {
+  await api.post(`/users/${userId}/change-password`, payload);
 }
 
 export async function resetPassword(
@@ -114,4 +164,12 @@ export async function verifyPhoneOtpForMe(
     otp,
   });
   return data;
+}
+
+export async function resendLoginTwoFactor(preAuthToken: string): Promise<void> {
+  await api.post(
+      "/auth/2fa/login-resend",
+      { preAuthToken },
+      { _skipAuth: true }
+  );
 }

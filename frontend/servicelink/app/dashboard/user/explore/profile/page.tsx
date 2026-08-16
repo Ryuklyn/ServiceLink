@@ -40,8 +40,8 @@ function mapBackendToProviderData(data: any): ProviderData {
     id: String(data.id),
     initials: getInitials(data.fullName ?? ""),
     name: data.businessName ?? data.fullName,
-    specialty: data.primaryService,
-    category: data.primaryService,
+    specialty: data.primaryCategoryName ?? "General",
+    category: data.primaryCategoryName ?? "General",
     rating: data.averageRating ?? 5.0,
     reviews: data.totalReviews ?? 0,
     experience: data.experienceYears ?? 0,
@@ -54,9 +54,9 @@ function mapBackendToProviderData(data: any): ProviderData {
         : [data.baseDistrict ?? "Kathmandu"],
     phone: data.phone ?? "",
     location: `${data.baseDistrict ?? "Kathmandu"}, Nepal`,
-    categories: [data.primaryService],
+    categories: [data.primaryCategoryName ?? "General"],
     avatarUrl: data.profilePictureUrl ?? "",
-    verificationId: `VER-${data.id}`,
+    verificationId: data.kycReferenceNumber ?? `VER-${data.id}`,   // ← single, correct source
     registeredName: data.businessName ?? data.fullName,
     primaryDistrict: data.baseDistrict ?? "Kathmandu",
     skills: data.services?.map((s: any) => s.subServiceName) ?? [],
@@ -81,7 +81,7 @@ function mapBackendToProviderData(data: any): ProviderData {
     services:
         data.services?.map((s: any) => ({
           name: s.subServiceName,
-          category: s.category,
+          category: s.categoryName ?? s.category,
           priceMin: s.customPrice,
           priceMax: s.customPrice,
           duration: s.effectiveDuration ?? "1 hr",
@@ -97,12 +97,6 @@ function mapBackendToProviderData(data: any): ProviderData {
           text: r.comment ?? "",
           date: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "",
         })) ?? [],
-    // portfolio:
-    //     data.portfolio?.map((p: any) => ({
-    //       label: p.caption ?? p.serviceCategory ?? "Work Sample",
-    //       gradient: "from-blue-500 to-cyan-500",
-    //       mediaUrl: p.mediaUrl ?? "",
-    //     })) ?? [],
     portfolio: data.portfolio ?? [],
   };
 }
@@ -216,9 +210,13 @@ export default function ProviderPage() {
                 radiusKm={provider.coverageRadius}
             />
           </div>
+          {provider.providerReviews?.length > 0 && (
+              <ReviewsSection provider={provider} />
+          )}
 
-          <ReviewsSection provider={provider} />
-          <PortfolioSection provider={provider} />
+          {provider.portfolio?.length > 0 && (
+              <PortfolioSection provider={provider} />
+          )}
         </div>
 
         {/* ── Sidebar Component (Appears below main feed on mobile, snaps side-by-side on desktop) ── */}

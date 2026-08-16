@@ -26,4 +26,5 @@ public class UserResponseDTO {
     private boolean verified;
     private LocalDateTime createdAt;
     private String role;
+    private boolean is2FAEnabled;
 }

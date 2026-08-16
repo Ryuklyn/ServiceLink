@@ -27,20 +27,28 @@ export default function LoginPage() {
     try {
       setLoading(true);
 
-      // Delegated directly to authApi
-      await login(email.trim().toLowerCase(), password);
+      const result = await login(email.trim().toLowerCase(), password);
+
+      // if (result.requiresTwoFactor && result.preAuthToken) {
+      //   router.push(
+      //       `/login/user/2fa-verify?token=${encodeURIComponent(result.preAuthToken)}`
+      //   );
+      //   return;
+      // }
+
+      if (result.requiresTwoFactor && result.preAuthToken) {
+        router.push(
+            `/login/user/2fa-verify?token=${encodeURIComponent(result.preAuthToken)}&method=${result.twoFactorMethod ?? "TOTP"}`
+        );
+        return;
+      }
 
       toast.success("Login successful!");
-
-      // Transition smoothly to dashboard
       router.replace("/dashboard/user");
     } catch (err: any) {
       console.error("Login failed:", err);
-
       toast.error(
-          err?.message ??
-          err?.response?.data?.message ??
-          "Invalid email or password."
+          err?.message ?? err?.response?.data?.message ?? "Invalid email or password."
       );
     } finally {
       setLoading(false);

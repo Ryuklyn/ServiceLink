@@ -1,4 +1,5 @@
 package com.servicelink.core.dto.response;
+import com.servicelink.core.model.user.TwoFactorMethod;
 import lombok.Builder;
 import lombok.Data;
 
@@ -13,4 +14,10 @@ public class AuthResponseDTO {
     private boolean requiresProfileImage;
     private String role;
     private String message; // for registration success or error messages
+
+    @Builder.Default
+    private boolean requiresTwoFactor = false;
+
+    private String preAuthToken;
+    private TwoFactorMethod twoFactorMethod;
 }

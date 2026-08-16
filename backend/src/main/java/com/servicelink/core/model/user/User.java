@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -46,4 +48,20 @@ public class User {
     // 🔗 One-to-one profile
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private UserProfile profile;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean is2FAEnabled = false;
+
+    @Column(length = 512)
+    private String twoFactorSecret; // Base32 TOTP secret
+
+    @Enumerated(EnumType.STRING)
+    private TwoFactorMethod twoFactorMethod;
+
+    @ElementCollection
+    @CollectionTable(name = "user_backup_codes", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "code_hash")
+    @Builder.Default
+    private List<String> backupCodes = new ArrayList<>(); // stored as bcrypt hashes, not plaintext
 }

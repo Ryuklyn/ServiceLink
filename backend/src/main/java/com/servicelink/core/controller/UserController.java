@@ -2,12 +2,14 @@ package com.servicelink.core.controller;
 
 import java.util.List;
 
+import com.servicelink.core.dto.request.*;
+import com.servicelink.core.dto.response.TwoFactorSetupInitResponseDTO;
+import com.servicelink.core.dto.response.TwoFactorSetupVerifyResponseDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import com.servicelink.core.dto.request.UserRequestDTO;
 import com.servicelink.core.dto.response.UserResponseDTO;
 import com.servicelink.core.model.user.Role;
 import com.servicelink.core.model.user.User;
@@ -49,6 +51,18 @@ public class UserController {
                 .toList();
     }
 
+    @PostMapping("/{id}/change-password")
+    public ResponseEntity<Void> changePassword(
+            @PathVariable Long id,
+            @Valid @RequestBody ChangePasswordRequestDTO dto,
+            Authentication authentication) {
+
+        verifyOwnership(id, authentication); // only self can change own password
+
+        service.changePassword(id, dto);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping("/{id}")
     public UserResponseDTO update(
             @PathVariable Long id,
@@ -77,10 +91,23 @@ public class UserController {
         );
     }
 
+//    @DeleteMapping("/{id}")
+//    public void delete(@PathVariable Long id, Authentication authentication) {
+//        verifyOwnership(id, authentication);
+//        service.deleteById(id);
+//    }
+
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id,
+            @Valid @RequestBody DeleteAccountRequestDTO dto,
+            Authentication authentication) {
+
         verifyOwnership(id, authentication);
-        service.deleteById(id);
+        User currentUser = (User) authentication.getPrincipal();
+
+        service.deleteOwnAccount(currentUser, dto);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
@@ -108,5 +135,42 @@ public class UserController {
                         service.markOnboardingSeen(id)
                 )
         );
+    }
+
+//    @PostMapping("/{id}/2fa/init")
+//    public ResponseEntity<TwoFactorSetupInitResponseDTO> init2FA(
+//            @PathVariable Long id,
+//            @Valid @RequestBody TwoFactorSetupInitRequestDTO dto,
+//            Authentication authentication) {
+//        verifyOwnership(id, authentication);
+//        return ResponseEntity.ok(service.init2FASetup(id, dto.getCurrentPassword()));
+//    }
+
+    @PostMapping("/{id}/2fa/verify")
+    public ResponseEntity<TwoFactorSetupVerifyResponseDTO> verify2FA(
+            @PathVariable Long id,
+            @Valid @RequestBody TwoFactorSetupVerifyRequestDTO dto,
+            Authentication authentication) {
+        verifyOwnership(id, authentication);
+        return ResponseEntity.ok(service.verify2FASetup(id, dto.getOtp()));
+    }
+
+    @PostMapping("/{id}/2fa/init")
+    public ResponseEntity<TwoFactorSetupInitResponseDTO> init2FA(
+            @PathVariable Long id,
+            @Valid @RequestBody TwoFactorSetupInitRequestDTO dto,
+            Authentication authentication) {
+        verifyOwnership(id, authentication);
+        return ResponseEntity.ok(service.init2FASetup(id, dto.getCurrentPassword(), dto.getMethod()));
+    }
+
+    @PostMapping("/{id}/2fa/disable")
+    public ResponseEntity<Void> disable2FA(
+            @PathVariable Long id,
+            @Valid @RequestBody TwoFactorDisableRequestDTO dto,
+            Authentication authentication) {
+        verifyOwnership(id, authentication);
+        service.disable2FA(id, dto.getCurrentPassword());
+        return ResponseEntity.ok().build();
     }
 }

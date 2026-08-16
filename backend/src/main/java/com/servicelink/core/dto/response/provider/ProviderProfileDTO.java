@@ -56,6 +56,8 @@ public class ProviderProfileDTO {
 
     private Instant memberSince;
 
+    private String kycReferenceNumber;
+
     // Nested summaries
     private List<ProviderServiceDTO>  services;
     private List<PortfolioResponseDTO>        portfolio;

@@ -332,4 +332,108 @@ public class EmailService {
 
         send(to, subject, body, "KYC rejection (ref: " + referenceNumber + ")");
     }
+
+    // ─── Password changed alert ─────────────────────────────────────────────
+
+    @Async
+    public void sendPasswordChangedAlert(String to) {
+        String subject = "Your ServiceLink password was changed";
+
+        String body = wrapTemplate(
+                "Security Alert",
+                "Your password was changed",
+                "This is a confirmation that your ServiceLink account password was just updated.",
+                """
+                <p style="font-size:14px; line-height:1.6; color:#44403c; margin:0;">
+                  If you made this change, no further action is needed.
+                </p>
+                <p style="font-size:13px; color:#78716c; margin:16px 0 0;">
+                  If you did <strong>not</strong> make this change, please contact us immediately at
+                  <a href="mailto:support@servicelink.np" style="color:%s;">support@servicelink.np</a>
+                  — your account may be compromised.
+                </p>
+                """.formatted(ORANGE),
+                null, null
+        );
+
+        send(to, subject, body, "Password changed alert");
+    }
+
+    // ─── Phone number changed alert ─────────────────────────────────────────
+
+    @Async
+    public void sendPhoneChangedAlert(String to, String newPhone) {
+        String subject = "Your ServiceLink phone number was changed";
+
+        String body = wrapTemplate(
+                "Security Alert",
+                "Your phone number was changed",
+                "This is a confirmation that your ServiceLink account's phone number was just updated.",
+                """
+                <div style="background:#fafaf9; border:1px solid #e7e5e4; border-radius:10px; padding:16px; margin: 20px 0;">
+                  <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#78716c; margin:0 0 4px;">
+                    New Number
+                  </p>
+                  <p style="font-size:16px; font-weight:600; color:#1c1917; margin:0;">%s</p>
+                </div>
+                <p style="font-size:13px; color:#78716c; margin:16px 0 0;">
+                  If you did <strong>not</strong> make this change, please contact us immediately at
+                  <a href="mailto:support@servicelink.np" style="color:%s;">support@servicelink.np</a>
+                  — your account may be compromised.
+                </p>
+                """.formatted(newPhone, ORANGE),
+                null, null
+        );
+
+        send(to, subject, body, "Phone changed alert");
+    }
+
+    // ─── 2FA disabled alert ──────────────────────────────────────────────────
+
+    @Async
+    public void send2FADisabledAlert(String to) {
+        String subject = "Two-Factor Authentication was turned off";
+
+        String body = wrapTemplate(
+                "Security Alert",
+                "2-Step Verification was disabled",
+                "This is a confirmation that Two-Factor Authentication was just turned off on your ServiceLink account.",
+                """
+                <p style="font-size:14px; line-height:1.6; color:#44403c; margin:0;">
+                  Your account is now protected by your password alone. We recommend keeping 2FA enabled
+                  for stronger account security.
+                </p>
+                <p style="font-size:13px; color:#78716c; margin:16px 0 0;">
+                  If you did <strong>not</strong> make this change, please contact us immediately at
+                  <a href="mailto:support@servicelink.np" style="color:%s;">support@servicelink.np</a>
+                  — your account may be compromised.
+                </p>
+                """.formatted(ORANGE),
+                null, null
+        );
+
+        send(to, subject, body, "2FA disabled alert");
+    }
+
+// ─── Account deleted alert ───────────────────────────────────────────────
+
+    @Async
+    public void sendAccountDeletedAlert(String to) {
+        String subject = "Your ServiceLink account has been deleted";
+
+        String body = wrapTemplate(
+                "Account Deleted",
+                "Your account has been permanently deleted",
+                "This confirms that your ServiceLink account and associated data have been removed, as requested.",
+                """
+                <p style="font-size:14px; line-height:1.6; color:#44403c; margin:0;">
+                  If you didn't request this, or believe this was done in error, please contact us right away —
+                  we may be able to help within a limited recovery window.
+                </p>
+                """,
+                null, null
+        );
+
+        send(to, subject, body, "Account deleted alert");
+    }
 }

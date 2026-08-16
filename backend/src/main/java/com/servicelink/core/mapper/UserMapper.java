@@ -73,6 +73,7 @@ public class UserMapper {
                     .provider(user.getProvider())
                     .verified(user.isVerified())
                     .createdAt(user.getCreatedAt())
+                    .is2FAEnabled(user.is2FAEnabled())
                     .role(user.getRole().name())
                     .build();
         }
