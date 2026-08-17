@@ -296,23 +296,38 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
 
     // ─── Email OTP ────────────────────────────────────────────────────────────
 
-    @PostMapping("/send-email-otp")
-    public ResponseEntity<OtpSendResponseDTO> sendEmailOtp(
-            @RequestBody OtpRequestDto request) {
+//    @PostMapping("/send-email-otp")
+//    public ResponseEntity<OtpSendResponseDTO> sendEmailOtp(
+//            @RequestBody OtpRequestDto request) {
+//
+//        String email = request.getEmail();
+//        if (email == null || email.isBlank()) {
+//            throw new IllegalArgumentException("Email is required");
+//        }
+//
+//        String otp = otpService.generateOtp(email);
+//        emailService.sendOtpEmail(email, otp);
+//
+//        return ResponseEntity.ok(OtpSendResponseDTO.builder()
+//                .message("OTP sent to " + email)
+//                .deliveryMethod("EMAIL")
+//                .build());
+//    }
 
+    @PostMapping("/send-email-otp")
+    public ResponseEntity<OtpSendResponseDTO> sendEmailOtp(@RequestBody OtpRequestDto request) {
         String email = request.getEmail();
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("Email is required");
         }
-
-        String otp = otpService.generateOtp(email);
+        String otp = otpService.generateOtp("email-verify:" + email);
         emailService.sendOtpEmail(email, otp);
-
         return ResponseEntity.ok(OtpSendResponseDTO.builder()
                 .message("OTP sent to " + email)
                 .deliveryMethod("EMAIL")
                 .build());
     }
+
 
     @PostMapping("/verify-email-otp")
     public ResponseEntity<OtpVerifyResponseDTO> verifyEmailOtp(
@@ -325,7 +340,8 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
             throw new IllegalArgumentException("Email and OTP are required");
         }
 
-        boolean valid = otpService.verifyOtp(email, otp);
+        boolean valid = otpService.verifyOtp("email-verify:" + email, otp); // ✅ matches send
+
         if (!valid) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(OtpVerifyResponseDTO.builder()
@@ -334,7 +350,6 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
                             .build());
         }
 
-        // Issue a short-lived "provider applicant" token explicitly timed for 15 minutes (900_000 ms)
         String providerToken = jwtService.generatePurposeToken(
                 Map.of("type", "EMAIL_VERIFIED", "role", "PROVIDER_APPLICANT"),
                 email,

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Lock, Eye, EyeOff, ArrowLeft, CheckCircle } from "lucide-react";
 import { toast } from "react-toastify";
-import { changePassword } from "@/lib/api/authApi";
+import { changePassword, logout } from "@/lib/api/authApi";
 import { useAppSelector } from "@/store/hooks";
 
 export default function ChangePasswordPage() {
@@ -23,7 +23,6 @@ export default function ChangePasswordPage() {
     const [logoutOtherDevices, setLogoutOtherDevices] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Same strength logic as your reset-password page
     const getStrength = (pass: string) => {
         let score = 0;
         if (pass.length >= 8) score++;
@@ -79,8 +78,17 @@ export default function ChangePasswordPage() {
                 logoutOtherDevices,
             });
 
-            toast.success("Password updated successfully");
-            router.push("/dashboard/user/settings");
+            if (logoutOtherDevices) {
+                // Checked = sign out everywhere, including this device.
+                // Backend already revoked every session; now clear local tokens
+                // and send the user back to login.
+                toast.success("Password updated. You've been signed out everywhere.");
+                await logout();
+                router.replace("/login");
+            } else {
+                toast.success("Password updated successfully");
+                router.push("/dashboard/user/settings");
+            }
         } catch (err: any) {
             toast.error(
                 err?.response?.data?.message || "Failed to update password"
@@ -211,14 +219,19 @@ export default function ChangePasswordPage() {
                 </div>
 
                 {/* OTHER DEVICES */}
-                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <label className="flex items-start gap-2 text-sm text-gray-600 cursor-pointer">
                     <input
                         type="checkbox"
                         checked={logoutOtherDevices}
                         onChange={(e) => setLogoutOtherDevices(e.target.checked)}
-                        className="rounded text-[#1e3a8a]"
+                        className="rounded text-[#1e3a8a] mt-0.5"
                     />
-                    Log out of all other devices
+                    <span>
+                        Sign out everywhere after this change
+                        <span className="block text-xs text-gray-400">
+                            Including this device — you'll need to log in again.
+                        </span>
+                    </span>
                 </label>
 
                 <button

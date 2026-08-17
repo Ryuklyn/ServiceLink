@@ -16,6 +16,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TwoFactorAuthService {
@@ -64,10 +65,16 @@ public class TwoFactorAuthService {
         return codes;
     }
 
+//    public List<String> hashBackupCodes(List<String> plaintextCodes) {
+//        return plaintextCodes.stream()
+//                .map(c -> BCrypt.hashpw(c, BCrypt.gensalt()))
+//                .toList();
+//    }
+
     public List<String> hashBackupCodes(List<String> plaintextCodes) {
         return plaintextCodes.stream()
                 .map(c -> BCrypt.hashpw(c, BCrypt.gensalt()))
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public boolean matchesAnyBackupCode(String rawCode, List<String> hashedCodes) {

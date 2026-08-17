@@ -1,6 +1,8 @@
 package com.servicelink.core.dto.response;
+
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.servicelink.core.model.auth.AuthProvider;
 
 import lombok.AllArgsConstructor;
@@ -20,11 +22,12 @@ public class UserResponseDTO {
     private String profileImage;
     private boolean phoneVerified;
     private String phoneNumber;
-    // private String provider;
     private boolean hasSeenOnboarding;
     private AuthProvider provider;
     private boolean verified;
     private LocalDateTime createdAt;
     private String role;
+
+    @JsonProperty("is2FAEnabled")
     private boolean is2FAEnabled;
 }

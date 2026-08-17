@@ -18,8 +18,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -113,30 +115,46 @@ public class AuthService {
      * whichever matches the user's configured method, plus backup codes
      * always work regardless of method as the recovery path.
      */
+//    public AuthResponseDTO completeTwoFactorLogin(String preAuthToken, String code) {
+//
+//        User user = resolvePreAuthUser(preAuthToken);
+//
+//        boolean validPrimary = switch (user.getTwoFactorMethod()) {
+//            case TOTP -> user.getTwoFactorSecret() != null
+//                    && twoFactorAuthService.verifyCode(user.getTwoFactorSecret(), code);
+//            case EMAIL -> otpService.verifyOtp("2fa:" + user.getEmail(), code);
+//        };
+//
+//        boolean validBackup = !validPrimary
+//                && twoFactorAuthService.matchesAnyBackupCode(code, user.getBackupCodes());
+//
+//        if (!validPrimary && !validBackup) {
+//            throw new IllegalArgumentException("Invalid or expired verification code");
+//        }
+//        if (validBackup) {
+//            List<String> remaining = user.getBackupCodes().stream()
+//                    .filter(hash -> !BCrypt.checkpw(code, hash))
+//                    .collect(Collectors.toCollection(ArrayList::new));
+//            user.setBackupCodes(remaining);
+//            userRepository.save(user);
+//        }
+//
+//        activateRescheduleTokensIfCustomer(user);
+//        return issueFullLoginSession(user);
+//    }
+
     public AuthResponseDTO completeTwoFactorLogin(String preAuthToken, String code) {
 
         User user = resolvePreAuthUser(preAuthToken);
 
-        boolean validPrimary = switch (user.getTwoFactorMethod()) {
+        boolean valid = switch (user.getTwoFactorMethod()) {
             case TOTP -> user.getTwoFactorSecret() != null
                     && twoFactorAuthService.verifyCode(user.getTwoFactorSecret(), code);
-            case EMAIL -> otpService.verifyOtp(user.getEmail(), code);
+            case EMAIL -> otpService.verifyOtp("2fa:" + user.getEmail(), code);
         };
 
-        boolean validBackup = !validPrimary
-                && twoFactorAuthService.matchesAnyBackupCode(code, user.getBackupCodes());
-
-        if (!validPrimary && !validBackup) {
+        if (!valid) {
             throw new IllegalArgumentException("Invalid or expired verification code");
-        }
-
-        if (validBackup) {
-            // Consume the used backup code so it can't be replayed
-            List<String> remaining = user.getBackupCodes().stream()
-                    .filter(hash -> !BCrypt.checkpw(code, hash))
-                    .toList();
-            user.setBackupCodes(remaining);
-            userRepository.save(user);
         }
 
         activateRescheduleTokensIfCustomer(user);
@@ -155,8 +173,12 @@ public class AuthService {
 
     // ─── Shared helpers ─────────────────────────────────────────────────────
 
+//    private void sendLoginEmailOtp(User user) {
+//        String otp = otpService.generateOtp(user.getEmail());
+//        emailService.sendOtpEmail(user.getEmail(), otp);
+//    }
     private void sendLoginEmailOtp(User user) {
-        String otp = otpService.generateOtp(user.getEmail());
+        String otp = otpService.generateOtp("2fa:" + user.getEmail());
         emailService.sendOtpEmail(user.getEmail(), otp);
     }
 

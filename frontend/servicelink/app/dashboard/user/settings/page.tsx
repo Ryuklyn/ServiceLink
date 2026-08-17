@@ -147,9 +147,15 @@ export default function SettingsPage() {
   // ── 2FA state — hydrated from real user data once it loads, not hardcoded ──
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
 
+  // useEffect(() => {
+  //   if (user) {
+  //     setIs2FAEnabled((user as any).is2FAEnabled ?? false);
+  //   }
+  // }, [user]);
+
   useEffect(() => {
     if (user) {
-      setIs2FAEnabled((user as any).is2FAEnabled ?? false);
+      setIs2FAEnabled(user.is2FAEnabled ?? false);
     }
   }, [user]);
 

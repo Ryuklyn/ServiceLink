@@ -157,7 +157,11 @@ public class UserService {
         sendAlertSafely(() -> emailService.sendPasswordChangedAlert(user.getEmail()),
                 "password-changed alert", user.getId());
 
-        // TODO: if dto.isLogoutOtherDevices() -> invalidate other refresh tokens for this user
+        // ✅ implemented — when checked, kill every session (including this one).
+        // Frontend handles logging the current device out after seeing this succeed.
+        if (dto.isLogoutOtherDevices()) {
+            refreshTokenService.revokeAllForUser(user.getEmail());
+        }
 
         return saved;
     }
@@ -189,14 +193,47 @@ public class UserService {
         // EMAIL method — reuse the existing OtpService, same as phone/email login OTPs elsewhere
         user.setTwoFactorMethod(TwoFactorMethod.EMAIL);
         repo.save(user);
+//
+//        String otp = otpService.generateOtp(user.getEmail());
+//        emailService.sendOtpEmail(user.getEmail(), otp);
 
-        String otp = otpService.generateOtp(user.getEmail());
+        // init2FASetup — EMAIL branch
+        String otp = otpService.generateOtp("2fa:" + user.getEmail());
         emailService.sendOtpEmail(user.getEmail(), otp);
 
         return TwoFactorSetupInitResponseDTO.builder().build(); // no QR/key for email method
     }
 
     /** Step 2: mandatory code validation before turning 2FA on — checks against whichever method was chosen in init */
+//    public TwoFactorSetupVerifyResponseDTO verify2FASetup(Long userId, String otp) {
+//        User user = findUserOrThrow(userId);
+//
+//        if (user.getTwoFactorMethod() == null) {
+//            throw new IllegalStateException("2FA setup was not initiated");
+//        }
+//
+//        boolean valid = switch (user.getTwoFactorMethod()) {
+//            case TOTP -> user.getTwoFactorSecret() != null
+//                    && twoFactorAuthService.verifyCode(user.getTwoFactorSecret(), otp);
+////            case EMAIL -> otpService.verifyOtp(user.getEmail(), otp);
+//            // verify2FASetup
+//            case EMAIL -> otpService.verifyOtp("2fa:" + user.getEmail(), otp);
+//        };
+//
+//        if (!valid) {
+//            throw new IllegalArgumentException("Invalid or expired verification code");
+//        }
+//
+//        List<String> plaintextCodes = twoFactorAuthService.generatePlaintextBackupCodes(10);
+//        user.set2FAEnabled(true);
+//        user.setBackupCodes(twoFactorAuthService.hashBackupCodes(plaintextCodes));
+//        repo.save(user);
+//
+//        return TwoFactorSetupVerifyResponseDTO.builder()
+//                .backupCodes(plaintextCodes) // shown once — frontend must force download/copy
+//                .build();
+//    }
+
     public TwoFactorSetupVerifyResponseDTO verify2FASetup(Long userId, String otp) {
         User user = findUserOrThrow(userId);
 
@@ -207,24 +244,36 @@ public class UserService {
         boolean valid = switch (user.getTwoFactorMethod()) {
             case TOTP -> user.getTwoFactorSecret() != null
                     && twoFactorAuthService.verifyCode(user.getTwoFactorSecret(), otp);
-            case EMAIL -> otpService.verifyOtp(user.getEmail(), otp);
+            case EMAIL -> otpService.verifyOtp("2fa:" + user.getEmail(), otp);
         };
 
         if (!valid) {
             throw new IllegalArgumentException("Invalid or expired verification code");
         }
 
-        List<String> plaintextCodes = twoFactorAuthService.generatePlaintextBackupCodes(10);
         user.set2FAEnabled(true);
-        user.setBackupCodes(twoFactorAuthService.hashBackupCodes(plaintextCodes));
         repo.save(user);
 
-        return TwoFactorSetupVerifyResponseDTO.builder()
-                .backupCodes(plaintextCodes) // shown once — frontend must force download/copy
-                .build();
+        return TwoFactorSetupVerifyResponseDTO.builder().build();
     }
 
     /** Disable 2FA — requires password re-entry, clears both TOTP and email-method state */
+//    public void disable2FA(Long userId, String currentPassword) {
+//        User user = findUserOrThrow(userId);
+//
+//        requirePassword(user);
+//        verifyCurrentPassword(user, currentPassword);
+//
+//        user.set2FAEnabled(false);
+//        user.setTwoFactorMethod(null);
+//        user.setTwoFactorSecret(null);
+//        user.setBackupCodes(new ArrayList<>());
+//        repo.save(user);
+//
+//        sendAlertSafely(() -> emailService.send2FADisabledAlert(user.getEmail()),
+//                "2FA-disabled alert", user.getId());
+//    }
+
     public void disable2FA(Long userId, String currentPassword) {
         User user = findUserOrThrow(userId);
 
@@ -234,7 +283,6 @@ public class UserService {
         user.set2FAEnabled(false);
         user.setTwoFactorMethod(null);
         user.setTwoFactorSecret(null);
-        user.setBackupCodes(new ArrayList<>());
         repo.save(user);
 
         sendAlertSafely(() -> emailService.send2FADisabledAlert(user.getEmail()),

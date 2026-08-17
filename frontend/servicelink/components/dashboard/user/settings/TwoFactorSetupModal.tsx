@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Lock, ShieldCheck, Copy, CheckCircle2, Smartphone, Mail, ArrowLeft } from "lucide-react";
+import { X, Lock, ShieldCheck, CheckCircle2, Smartphone, Mail, ArrowLeft } from "lucide-react";
 import { toast } from "react-toastify";
 import api from "@/utils/axios";
 import { useAppSelector } from "@/store/hooks";
@@ -23,7 +23,6 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
     const [qrCode, setQrCode] = useState("");
     const [manualKey, setManualKey] = useState("");
     const [otp, setOtp] = useState("");
-    const [backupCodes, setBackupCodes] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
 
     // ── Step 1: password re-verify, then show method choice ──
@@ -80,8 +79,7 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
         }
         try {
             setLoading(true);
-            const { data } = await api.post(`/users/${user?.id}/2fa/verify`, { otp });
-            setBackupCodes(data.backupCodes);
+            await api.post(`/users/${user?.id}/2fa/verify`, { otp });
             setStep("done");
         } catch (err: any) {
             toast.error(err?.response?.data?.message || "Invalid or expired code");
@@ -103,11 +101,6 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
         } finally {
             setLoading(false);
         }
-    };
-
-    const copyBackupCodes = () => {
-        navigator.clipboard.writeText(backupCodes.join("\n"));
-        toast.success("Backup codes copied");
     };
 
     return (
@@ -248,25 +241,16 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
                 )}
 
                 {step === "done" && (
-                    <>
-                        <div className="flex items-center gap-2 mb-1">
-                            <CheckCircle2 className="text-emerald-500" size={20} />
-                            <h3 className="text-lg font-bold text-gray-900">2FA Enabled</h3>
+                    <div className="text-center py-2">
+                        <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle2 className="text-emerald-500" size={28} />
                         </div>
-                        <p className="text-sm text-gray-500 mb-4">
-                            Save these backup codes somewhere safe. Each can be used once if you lose access to your {method === "TOTP" ? "authenticator app" : "email"}.
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">Two-Factor Authentication Enabled</h3>
+                        <p className="text-sm text-gray-500 mb-6">
+                            {method === "TOTP"
+                                ? "You'll be asked for a code from your authenticator app each time you sign in."
+                                : "You'll be sent a code to your email each time you sign in."}
                         </p>
-                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-4 grid grid-cols-2 gap-2 font-mono text-sm">
-                            {backupCodes.map((code) => (
-                                <div key={code}>{code}</div>
-                            ))}
-                        </div>
-                        <button
-                            onClick={copyBackupCodes}
-                            className="w-full py-2.5 rounded-xl border border-gray-200 text-gray-700 font-semibold mb-2 inline-flex items-center justify-center gap-2"
-                        >
-                            <Copy size={14} /> Copy Codes
-                        </button>
                         <button
                             onClick={() => {
                                 onEnabled();
@@ -276,7 +260,7 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
                         >
                             Done
                         </button>
-                    </>
+                    </div>
                 )}
             </div>
         </div>
