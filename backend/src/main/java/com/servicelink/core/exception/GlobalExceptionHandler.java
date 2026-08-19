@@ -129,4 +129,9 @@ public class GlobalExceptionHandler {
         body.put("timestamp", Instant.now().toString());
         return ResponseEntity.status(status).body(body);
     }
+
+    @ExceptionHandler(BookingConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleBookingConflict(BookingConflictException ex) {
+        return build(HttpStatus.CONFLICT, "BOOKING_CONFLICT", ex.getMessage());
+    }
 }

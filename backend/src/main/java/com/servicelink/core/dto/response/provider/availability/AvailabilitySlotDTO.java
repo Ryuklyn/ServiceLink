@@ -11,7 +11,9 @@ import java.time.LocalDate;
 public class AvailabilitySlotDTO {
     private LocalDate date;
     private TimeSlot period;
-    private String displayRange;   // TimeSlot.getDisplayRange(), e.g. "08:00-12:00"
+    private String displayRange;
     private Boolean isAvailable;
-    private String reason;         // always null on the public/customer response
+//    private String reasonTag;
+//    private String reasonNote;
+    private String reason;
 }

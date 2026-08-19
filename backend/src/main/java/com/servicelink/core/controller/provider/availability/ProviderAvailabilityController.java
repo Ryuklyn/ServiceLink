@@ -1,9 +1,13 @@
 package com.servicelink.core.controller.provider.availability;
 
 import com.servicelink.core.dto.request.provider.availability.AvailabilityBulkUpdateRequestDTO;
+import com.servicelink.core.dto.request.provider.availability.AvailabilitySlotUpdateDTO;
 import com.servicelink.core.dto.response.provider.availability.AvailabilitySlotDTO;
+import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.user.User;
-import com.servicelink.core.service.provider.availability.ProviderAvailabilityService;
+import com.servicelink.core.repository.provider.ProviderRepository;
+import com.servicelink.core.service.provider.availability.AvailabilityExceptionService;
+import com.servicelink.core.service.provider.availability.AvailabilityResolverService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,34 +23,41 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProviderAvailabilityController {
 
-    private final ProviderAvailabilityService availabilityService;
+    private final AvailabilityResolverService resolver;
+    private final AvailabilityExceptionService exceptionService;
+    private final ProviderRepository providerRepo;
 
-    /** GET /api/providers/me/availability?start=2026-07-01&end=2026-07-31 */
     @GetMapping("/me/availability")
     @PreAuthorize("hasRole('PROVIDER')")
     public ResponseEntity<List<AvailabilitySlotDTO>> getMyAvailability(
-            @AuthenticationPrincipal User user,
-            @RequestParam LocalDate start,
-            @RequestParam LocalDate end) {
-        return ResponseEntity.ok(availabilityService.getMyAvailability(user.getId(), start, end));
+            @AuthenticationPrincipal User user, @RequestParam LocalDate start, @RequestParam LocalDate end) {
+        Long providerId = requireProviderId(user.getId());
+        return ResponseEntity.ok(resolver.resolveRange(providerId, start, end, true));
     }
 
-    /** PATCH /api/providers/me/availability */
+    @GetMapping("/{id}/availability")
+    public ResponseEntity<List<AvailabilitySlotDTO>> getPublicAvailability(
+            @PathVariable Long id, @RequestParam LocalDate start, @RequestParam LocalDate end) {
+        return ResponseEntity.ok(resolver.resolveRange(id, start, end, false));
+    }
+
     @PatchMapping("/me/availability")
     @PreAuthorize("hasRole('PROVIDER')")
     public ResponseEntity<Void> updateMyAvailability(
-            @AuthenticationPrincipal User user,
-            @Valid @RequestBody AvailabilityBulkUpdateRequestDTO request) {
-        availabilityService.updateMyAvailability(user.getId(), request.getUpdates());
+            @AuthenticationPrincipal User user, @Valid @RequestBody AvailabilityBulkUpdateRequestDTO request) {
+        for (AvailabilitySlotUpdateDTO u : request.getUpdates()) {
+            if (u.isAvailable()) {
+                exceptionService.deleteCoveringException(user.getId(), u.getDate(), u.getPeriod());
+            } else {
+                exceptionService.createException(user.getId(), u.getDate(), u.getPeriod(), u.getReason());
+            }
+        }
         return ResponseEntity.ok().build();
     }
 
-    /** GET /api/providers/{id}/availability?start=...&end=... — public, feeds the customer booking calendar */
-    @GetMapping("/{id}/availability")
-    public ResponseEntity<List<AvailabilitySlotDTO>> getPublicAvailability(
-            @PathVariable Long id,
-            @RequestParam LocalDate start,
-            @RequestParam LocalDate end) {
-        return ResponseEntity.ok(availabilityService.getPublicAvailability(id, start, end));
+    private Long requireProviderId(Long userId) {
+        Provider provider = providerRepo.findByUser_Id(userId)
+                .orElseThrow(() -> new IllegalStateException("No provider profile for this account."));
+        return provider.getId();
     }
 }

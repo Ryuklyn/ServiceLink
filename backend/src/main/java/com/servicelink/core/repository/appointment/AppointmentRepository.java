@@ -199,4 +199,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("date") LocalDate date,
             @Param("slot") TimeSlot slot,
             @Param("excludeAppointmentId") Long excludeAppointmentId);
+
+    @Query("select case when count(a) > 0 then true else false end from Appointment a " +
+            "where a.provider.id = :providerId and a.appointmentDate = :date and a.timeSlot = :period " +
+            "and a.status in ('CONFIRMED','IN_PROGRESS')")
+    boolean existsActiveBooking(Long providerId, LocalDate date, TimeSlot period);
+
+    @Query("select a from Appointment a where a.provider.id = :providerId " +
+            "and a.appointmentDate between :start and :end and a.status in ('CONFIRMED','IN_PROGRESS')")
+    List<Appointment> findActiveBetween(Long providerId, LocalDate start, LocalDate end);
 }

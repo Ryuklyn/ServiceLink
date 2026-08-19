@@ -1,20 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-    ChevronLeft,
-    ChevronRight,
-    Calendar,
-    FileDown,
-    CheckCircle2,
-    Ban,
-    CalendarRange,
-    Copy,
-    RotateCcw,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import type { AppDispatch, RootState } from "@/store";
+import { fetchScheduleSettings, saveScheduleSettings, ScheduleSettings } from "@/store/slices/providerAvailabilitySlice";
 import {
     fetchMonthAvailability,
     saveDayAvailability,
@@ -146,6 +137,7 @@ export default function AvailabilityTab() {
     const [selectedDay, setSelectedDay] = useState(() => isoDate(new Date()));
     const [draftSlots, setDraftSlots] = useState<DraftSlot[]>([]);
     const dateInputRef = useRef<HTMLInputElement>(null);
+    const todayIso = useMemo(() => isoDate(new Date()), []);
 
     const grid = useMemo(() => buildMonthGrid(currentMonth), [currentMonth]);
 
@@ -168,6 +160,39 @@ export default function AvailabilityTab() {
             }),
         [selectedDay],
     );
+    const { settings, settingsSaveStatus } = useSelector((s: RootState) => s.providerAvailability);
+    const [draftSettings, setDraftSettings] = useState<ScheduleSettings>(settings);
+
+    useEffect(() => { dispatch(fetchScheduleSettings()); }, [dispatch]);
+    useEffect(() => { setDraftSettings(settings); }, [settings]);
+
+    const toggleDay = (dow: number) => {
+        setDraftSettings((prev) => ({
+            ...prev,
+            workingDays: prev.workingDays.includes(dow)
+                ? prev.workingDays.filter((d) => d !== dow)
+                : [...prev.workingDays, dow],
+        }));
+    };
+
+    const toggleDefaultSlot = (key: TimeSlotKey) => {
+        setDraftSettings((prev) => ({
+            ...prev,
+            defaultSlots: prev.defaultSlots.includes(key)
+                ? prev.defaultSlots.filter((s) => s !== key)
+                : [...prev.defaultSlots, key],
+        }));
+    };
+
+    const handleSaveSettings = async () => {
+        const result = await dispatch(saveScheduleSettings(draftSettings));
+        if (saveScheduleSettings.fulfilled.match(result)) {
+            toast.success("Weekly schedule updated.");
+            dispatch(fetchMonthAvailability(currentMonth)); // refresh the calendar's computed defaults
+        } else {
+            toast.error(result.payload as string);
+        }
+    };
 
     // Fetch this month's grid whenever the visible month changes.
     useEffect(() => {
@@ -220,40 +245,6 @@ export default function AvailabilityTab() {
         }
     };
 
-    /**
-     * Bulk-sets every in-month, non-past day to fully available/unavailable.
-     * The backend PATCH endpoint accepts a flat list of {date, period, ...}
-     * updates spanning any dates, so this is a genuine single bulk request —
-     * not a loop of per-day calls.
-     */
-    const handleBulkSetMonth = async (available: boolean) => {
-        const updates: AvailabilitySlot[] = [];
-        grid
-            .filter((c) => c.inMonth && !c.isPast)
-            .forEach((c) => {
-                SLOT_DEFS.forEach((def) => {
-                    updates.push({
-                        date: c.iso,
-                        period: def.key,
-                        displayRange: def.time,
-                        isAvailable: available,
-                        reason: available ? null : "Other",
-                    });
-                });
-            });
-        if (updates.length === 0) return;
-        const result = await dispatch(saveDayAvailability(updates));
-        if (saveDayAvailability.fulfilled.match(result)) {
-            toast.success(
-                available
-                    ? `All remaining days in ${monthLabel} marked available.`
-                    : `All remaining days in ${monthLabel} marked unavailable.`,
-            );
-        } else {
-            toast.error((result.payload as string) ?? "Bulk update failed.");
-        }
-    };
-
     const handleSelectDateClick = () => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click();
 
     const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,14 +280,6 @@ export default function AvailabilityTab() {
                             <span className="h-2 w-2 rounded-full bg-red-500" /> Unavailable
                         </span>
                     </div>
-                    <button
-                        disabled
-                        title="Bulk update across multiple days is coming soon"
-                        className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-400 cursor-not-allowed"
-                    >
-                        <FileDown className="h-4 w-4" />
-                        Bulk Update
-                    </button>
                 </div>
 
                 {error && (
@@ -341,6 +324,7 @@ export default function AvailabilityTab() {
                                 <input
                                     ref={dateInputRef}
                                     type="date"
+                                    min={todayIso}
                                     onChange={handleDateInputChange}
                                     className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                                     aria-hidden
@@ -447,57 +431,6 @@ export default function AvailabilityTab() {
                                 </span>
                             ))}
                         </p>
-
-                        {/* Quick actions */}
-                        <div className="mt-5 rounded-xl border border-slate-200 p-4">
-                            <p className="mb-3 text-sm font-semibold text-slate-800">Quick Actions</p>
-                            <p className="mb-3 text-xs text-slate-400">
-                                Applies to every remaining day in {monthLabel}.
-                            </p>
-                            <div className="flex flex-wrap gap-5 text-sm text-slate-600">
-                                <button
-                                    onClick={() => handleBulkSetMonth(true)}
-                                    disabled={saveStatus === "saving"}
-                                    className="flex items-center gap-1.5 hover:text-[#1e3a8a] disabled:opacity-50"
-                                >
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                    Make All Available
-                                </button>
-                                <button
-                                    onClick={() => handleBulkSetMonth(false)}
-                                    disabled={saveStatus === "saving"}
-                                    className="flex items-center gap-1.5 hover:text-[#1e3a8a] disabled:opacity-50"
-                                >
-                                    <Ban className="h-4 w-4 text-red-500" />
-                                    Make All Unavailable
-                                </button>
-                                <button
-                                    disabled
-                                    title="Coming soon"
-                                    className="flex items-center gap-1.5 text-slate-400 cursor-not-allowed"
-                                >
-                                    <CalendarRange className="h-4 w-4" />
-                                    Custom Time Range
-                                </button>
-                                <button
-                                    disabled
-                                    title="Coming soon"
-                                    className="flex items-center gap-1.5 text-slate-400 cursor-not-allowed"
-                                >
-                                    <Copy className="h-4 w-4" />
-                                    Copy Availability
-                                </button>
-                                <button
-                                    onClick={() => handleBulkSetMonth(true)}
-                                    disabled={saveStatus === "saving"}
-                                    title="Resets every remaining day this month back to fully available"
-                                    className="flex items-center gap-1.5 hover:text-[#1e3a8a] disabled:opacity-50"
-                                >
-                                    <RotateCcw className="h-4 w-4 text-[#e8683f]" />
-                                    Reset Calendar
-                                </button>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Day detail sidebar */}
@@ -559,6 +492,77 @@ export default function AvailabilityTab() {
                             {saveStatus === "saving" ? "Saving…" : "Save Changes"}
                         </button>
                     </div>
+                </div>
+
+                {/* Weekly working pattern — full width row below the calendar/sidebar grid,
+                    so it stretches all the way to the right edge without touching the
+                    day-detail ("Overall Status") sidebar above. Day toggles and slot
+                    toggles are independent, not a 21-cell grid. */}
+                <div className="mt-6 rounded-xl border border-slate-200 p-4 sm:p-5">
+                    <p className="mb-1 text-sm font-semibold text-slate-800">Weekly Working Pattern</p>
+                    <p className="mb-4 text-xs text-slate-400">
+                        Pick your working days and which slots you generally take. Calendar overrides above always win.
+                    </p>
+
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                        <div>
+                            <p className="mb-1.5 text-xs font-medium text-slate-500">Working days</p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {WEEKDAYS.map((label, dow) => (
+                                    <button
+                                        key={label}
+                                        onClick={() => toggleDay(dow)}
+                                        className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                                            draftSettings.workingDays.includes(dow)
+                                                ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
+                                                : "border-slate-200 bg-white text-slate-500"
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="mb-1.5 text-xs font-medium text-slate-500">Default slots</p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {SLOT_DEFS.map((def) => (
+                                    <button
+                                        key={def.key}
+                                        onClick={() => toggleDefaultSlot(def.key)}
+                                        className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
+                                            draftSettings.defaultSlots.includes(def.key)
+                                                ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
+                                                : "border-slate-200 bg-white text-slate-500"
+                                        }`}
+                                    >
+                                        <span className={`h-1.5 w-1.5 rounded-full ${def.dot}`} />
+                                        {def.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between rounded-lg border border-slate-100 p-3 sm:col-span-2 lg:col-span-1">
+                            <div>
+                                <p className="text-sm font-medium text-slate-700">Accept Business &amp; Pro Orders</p>
+                                <p className="text-xs text-slate-400">Lets ServiceLink assign you to bulk / corporate bookings.</p>
+                            </div>
+                            <ToggleSwitch
+                                checked={draftSettings.acceptsProOrders}
+                                onChange={() => setDraftSettings((prev) => ({ ...prev, acceptsProOrders: !prev.acceptsProOrders }))}
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleSaveSettings}
+                        disabled={settingsSaveStatus === "saving"}
+                        className="mt-5 rounded-lg bg-[#1e3a8a] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                    >
+                        {settingsSaveStatus === "saving" ? "Saving…" : "Save Weekly Pattern"}
+                    </button>
                 </div>
             </div>
         </div>

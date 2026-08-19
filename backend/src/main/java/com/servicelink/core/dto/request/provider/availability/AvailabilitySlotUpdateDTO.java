@@ -19,6 +19,11 @@ public class AvailabilitySlotUpdateDTO {
     @JsonProperty("isAvailable")
     private boolean isAvailable;
 
-    /** Ignored when isAvailable = true; service nulls it out regardless of what's sent. */
-    private String reason;
+//    /** Plain string tag, e.g. "Personal Work" / "Festival" / "Emergency" / "Other".
+//     *  Ignored when isAvailable = true; service nulls it out regardless of what's sent. */
+//    private String reasonTag;
+//
+//    /** Only required when reasonTag = "Other". */
+//    private String reasonNote;
+private String reason;
 }

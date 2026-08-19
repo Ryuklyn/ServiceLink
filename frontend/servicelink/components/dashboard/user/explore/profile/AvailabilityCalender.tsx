@@ -25,11 +25,16 @@ interface DaySlot {
   available: boolean;
 }
 
-// Shape returned by GET /providers/{id}/availability
+// Shape returned by GET /providers/{id}/availability (public/customer DTO).
+// displayRange and reason are always present on the wire — reason is always
+// null on this endpoint (the resolver strips it for non-owner callers), but
+// the type should still reflect the real response shape.
 interface BackendAvailabilitySlot {
   date: string; // yyyy-MM-dd
   period: "MORNING" | "AFTERNOON" | "EVENING";
+  displayRange: string; // e.g. "08:00-12:00", from TimeSlot.getDisplayRange()
   isAvailable: boolean;
+  reason: string | null; // always null here — never rendered on the customer side
 }
 
 const ALL_PERIODS: DaySlot["period"][] = ["morning", "afternoon", "evening"];
@@ -119,10 +124,15 @@ function isPeriodElapsed(date: Date, period: DaySlot["period"]): boolean {
   return now >= periodEnd;
 }
 
+// Static fallback (label + icon + default time), used only when a date/period
+// has no fetched row yet (e.g. still loading) — defaultTime matches the
+// backend's TimeSlot.getDisplayRange() exactly, since both encode the same
+// three-slot concept. Once a row arrives, its displayRange wins (see
+// getTimeLabel below), so this never drifts out of sync with the server.
 const TIME_SLOT_DESCRIPTORS = {
-  morning:   { label: "Morning",   time: "8:00 AM - 12:00 PM", icon: Sun    },
-  afternoon: { label: "Afternoon", time: "12:00 PM - 4:00 PM", icon: Sunset },
-  evening:   { label: "Evening",   time: "4:00 PM - 8:00 PM",  icon: Moon   },
+  morning:   { label: "Morning",   defaultTime: "8:00 AM - 12:00 PM", icon: Sun    },
+  afternoon: { label: "Afternoon", defaultTime: "12:00 PM - 4:00 PM", icon: Sunset },
+  evening:   { label: "Evening",   defaultTime: "4:00 PM - 8:00 PM",  icon: Moon   },
 };
 
 export default function AvailabilityCalendar({
@@ -187,6 +197,14 @@ export default function AvailabilityCalendar({
       const backendAvailable = row ? row.isAvailable : true;
       return { id: period[0], period, available: backendAvailable && !isPeriodElapsed(date, period) };
     });
+  };
+
+  // Prefers the backend's displayRange for the given date/period, falling
+  // back to the static default only when no row has been fetched yet
+  // (e.g. a defaulted slot outside the loaded range, or mid-load).
+  const getTimeLabel = (date: Date, period: DaySlot["period"]): string => {
+    const row = slotsByDate[isoKey(date)]?.find((r) => r.period === PERIOD_TO_BACKEND[period]);
+    return row?.displayRange ?? TIME_SLOT_DESCRIPTORS[period].defaultTime;
   };
 
   const weekDays = useMemo(() =>
@@ -360,6 +378,7 @@ export default function AvailabilityCalendar({
               const IconComponent = config.icon;
               const isSlotSelected = selectedSlotPeriod === slot.period;
               const elapsed = isPeriodElapsed(selectedDate, slot.period);
+              const timeLabel = getTimeLabel(selectedDate, slot.period);
 
               return (
                   <button
@@ -393,7 +412,7 @@ export default function AvailabilityCalendar({
                                 isSlotSelected ? "text-white/70" : "text-slate-400"
                             }`}
                         >
-                          {config.time}
+                          {timeLabel}
                         </span>
                       </div>
                     </div>
