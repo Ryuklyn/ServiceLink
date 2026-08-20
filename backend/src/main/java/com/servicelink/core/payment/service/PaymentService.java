@@ -19,6 +19,7 @@ import com.servicelink.core.payment.gateway.KhaltiGatewayService;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.business.PaymentTransactionRepository;
 import com.servicelink.core.repository.provider.subscription.ProviderSubscriptionRepository;
+import com.servicelink.core.service.EmailService;
 import com.servicelink.core.service.provider.subscription.ProviderSubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,7 @@ public class PaymentService {
     private final PaymentMapper paymentMapper;
     private final ProviderRepository providerRepo;
     private final ProviderSubscriptionService providerSubscriptionService;
+    private final EmailService emailService;
 
     // ─────────────────────────────────────────────────────────────
     // Step 1: Initiate — build gateway URL, save INITIATED record
@@ -236,6 +238,22 @@ public class PaymentService {
     // ProviderSubscriptionService, which sets plan/status/dates and
     // syncs Provider.isActive, all in one authoritative place.
     // ─────────────────────────────────────────────────────────────
+//    @Transactional
+//    public PaymentTransactionResponse verifyAndSync(Long userId, PaymentVerifyRequest req) throws Exception {
+//        Provider provider = providerRepo.findByUser_Id(userId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Provider for user", userId));
+//
+//        PaymentTransactionResponse result = verifyAndComplete(req);
+//
+//        if (result.getStatus() == PaymentStatus.SUCCESS) {
+//            transactionRepository.findByReferenceId(req.getReferenceId())
+//                    .map(PaymentTransaction::getSubscription)
+//                    .ifPresent(sub ->
+//                            providerSubscriptionService.upgradePlan(provider.getId(), sub.getPlanType()));
+//        }
+//        return result;
+//    }
+
     @Transactional
     public PaymentTransactionResponse verifyAndSync(Long userId, PaymentVerifyRequest req) throws Exception {
         Provider provider = providerRepo.findByUser_Id(userId)
@@ -245,9 +263,23 @@ public class PaymentService {
 
         if (result.getStatus() == PaymentStatus.SUCCESS) {
             transactionRepository.findByReferenceId(req.getReferenceId())
-                    .map(PaymentTransaction::getSubscription)
-                    .ifPresent(sub ->
-                            providerSubscriptionService.upgradePlan(provider.getId(), sub.getPlanType()));
+                    .ifPresent(tx -> {
+                        ProviderSubscription sub = tx.getSubscription();
+                        providerSubscriptionService.upgradePlan(provider.getId(), sub.getPlanType());
+
+                        // same persistence context → sub.getEndDate() below already
+                        // reflects the post-upgrade value, since upgradePlan() loads
+                        // and mutates the same managed entity by PK
+                        emailService.sendSubscriptionPaymentEmail(
+                                provider.getUser().getEmail(),
+                                provider.getUser().getFullName(),
+                                sub.getPlanType().name(),
+                                tx.getAmountNpr(),
+                                tx.getPaymentGateway().name(),
+                                tx.getReferenceId(),
+                                sub.getEndDate()
+                        );
+                    });
         }
         return result;
     }

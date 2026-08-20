@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Lock } from "lucide-react";
+import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import type { AppDispatch, RootState } from "@/store";
@@ -134,6 +135,17 @@ export default function AvailabilityTab() {
         (s: RootState) => s.providerAvailability,
     );
 
+    // ── Subscription gate for Business & Pro Orders ──────────────────────
+    // Already fetched once by ProviderDashboardLayout on mount and stored in
+    // Redux, so this tab just reads it — no prop drilling through the layout
+    // needed. Pro orders require a PAID, currently-active plan; the free
+    // trial deliberately does not unlock this (matches the backend rule
+    // enforced in ProviderScheduleSettingsService — this is a UX convenience,
+    // not the real enforcement).
+    const { data: subscription } = useSelector((s: RootState) => s.providerSubscription);
+    const isPaidPlan = Boolean(subscription?.planType && subscription.planType !== "FREE_TRIAL");
+    const proOrdersUnlocked = Boolean(subscription?.isActive && isPaidPlan);
+
     const [selectedDay, setSelectedDay] = useState(() => isoDate(new Date()));
     const [draftSlots, setDraftSlots] = useState<DraftSlot[]>([]);
     const dateInputRef = useRef<HTMLInputElement>(null);
@@ -182,6 +194,11 @@ export default function AvailabilityTab() {
                 ? prev.defaultSlots.filter((s) => s !== key)
                 : [...prev.defaultSlots, key],
         }));
+    };
+
+    const toggleAcceptsProOrders = () => {
+        if (!proOrdersUnlocked) return; // guarded again below at the switch itself; belt & suspenders
+        setDraftSettings((prev) => ({ ...prev, acceptsProOrders: !prev.acceptsProOrders }));
     };
 
     const handleSaveSettings = async () => {
@@ -256,6 +273,13 @@ export default function AvailabilityTab() {
     };
 
     const selectedStatus = dayStatus(slotsByDate[selectedDay]);
+
+    // Visual-only: while locked, always render the switch as OFF regardless
+    // of whatever value is saved underneath (e.g. a paid plan that lapsed
+    // last week shouldn't still look "on" to the provider). Saving is
+    // blocked entirely while locked (see the disabled Save button below),
+    // so this never silently overwrites their stored preference.
+    const displayAcceptsProOrders = proOrdersUnlocked && draftSettings.acceptsProOrders;
 
     return (
         <div className="space-y-6">
@@ -544,15 +568,42 @@ export default function AvailabilityTab() {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between rounded-lg border border-slate-100 p-3 sm:col-span-2 lg:col-span-1">
-                            <div>
-                                <p className="text-sm font-medium text-slate-700">Accept Business &amp; Pro Orders</p>
-                                <p className="text-xs text-slate-400">Lets ServiceLink assign you to bulk / corporate bookings.</p>
+                        {/* Accept Business & Pro Orders — gated behind an active PAID plan.
+                            During FREE_TRIAL (or a lapsed/cancelled subscription), this is
+                            forced off and disabled with an inline unlock CTA. */}
+                        <div className="rounded-lg border border-slate-100 p-3 sm:col-span-2 lg:col-span-1">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-sm font-medium text-slate-700">Accept Business &amp; Pro Orders</p>
+                                    {!proOrdersUnlocked && <Lock className="h-3.5 w-3.5 text-slate-400" />}
+                                </div>
+                                <ToggleSwitch
+                                    checked={displayAcceptsProOrders}
+                                    onChange={toggleAcceptsProOrders}
+                                    disabled={!proOrdersUnlocked}
+                                />
                             </div>
-                            <ToggleSwitch
-                                checked={draftSettings.acceptsProOrders}
-                                onChange={() => setDraftSettings((prev) => ({ ...prev, acceptsProOrders: !prev.acceptsProOrders }))}
-                            />
+
+                            {proOrdersUnlocked ? (
+                                <p className="mt-1 text-xs text-slate-400">
+                                    Lets ServiceLink assign you to bulk / corporate bookings.
+                                </p>
+                            ) : (
+                                <div className="mt-2 rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-700">
+                                    <p className="font-medium">
+                                        Not available on the Free Trial.
+                                    </p>
+                                    <p className="mt-0.5 text-amber-600">
+                                        Activate a paid subscription to accept Business &amp; Pro orders.
+                                    </p>
+                                    <Link
+                                        href="/dashboard/provider/subscription"
+                                        className="mt-1.5 inline-block font-semibold text-[#1e3a8a] hover:underline"
+                                    >
+                                        View plans →
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     </div>
 

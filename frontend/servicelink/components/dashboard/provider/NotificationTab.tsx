@@ -3,51 +3,49 @@
 import { useState } from "react";
 import { Bell, CreditCard, Star, Info, Megaphone } from "lucide-react";
 
-type NotificationRow = {
-    id: string;
-    title: string;
+type CategoryRow = {
+    key: string;
+    label: string;
     description: string;
+    icon: typeof Bell;
     enabled: boolean;
 };
 
-const CATEGORIES = [
-    { key: "bookings", label: "Bookings", desc: "Stay updated on booking activities", icon: Bell, active: true },
-    { key: "payments", label: "Payments", desc: "Receive payment and payout alerts", icon: CreditCard, active: false },
-    { key: "reviews", label: "Reviews", desc: "Get notified about customer reviews", icon: Star, active: false },
-    { key: "general", label: "General", desc: "Important updates and announcements", icon: Info, active: false },
-    { key: "marketing", label: "Marketing", desc: "Offers, tips and promotional updates", icon: Megaphone, active: false },
-];
-
-const INITIAL_ROWS: NotificationRow[] = [
+const INITIAL_CATEGORIES: CategoryRow[] = [
     {
-        id: "new_request",
-        title: "New Booking Request",
-        description: "When a customer sends a new booking request",
+        key: "bookings",
+        label: "Bookings",
+        description: "New requests, confirmations, reschedules, cancellations & reminders",
+        icon: Bell,
         enabled: true,
     },
     {
-        id: "confirmed",
-        title: "Booking Confirmed",
-        description: "When a booking is confirmed",
+        key: "payments",
+        label: "Payments",
+        description: "Late reschedule/cancellation fines, and payments from Business & Pro bookings",
+        icon: CreditCard,
         enabled: true,
     },
     {
-        id: "rescheduled",
-        title: "Booking Rescheduled",
-        description: "When a booking is rescheduled",
+        key: "reviews",
+        label: "Reviews",
+        description: "New customer reviews and ratings",
+        icon: Star,
         enabled: true,
     },
     {
-        id: "cancelled",
-        title: "Booking Cancelled",
-        description: "When a booking is cancelled",
+        key: "general",
+        label: "General",
+        description: "Platform updates and important announcements",
+        icon: Info,
         enabled: true,
     },
     {
-        id: "reminder",
-        title: "Reminder Before Booking",
-        description: "Get reminder before scheduled booking",
-        enabled: true,
+        key: "marketing",
+        label: "Marketing",
+        description: "Offers, tips and promotional updates",
+        icon: Megaphone,
+        enabled: false,
     },
 ];
 
@@ -81,86 +79,56 @@ function ToggleSwitch({
 }
 
 export default function NotificationTab() {
-    const [rows, setRows] = useState<NotificationRow[]>(INITIAL_ROWS);
+    const [categories, setCategories] = useState<CategoryRow[]>(INITIAL_CATEGORIES);
     const [quietHours, setQuietHours] = useState(true);
     const [digest, setDigest] = useState(true);
     const [from, setFrom] = useState("22:00");
     const [to, setTo] = useState("07:00");
     const [frequency, setFrequency] = useState("Daily");
 
-    const toggleRow = (id: string) => {
-        setRows((prev) =>
-            prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r))
+    const toggleCategory = (key: string) => {
+        setCategories((prev) =>
+            prev.map((c) => (c.key === key ? { ...c, enabled: !c.enabled } : c))
         );
     };
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr_280px]">
-                {/* Categories sidebar */}
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <h3 className="mb-3 text-sm font-semibold text-slate-900">
-                        Notification Categories
-                    </h3>
-                    <div className="space-y-1">
-                        {CATEGORIES.map((cat) => {
-                            const Icon = cat.icon;
-                            return (
-                                <button
-                                    key={cat.key}
-                                    className={`flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
-                                        cat.active ? "bg-[#1e3a8a]/5" : "hover:bg-slate-50"
-                                    }`}
-                                >
-                                    <span
-                                        className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                                            cat.active
-                                                ? "bg-[#1e3a8a]/10 text-[#1e3a8a]"
-                                                : "bg-slate-100 text-slate-400"
-                                        }`}
-                                    >
-                                        <Icon className="h-3.5 w-3.5" />
-                                    </span>
-                                    <span>
-                                        <p
-                                            className={`text-sm font-medium ${
-                                                cat.active ? "text-[#1e3a8a]" : "text-slate-700"
-                                            }`}
-                                        >
-                                            {cat.label}
-                                        </p>
-                                        <p className="text-xs text-slate-400">{cat.desc}</p>
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Booking notifications — single on/off toggle per notification */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+                {/* Notifications — one toggle per category, no sub-items */}
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-slate-900">
-                        Booking Notifications
+                    <h3 className="mb-1 text-sm font-semibold text-slate-900">
+                        Notifications
                     </h3>
+                    <p className="mb-4 text-xs text-slate-400">
+                        Choose which types of notifications you want to receive.
+                    </p>
 
                     <div className="divide-y divide-slate-100">
-                        {rows.map((row) => (
-                            <div key={row.id} className="flex items-center justify-between gap-4 py-4">
-                                <div>
-                                    <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                                        <Bell className="h-3.5 w-3.5 text-[#1e3a8a]" />
-                                        {row.title}
-                                    </p>
-                                    <p className="mt-0.5 pl-5 text-xs text-slate-400">
-                                        {row.description}
-                                    </p>
+                        {categories.map((cat) => {
+                            const Icon = cat.icon;
+                            return (
+                                <div key={cat.key} className="flex items-center justify-between gap-4 py-4">
+                                    <div className="flex items-start gap-3">
+                                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1e3a8a]/5 text-[#1e3a8a]">
+                                            <Icon className="h-4 w-4" />
+                                        </span>
+                                        <div>
+                                            <p className="text-sm font-medium text-slate-800">
+                                                {cat.label}
+                                            </p>
+                                            <p className="mt-0.5 text-xs text-slate-400">
+                                                {cat.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <ToggleSwitch
+                                        checked={cat.enabled}
+                                        onChange={() => toggleCategory(cat.key)}
+                                    />
                                 </div>
-                                <ToggleSwitch
-                                    checked={row.enabled}
-                                    onChange={() => toggleRow(row.id)}
-                                />
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 

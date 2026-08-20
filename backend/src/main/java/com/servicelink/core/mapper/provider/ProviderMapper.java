@@ -71,23 +71,6 @@ public class ProviderMapper {
                 .build();
     }
 
-    // ── ProviderService ───────────────────────────────────────────────────────
-//
-//    public ProviderServiceDTO toProviderServiceDTO(ProviderService ps) {
-//        ServiceCatalog c = ps.getCatalogItem();
-//        return ProviderServiceDTO.builder()
-//                .id(ps.getId())
-//                .catalogId(c.getId())
-//                .subServiceName(c.getSubServiceName())
-//                .categoryId(c.getCategory().getId())
-//                .categoryName(c.getCategory().getName())
-//                .pricingUnit(c.getPricingUnit())
-//                .customPrice(ps.getCustomPrice())
-//                .effectiveDuration(ps.getEffectiveDuration())
-//                .isAvailable(ps.getIsAvailable())
-//                .build();
-//    }
-
     // ── Portfolio ─────────────────────────────────────────────────────────────
 
     public PortfolioResponseDTO toPortfolioDTO(Portfolio portfolio) {
@@ -115,36 +98,6 @@ public class ProviderMapper {
                 .createdAt(review.getCreatedAt())
                 .build();
     }
-
-    // ── ServiceCatalog ────────────────────────────────────────────────────────
-
-//    public ServiceCatalogDTO toCatalogDTO(ServiceCatalog sc) {
-//        return ServiceCatalogDTO.builder()
-//                .id(sc.getId())
-//                .categoryId(sc.getCategory().getId())
-//                .categoryName(sc.getCategory().getName())
-//                .subServiceName(sc.getSubServiceName())
-//                .defaultDuration(sc.getDefaultDuration())
-//                .pricingUnit(sc.getPricingUnit())
-//                .basePrice(sc.getBasePrice())
-//                .isActive(sc.getIsActive())
-//                .build();
-//    }
-
-    // ProviderMapper.java
-//
-//    public ServiceCatalogDTO toCatalogDTO(ServiceCatalog sc) {
-//        return ServiceCatalogDTO.builder()
-//                .id(sc.getId())
-//                .categoryId(sc.getCategory() != null ? sc.getCategory().getId() : null)
-//                .categoryName(sc.getCategory() != null ? sc.getCategory().getName() : null)
-//                .subServiceName(sc.getSubServiceName())
-//                .defaultDuration(sc.getDefaultDuration())
-//                .pricingUnit(sc.getPricingUnit())
-//                .basePrice(sc.getBasePrice())
-//                .isActive(sc.getIsActive())
-//                .build();
-//    }
 
     // ── ProviderService ───────────────────────────────────────────────────────
 

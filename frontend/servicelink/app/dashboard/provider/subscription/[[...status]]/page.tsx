@@ -17,28 +17,75 @@ import type { PaymentGateway, SubscriptionPlanType } from "@/lib/api/subscriptio
 // in the /checkout endpoint; these are for display only, never trusted as
 // the actual charge amount. ──────────────────────────────────────────────────
 
+// const PLAN_DISPLAY: Record<
+//     "monthly" | "quarterly" | "yearly",
+//     { label: string; price: string; sub: string; enumValue: SubscriptionPlanType; durationDays: number; save?: string }
+// > = {
+//     monthly: { label: "Monthly", price: "Rs. 500", sub: "/ month", enumValue: "MONTHLY", durationDays: 30 },
+//     quarterly: {
+//         label: "Quarterly",
+//         price: "Rs. 1200",
+//         sub: "/ 3 months",
+//         enumValue: "QUARTERLY",
+//         durationDays: 90,
+//         save: "Save Rs. 300/year",
+//     },
+//     yearly: {
+//         label: "Yearly",
+//         price: "Rs. 4000",
+//         sub: "/ year",
+//         enumValue: "YEARLY",
+//         durationDays: 365,
+//         save: "Save Rs. 2000/year",
+//     },
+// };
+
 const PLAN_DISPLAY: Record<
-    "monthly" | "quarterly" | "yearly",
-    { label: string; price: string; sub: string; enumValue: SubscriptionPlanType; durationDays: number; save?: string }
-> = {
-    monthly: { label: "Monthly", price: "Rs. 500", sub: "/ month", enumValue: "MONTHLY", durationDays: 30 },
-    quarterly: {
-        label: "Quarterly",
-        price: "Rs. 1200",
-        sub: "/ 3 months",
-        enumValue: "QUARTERLY",
-        durationDays: 90,
-        save: "Save Rs. 300/year",
-    },
-    yearly: {
-        label: "Yearly",
-        price: "Rs. 4000",
-        sub: "/ year",
-        enumValue: "YEARLY",
-        durationDays: 365,
-        save: "Save Rs. 2000/year",
-    },
-};
+"monthly" | "quarterly" | "yearly",
+    {
+        label: string;
+        price: string;
+        priceValue: number;
+        sub: string;
+        perDay: string;
+        enumValue: SubscriptionPlanType;
+        durationDays: number;
+        savingsNote?: string;
+        badge?: { text: string; tone: "popular" | "value" };
+    }
+    > = {
+        monthly: {
+            label: "Monthly",
+            price: "Rs. 500",
+            priceValue: 500,
+            sub: "billed every month",
+            perDay: "Rs. 17 / day",
+            enumValue: "MONTHLY",
+            durationDays: 30,
+        },
+        quarterly: {
+            label: "Quarterly",
+            price: "Rs. 1,200",
+            priceValue: 1200,
+            sub: "billed every 3 months",
+            perDay: "Rs. 13 / day",
+            enumValue: "QUARTERLY",
+            durationDays: 90,
+            savingsNote: "Save Rs. 300 vs monthly billing",
+            badge: { text: "Most Popular", tone: "popular" },
+        },
+        yearly: {
+            label: "Yearly",
+            price: "Rs. 4,000",
+            priceValue: 4000,
+            sub: "billed once a year",
+            perDay: "Rs. 11 / day",
+            enumValue: "YEARLY",
+            durationDays: 365,
+            savingsNote: "Save Rs. 2,000 vs monthly billing",
+            badge: { text: "Best Value", tone: "value" },
+        },
+    };
 
 const PLAN_FEATURES = [
     "Unlimited booking requests",
@@ -412,61 +459,154 @@ export default function SubscriptionPage() {
                 </div>
 
                 {/* Choose a Plan */}
+                {/*<div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">*/}
+                {/*    <h2 className="text-sm font-semibold text-gray-800 mb-4">Choose a Plan</h2>*/}
+                {/*    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">*/}
+                {/*        {(Object.keys(PLAN_DISPLAY) as Array<keyof typeof PLAN_DISPLAY>).map((key) => {*/}
+                {/*            const plan = PLAN_DISPLAY[key];*/}
+                {/*            const isSelected = selectedPlan === key;*/}
+                {/*            const isCurrent = status?.planType === plan.enumValue;*/}
+                {/*            return (*/}
+                {/*                <div*/}
+                {/*                    key={key}*/}
+                {/*                    onClick={() => setSelectedPlan(key)}*/}
+                {/*                    className={`relative rounded-xl border-2 p-3 cursor-pointer transition-all ${*/}
+                {/*                        isSelected*/}
+                {/*                            ? "border-orange-400 bg-orange-50"*/}
+                {/*                            : "border-gray-200 hover:border-gray-300"*/}
+                {/*                    }`}*/}
+                {/*                >*/}
+                {/*                    {isCurrent && (*/}
+                {/*                        <span*/}
+                {/*                            className="absolute -top-2.5 left-3 text-xs font-semibold px-2 py-0.5 rounded"*/}
+                {/*                            style={{ backgroundColor: "#e8683f", color: "white" }}*/}
+                {/*                        >*/}
+                {/*      Current*/}
+                {/*    </span>*/}
+                {/*                    )}*/}
+                {/*                    {key === "yearly" && (*/}
+                {/*                        <span*/}
+                {/*                            className="absolute -top-2.5 right-3 text-xs font-semibold px-2 py-0.5 rounded text-white"*/}
+                {/*                            style={{ backgroundColor: "#e8683f" }}*/}
+                {/*                        >*/}
+                {/*      Best Value*/}
+                {/*    </span>*/}
+                {/*                    )}*/}
+                {/*                    <p className="text-xs font-semibold text-gray-700 mb-1">{plan.label}</p>*/}
+                {/*                    <p className="text-base font-bold" style={{ color: "#1e3a8a" }}>*/}
+                {/*                        {plan.price}*/}
+                {/*                    </p>*/}
+                {/*                    <p className="text-xs text-gray-400 mb-1">{plan.sub}</p>*/}
+                {/*                    {plan.save && (*/}
+                {/*                        <p className="text-xs font-semibold mb-2" style={{ color: "#e8683f" }}>*/}
+                {/*                            {plan.save}*/}
+                {/*                        </p>*/}
+                {/*                    )}*/}
+                {/*                    <div className="space-y-1.5 mt-2">*/}
+                {/*                        {PLAN_FEATURES.map((f) => (*/}
+                {/*                            <div key={f} className="flex items-start gap-1.5">*/}
+                {/*                                <Check size={11} className="text-green-500 mt-0.5 flex-shrink-0" />*/}
+                {/*                                <span className="text-xs text-gray-600 leading-tight">{f}</span>*/}
+                {/*                            </div>*/}
+                {/*                        ))}*/}
+                {/*                    </div>*/}
+                {/*                </div>*/}
+                {/*            );*/}
+                {/*        })}*/}
+                {/*    </div>*/}
+                {/*</div>*/}
+
+                {/* Choose a Plan */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                    <h2 className="text-sm font-semibold text-gray-800 mb-4">Choose a Plan</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="mb-4">
+                        <h2 className="text-sm font-semibold text-gray-800">Choose a Plan</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            Same features on every plan — longer commitments just cost less per day.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {(Object.keys(PLAN_DISPLAY) as Array<keyof typeof PLAN_DISPLAY>).map((key) => {
                             const plan = PLAN_DISPLAY[key];
                             const isSelected = selectedPlan === key;
                             const isCurrent = status?.planType === plan.enumValue;
+
                             return (
-                                <div
+                                <button
+                                    type="button"
                                     key={key}
                                     onClick={() => setSelectedPlan(key)}
-                                    className={`relative rounded-xl border-2 p-3 cursor-pointer transition-all ${
+                                    className={`relative text-left rounded-2xl border-2 p-4 pt-6 transition-all ${
                                         isSelected
-                                            ? "border-orange-400 bg-orange-50"
-                                            : "border-gray-200 hover:border-gray-300"
+                                            ? "border-[#e8683f] bg-orange-50/60 shadow-md"
+                                            : "border-gray-200 bg-white hover:border-gray-300"
                                     }`}
                                 >
-                                    {isCurrent && (
-                                        <span
-                                            className="absolute -top-2.5 left-3 text-xs font-semibold px-2 py-0.5 rounded"
-                                            style={{ backgroundColor: "#e8683f", color: "white" }}
-                                        >
-                      Current
-                    </span>
-                                    )}
-                                    {key === "yearly" && (
-                                        <span
-                                            className="absolute -top-2.5 right-3 text-xs font-semibold px-2 py-0.5 rounded text-white"
-                                            style={{ backgroundColor: "#e8683f" }}
-                                        >
-                      Best Value
-                    </span>
-                                    )}
-                                    <p className="text-xs font-semibold text-gray-700 mb-1">{plan.label}</p>
-                                    <p className="text-base font-bold" style={{ color: "#1e3a8a" }}>
-                                        {plan.price}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mb-1">{plan.sub}</p>
-                                    {plan.save && (
-                                        <p className="text-xs font-semibold mb-2" style={{ color: "#e8683f" }}>
-                                            {plan.save}
+                                    {/* Badge row — current plan wins over marketing badge when both apply */}
+                                    <div className="absolute -top-3 left-4 right-4 flex items-center justify-between gap-2">
+                                        {isCurrent ? (
+                                            <span className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full text-white bg-[#1e3a8a]">
+                                Your Current Plan
+                            </span>
+                                        ) : plan.badge ? (
+                                            <span
+                                                className={`text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full text-white ${
+                                                    plan.badge.tone === "popular" ? "bg-[#e8683f]" : "bg-emerald-600"
+                                                }`}
+                                            >
+                                {plan.badge.text}
+                            </span>
+                                        ) : (
+                                            <span />
+                                        )}
+                                    </div>
+
+                                    <p className="text-sm font-semibold text-gray-700">{plan.label}</p>
+
+                                    <div className="mt-2 flex items-baseline gap-1">
+                        <span className="text-2xl font-bold" style={{ color: "#1e3a8a" }}>
+                            {plan.price}
+                        </span>
+                                    </div>
+                                    <p className="text-xs text-gray-400">{plan.sub}</p>
+
+                                    <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-md px-2 py-1">
+                                        {plan.perDay}
+                                    </div>
+
+                                    {plan.savingsNote && (
+                                        <p className="mt-2 text-xs font-semibold" style={{ color: "#e8683f" }}>
+                                            {plan.savingsNote}
                                         </p>
                                     )}
-                                    <div className="space-y-1.5 mt-2">
+
+                                    <div className="mt-3 border-t border-gray-100 pt-3 space-y-1.5">
                                         {PLAN_FEATURES.map((f) => (
                                             <div key={f} className="flex items-start gap-1.5">
-                                                <Check size={11} className="text-green-500 mt-0.5 flex-shrink-0" />
+                                                <Check size={12} className="text-green-500 mt-0.5 flex-shrink-0" />
                                                 <span className="text-xs text-gray-600 leading-tight">{f}</span>
                                             </div>
                                         ))}
                                     </div>
-                                </div>
+
+                                    <div
+                                        className={`mt-4 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold border ${
+                                            isSelected
+                                                ? "bg-[#e8683f] text-white border-[#e8683f]"
+                                                : "bg-white text-gray-600 border-gray-200"
+                                        }`}
+                                    >
+                                        {isSelected ? "Selected" : "Select Plan"}
+                                    </div>
+                                </button>
                             );
                         })}
                     </div>
+
+                    <p className="mt-4 text-xs text-gray-400 flex items-center gap-1.5">
+                        <Check size={12} className="text-green-500" />
+                        No lock-in — switch plans anytime. Leftover days always carry over to your new plan.
+                    </p>
                 </div>
 
                 {/* Payment Method */}

@@ -436,4 +436,99 @@ public class EmailService {
 
         send(to, subject, body, "Account deleted alert");
     }
+
+    // ─── Subscription payment success email ──────────────────────────────────
+
+    @Async
+    public void sendSubscriptionPaymentEmail(
+            String to,
+            String applicantName,
+            String planType,
+            long amountNpr,
+            String gateway,
+            String referenceId,
+            Instant newEndDate
+    ) {
+        String subject = "Payment received — " + planType + " plan activated";
+        String displayName = (applicantName == null || applicantName.isBlank()) ? "there" : applicantName;
+        String newEndDateFormatted = DateTimeFormatter
+                .ofPattern("MMMM d, yyyy")
+                .withZone(ZoneId.of("Asia/Kathmandu"))
+                .format(newEndDate);
+
+        String gatewayLabel = switch (gateway) {
+            case "ESEWA" -> "eSewa";
+            case "KHALTI" -> "Khalti";
+            default -> gateway;
+        };
+
+        String body = wrapTemplate(
+                "Payment Confirmation",
+                "Thanks, " + displayName + " — you're all set.",
+                "Your payment has been received and your subscription is now active.",
+                """
+                <div style="background:#fafaf9; border:1px solid #e7e5e4; border-radius:10px; padding:16px; margin: 20px 0;">
+                  <table style="width:100%%; border-collapse:collapse; font-size:14px;">
+                    <tr>
+                      <td style="padding:6px 0; color:#78716c;">Plan</td>
+                      <td style="padding:6px 0; color:#1c1917; font-weight:600; text-align:right;">%s</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0; color:#78716c;">Amount Paid</td>
+                      <td style="padding:6px 0; color:#1c1917; font-weight:600; text-align:right;">Rs. %d</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0; color:#78716c;">Payment Method</td>
+                      <td style="padding:6px 0; color:#1c1917; font-weight:600; text-align:right;">%s</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0; color:#78716c;">Reference ID</td>
+                      <td style="padding:6px 0; color:#1c1917; font-weight:600; text-align:right;">%s</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0; color:#78716c;">Active Until</td>
+                      <td style="padding:6px 0; color:%s; font-weight:600; text-align:right;">%s</td>
+                    </tr>
+                  </table>
+                </div>
+                <p style="font-size:13px; color:#78716c; margin:0;">
+                  Keep this email for your records — you can also review your full billing history
+                  anytime from your dashboard.
+                </p>
+                """.formatted(planType, amountNpr, gatewayLabel, referenceId, NAVY, newEndDateFormatted),
+                "View Billing History", "https://servicelink.com.np/dashboard/provider/subscription"
+        );
+
+        send(to, subject, body, "Subscription payment confirmation (ref: " + referenceId + ")");
+    }
+
+// ─── Subscription expired email ──────────────────────────────────────────
+
+    @Async
+    public void sendSubscriptionExpiredEmail(String to, String applicantName, String planType, Instant endDate) {
+        String subject = "Your ServiceLink subscription has expired";
+        String displayName = (applicantName == null || applicantName.isBlank()) ? "there" : applicantName;
+        String endDateFormatted = DateTimeFormatter
+                .ofPattern("MMMM d, yyyy")
+                .withZone(ZoneId.of("Asia/Kathmandu"))
+                .format(endDate);
+
+        String body = wrapTemplate(
+                "Subscription Expired",
+                "Your subscription just ended, " + displayName + ".",
+                "Your " + planType + " plan expired on " + endDateFormatted + ", and Pro Order eligibility has been paused.",
+                """
+                <p style="font-size:14px; line-height:1.6; color:#44403c; margin:0;">
+                  Your calendar and existing bookings are unaffected — but you won't be assigned new
+                  Business/Pro bulk bookings until you renew.
+                </p>
+                <p style="font-size:13px; color:#78716c; margin:16px 0 0;">
+                  Renew anytime from your dashboard to pick up right where you left off.
+                </p>
+                """,
+                "Renew Subscription", "https://servicelink.com.np/dashboard/provider/subscription"
+        );
+
+        send(to, subject, body, "Subscription expired alert");
+    }
 }

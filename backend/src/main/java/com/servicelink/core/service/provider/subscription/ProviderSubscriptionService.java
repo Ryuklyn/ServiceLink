@@ -9,7 +9,9 @@ import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import com.servicelink.core.model.provider.subscription.SubscriptionStatus;
 import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.provider.ProviderRepository;
+import com.servicelink.core.repository.provider.availability.ProviderScheduleSettingsRepository;
 import com.servicelink.core.repository.provider.subscription.ProviderSubscriptionRepository;
+import com.servicelink.core.service.EmailService;
 import com.servicelink.core.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,9 @@ public class ProviderSubscriptionService {
     private final ProviderSubscriptionRepository subscriptionRepo;
     private final ProviderRepository providerRepo;
     private final NotificationService notificationService;
+    private final ProviderScheduleSettingsRepository scheduleSettingsRepo;
+    private final EmailService emailService;
+
 
     @Transactional
     public ProviderSubscription issueTrialIfEligible(Provider provider) {
@@ -144,7 +149,50 @@ public class ProviderSubscriptionService {
      * isActive gets forced to false purely by subscription state; admins can
      * still suspend a provider manually at any other time.
      */
-    @Scheduled(cron = "0 5 0 * * *") // 00:05 every day
+//    @Scheduled(cron = "0 5 0 * * *") // 00:05 every day
+//    @Transactional
+//    public void expireOverdueSubscriptions() {
+//        List<ProviderSubscription> overdue =
+//                subscriptionRepo.findByStatusAndEndDateBefore(SubscriptionStatus.ACTIVE, Instant.now());
+//
+//        overdue.forEach(sub -> {
+//            sub.setStatus(SubscriptionStatus.EXPIRED);
+//            syncProviderIsActive(sub.getProvider(), false);
+//        });
+//
+//        subscriptionRepo.saveAll(overdue);
+//        if (!overdue.isEmpty()) {
+//            log.info("Expired {} provider subscription(s) and deactivated their providers", overdue.size());
+//        }
+//    }
+//
+//    @Scheduled(cron = "0 5 0 * * *") // 00:05 every day
+//    @Transactional
+//    public void expireOverdueSubscriptions() {
+//        List<ProviderSubscription> overdue =
+//                subscriptionRepo.findByStatusAndEndDateBefore(SubscriptionStatus.ACTIVE, Instant.now());
+//
+//        overdue.forEach(sub -> {
+//            sub.setStatus(SubscriptionStatus.EXPIRED);
+//            syncProviderIsActive(sub.getProvider(), false);
+//
+//            scheduleSettingsRepo.findById(sub.getProvider().getId())
+//                    .filter(s -> Boolean.TRUE.equals(s.getAcceptsProOrders()))
+//                    .ifPresent(s -> {
+//                        s.setAcceptsProOrders(false);
+//                        scheduleSettingsRepo.save(s);
+//                        log.info("Provider {} acceptsProOrders reset to false (subscription expired)",
+//                                sub.getProvider().getId());
+//                    });
+//        });
+//
+//        subscriptionRepo.saveAll(overdue);
+//        if (!overdue.isEmpty()) {
+//            log.info("Expired {} provider subscription(s) and deactivated their providers", overdue.size());
+//        }
+//    }
+
+    @Scheduled(cron = "0 5 0 * * *")
     @Transactional
     public void expireOverdueSubscriptions() {
         List<ProviderSubscription> overdue =
@@ -153,6 +201,22 @@ public class ProviderSubscriptionService {
         overdue.forEach(sub -> {
             sub.setStatus(SubscriptionStatus.EXPIRED);
             syncProviderIsActive(sub.getProvider(), false);
+
+            scheduleSettingsRepo.findById(sub.getProvider().getId())
+                    .filter(s -> Boolean.TRUE.equals(s.getAcceptsProOrders()))
+                    .ifPresent(s -> {
+                        s.setAcceptsProOrders(false);
+                        scheduleSettingsRepo.save(s);
+                        log.info("Provider {} acceptsProOrders reset to false (subscription expired)",
+                                sub.getProvider().getId());
+                    });
+
+            emailService.sendSubscriptionExpiredEmail(
+                    sub.getProvider().getUser().getEmail(),
+                    sub.getProvider().getUser().getFullName(),
+                    sub.getPlanType().name(),
+                    sub.getEndDate()
+            );
         });
 
         subscriptionRepo.saveAll(overdue);
