@@ -67,13 +67,50 @@ export function normalizeError(error: unknown): ApiError {
 // ─── Token storage ───────────────────────────────────────────────────────────
 
 const storage = {
-    getToken: (): string | null =>
-        typeof window !== "undefined" ? localStorage.getItem("token") : null,
-    setToken: (t: string) => localStorage.setItem("token", t),
-    clearToken: () => localStorage.removeItem("token"),
+    getToken: (): string | null => {
+        if (typeof window === "undefined") return null;
+        // Checks 'token', then falls back to 'adminAccessToken' or 'accessToken'
+        return (
+            localStorage.getItem("token") ||
+            localStorage.getItem("adminAccessToken") ||
+            localStorage.getItem("accessToken")
+        );
+    },
+    setToken: (t: string) => {
+        if (typeof window !== "undefined") {
+            localStorage.setItem("token", t);
+            localStorage.setItem("accessToken", t);
+        }
+    },
+    clearToken: () => {
+        if (typeof window !== "undefined") {
+            localStorage.removeItem("token");
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("adminAccessToken");
+            localStorage.removeItem("adminRefreshToken");
+        }
+    },
 };
 
-export { storage };
+const adminStorage = {
+    getAccess: (): string | null =>
+        typeof window !== "undefined"
+            ? localStorage.getItem("adminAccessToken") || localStorage.getItem("token")
+            : null,
+    setAccess: (t: string) => {
+        if (typeof window !== "undefined") {
+            localStorage.setItem("adminAccessToken", t);
+            localStorage.setItem("token", t);
+        }
+    },
+    setRefresh: (t: string) => {
+        if (typeof window !== "undefined") {
+            localStorage.setItem("adminRefreshToken", t);
+        }
+    },
+};
+
+export { storage, adminStorage };
 
 // ─── Axios instances ─────────────────────────────────────────────────────────
 
@@ -84,7 +121,6 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 /** Authenticated client — attaches Bearer token automatically. */
 const authClient: AxiosInstance = axios.create({
     baseURL: BASE_URL,
-    // headers: { "Content-Type": "application/json" },
     timeout: 15_000,
 });
 
@@ -95,18 +131,7 @@ const publicClient: AxiosInstance = axios.create({
     timeout: 15_000,
 });
 
-/**
- * Status client — attaches both Authorization and X-Provider-Token headers,
- * since new (not-yet-registered) applicants authenticate via a provider
- * token that the JwtAuthenticationFilter silently ignores (it only resolves
- * Authentication for rows that already exist in the users table).
- *
- * Deliberately has NO 401-redirect response interceptor: status checks can
- * run on pages like DoneStep/receipt that the applicant should be able to
- * see even if their token is stale or not yet a full session. A failed
- * status check should degrade gracefully in the UI, not force-navigate
- * the user away from a page they're already on.
- */
+/** Status client */
 const statusClient: AxiosInstance = axios.create({
     baseURL: BASE_URL,
     timeout: 15_000,
@@ -147,22 +172,28 @@ publicClient.interceptors.response.use(
     (error: AxiosError) => Promise.reject(normalizeError(error)),
 );
 
-
-// ─── Response interceptors (both clients) ───────────────────────────────────
+// ─── Response interceptors (authClient) ───────────────────────────────────
 
 function attachResponseInterceptor(instance: AxiosInstance) {
     instance.interceptors.response.use(
         (res) => res,
         (error: AxiosError) => {
             if (error.response?.status === 401) {
+                const isAdminPath =
+                    typeof window !== "undefined" &&
+                    (window.location.pathname.includes("/admin") ||
+                        window.location.pathname.includes("/dashboard/admin"));
+
                 storage.clearToken();
-                if (typeof window !== "undefined") window.location.href = "/login";
+
+                if (typeof window !== "undefined") {
+                    window.location.href = isAdminPath ? "/login/admin" : "/login";
+                }
             }
             return Promise.reject(normalizeError(error));
         },
     );
 }
-
 
 attachResponseInterceptor(authClient);
 

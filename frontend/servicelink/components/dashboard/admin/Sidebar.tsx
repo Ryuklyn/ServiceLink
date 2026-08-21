@@ -9,6 +9,7 @@ import {
     Layers,
     Building2,
     Wallet,
+    CreditCard,
     X,
     type LucideIcon,
 } from "lucide-react";
@@ -38,6 +39,12 @@ const NAV_ITEMS: NavItem[] = [
     },
     { id: "b2b", label: "B2B Organizations", href: "/dashboard/admin/b2b", icon: "b2b" },
     { id: "escrow", label: "Escrow & Payouts", href: "/dashboard/admin/escrow", icon: "escrow" },
+    {
+        id: "subscription",
+        label: "Provider Subscription",
+        href: "/dashboard/admin/provider-subscription",
+        icon: "subscription",
+    },
 ];
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -46,6 +53,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
     categories: Layers,
     b2b: Building2,
     escrow: Wallet,
+    subscription: CreditCard,
 };
 
 export default function Sidebar({

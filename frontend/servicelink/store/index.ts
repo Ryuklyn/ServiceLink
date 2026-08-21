@@ -11,6 +11,7 @@ import providerAvailabilityReducer from "./slices/providerAvailabilitySlice";
 import providerBookingsReducer from "./slices/providerBookingsSlice";
 import proSessionReducer from "@/store/slices/proSessionSlice";
 import categoriesAdminReducer from "@/store/slices/categoriesAdminSlice";
+import adminSubscriptionReducer from "@/store/slices/features/admin-subscription/adminSubscriptionSlice";
 import uiReducer from "@/store/slices/uiSlice";
 import notificationReducer from "./slices/notificationSlice";
 
@@ -28,6 +29,7 @@ export const store = configureStore({
         providerBookings: providerBookingsReducer,
         proSession: proSessionReducer,
         categoriesAdmin: categoriesAdminReducer,
+        adminSubscription: adminSubscriptionReducer,
         ui: uiReducer,
         notifications: notificationReducer,
     },
