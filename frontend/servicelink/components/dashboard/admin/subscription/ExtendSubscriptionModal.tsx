@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { extendSubscription, clearActionError } from "@/store/slices/features/admin-subscription/adminSubscriptionSlice";
 import type { ProviderSubscriptionRow } from "@/store/slices/features/admin-subscription/adminSubscriptionTypes";
-import { PlanBadge, StatusBadge, formatValidityWindow } from "./utils";
+import { PlanBadge, StatusBadge, formatValidityWindow, getInitials } from "./utils";
 
 interface Props {
     row: ProviderSubscriptionRow;
@@ -54,7 +54,7 @@ export default function ExtendSubscriptionModal({ row, onClose }: Props) {
                     <div className="flex items-center justify-between bg-slate-50 rounded-xl p-3">
                         <div className="flex items-center gap-2.5">
               <span className="w-8 h-8 rounded-full bg-slate-700 text-white text-[11px] font-bold flex items-center justify-center">
-                {row.avatarInitials}
+                {getInitials(row.providerName)}
               </span>
                             <div>
                                 <p className="text-xs font-semibold text-slate-800">{row.providerName}</p>

@@ -27,6 +27,21 @@ export function formatValidityWindow(start: string, end: string): string {
     return `${formatDate(start)} – ${formatDate(end)}`;
 }
 
+/**
+ * Derives up to 2 uppercase initials from a display name. Defensive against
+ * undefined/empty/whitespace-only names — the backend's AdminSubscriptionRowDTO
+ * doesn't send a precomputed avatarInitials field, so this always derives it
+ * client-side rather than trusting the API to supply one.
+ */
+export function getInitials(name?: string | null): string {
+    if (!name || !name.trim()) return "?";
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    const first = parts[0]?.[0] ?? "";
+    const second = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? "" : parts[0]?.[1] ?? "";
+    const initials = `${first}${second}`.toUpperCase();
+    return initials || "?";
+}
+
 export function initialsAvatarColor(initials: string): string {
     const palette = [
         "bg-slate-700",
@@ -36,7 +51,8 @@ export function initialsAvatarColor(initials: string): string {
         "bg-indigo-600",
         "bg-emerald-600",
     ];
-    const code = initials.charCodeAt(0) + (initials.charCodeAt(1) ?? 0);
+    const safe = initials && initials.length > 0 ? initials : "?";
+    const code = safe.charCodeAt(0) + (safe.charCodeAt(1) ?? 0);
     return palette[code % palette.length];
 }
 

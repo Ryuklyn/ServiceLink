@@ -13,6 +13,7 @@ import {
     TransactionStatusBadge,
     formatValidityWindow,
     formatDateTime,
+    getInitials,
 } from "./utils";
 
 interface Props {
@@ -47,7 +48,7 @@ export default function SubscriptionHistoryModal({ row, onClose }: Props) {
                         <h3 className="text-base font-bold text-slate-900">Subscription History &amp; Logs</h3>
                         <div className="flex items-center gap-2 mt-2">
               <span className="w-7 h-7 rounded-full bg-slate-700 text-white text-[11px] font-bold flex items-center justify-center">
-                {row.avatarInitials}
+                {getInitials(row.providerName)}
               </span>
                             <span className="text-sm font-semibold text-slate-800">{row.providerName}</span>
                             <span className="text-xs text-slate-400">

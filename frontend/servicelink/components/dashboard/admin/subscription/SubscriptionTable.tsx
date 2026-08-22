@@ -16,6 +16,7 @@ import {
     DaysRemainingCell,
     formatValidityWindow,
     initialsAvatarColor,
+    getInitials,
 } from "./utils";
 
 interface Props {
@@ -183,10 +184,10 @@ export default function SubscriptionTable({ onViewLogs, onExtend, onRevoke }: Pr
                                         <div className="flex items-center gap-3">
                         <span
                             className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold ${initialsAvatarColor(
-                                row.avatarInitials
+                                getInitials(row.providerName)
                             )}`}
                         >
-                          {row.avatarInitials}
+                          {getInitials(row.providerName)}
                         </span>
                                             <div>
                                                 <p className="font-semibold text-slate-800">{row.providerName}</p>

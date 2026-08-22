@@ -18,7 +18,6 @@ export interface ProviderSubscriptionRow {
     providerName: string;
     email: string;
     category: string;
-    avatarInitials: string;
     planType: PlanType;
     status: SubscriptionStatus;
     startDate: string; // ISO instant
