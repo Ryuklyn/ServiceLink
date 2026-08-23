@@ -13,7 +13,7 @@ import {
     TransactionStatusBadge,
     formatValidityWindow,
     formatDateTime,
-    getInitials,
+    ProviderAvatar,
 } from "./utils";
 
 interface Props {
@@ -47,9 +47,11 @@ export default function SubscriptionHistoryModal({ row, onClose }: Props) {
                     <div>
                         <h3 className="text-base font-bold text-slate-900">Subscription History &amp; Logs</h3>
                         <div className="flex items-center gap-2 mt-2">
-              <span className="w-7 h-7 rounded-full bg-slate-700 text-white text-[11px] font-bold flex items-center justify-center">
-                {getInitials(row.providerName)}
-              </span>
+                            <ProviderAvatar
+                                profilePictureUrl={row.profilePictureUrl}
+                                providerName={row.providerName}
+                                size={28}
+                            />
                             <span className="text-sm font-semibold text-slate-800">{row.providerName}</span>
                             <span className="text-xs text-slate-400">
                 {row.email} &middot; {row.category}
@@ -102,7 +104,7 @@ export default function SubscriptionHistoryModal({ row, onClose }: Props) {
                         onClick={() => setTab("transactions")}
                         className={`pb-2.5 text-xs font-semibold border-b-2 -mb-px ${
                             tab === "transactions"
-                                ? "border-blue-600 text-blue-600"
+                                ? "border-[#1e3a8a] text-[#1e3a8a]"
                                 : "border-transparent text-slate-400"
                         }`}
                     >
@@ -111,7 +113,7 @@ export default function SubscriptionHistoryModal({ row, onClose }: Props) {
                     <button
                         onClick={() => setTab("events")}
                         className={`pb-2.5 text-xs font-semibold border-b-2 -mb-px ${
-                            tab === "events" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400"
+                            tab === "events" ? "border-[#1e3a8a] text-[#1e3a8a]" : "border-transparent text-slate-400"
                         }`}
                     >
                         System Events
@@ -157,7 +159,7 @@ export default function SubscriptionHistoryModal({ row, onClose }: Props) {
                                     <td className="py-2.5 pr-3 whitespace-nowrap text-slate-500">
                                         {formatDateTime(tx.createdAt)}
                                     </td>
-                                    <td className="py-2.5 pr-3 font-semibold text-blue-600">{tx.referenceId}</td>
+                                    <td className="py-2.5 pr-3 font-semibold text-[#1e3a8a]">{tx.referenceId}</td>
                                     <td className="py-2.5 pr-3">
                                         <GatewayBadge gateway={tx.gateway} />
                                     </td>
@@ -196,7 +198,7 @@ export default function SubscriptionHistoryModal({ row, onClose }: Props) {
                                         {formatDateTime(ev.createdAt)}
                                     </td>
                                     <td className="py-2.5 pr-3">
-                      <span className="inline-flex px-2 py-1 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700">
+                      <span className="inline-flex px-2 py-1 rounded-md text-[10px] font-semibold bg-blue-50 text-[#1e3a8a]">
                         {ev.type.replaceAll("_", " ")}
                       </span>
                                     </td>

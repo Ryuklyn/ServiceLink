@@ -15,8 +15,7 @@ import {
     StatusBadge,
     DaysRemainingCell,
     formatValidityWindow,
-    initialsAvatarColor,
-    getInitials,
+    ProviderAvatar,
 } from "./utils";
 
 interface Props {
@@ -77,7 +76,7 @@ export default function SubscriptionTable({ onViewLogs, onExtend, onRevoke }: Pr
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         placeholder="Search providers, email, or plan..."
-                        className="w-full pl-8 pr-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-8 pr-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
                     />
                 </div>
 
@@ -182,13 +181,11 @@ export default function SubscriptionTable({ onViewLogs, onExtend, onRevoke }: Pr
                                 <tr key={row.providerId} className="border-b border-slate-50 hover:bg-slate-50/60">
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-3">
-                        <span
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold ${initialsAvatarColor(
-                                getInitials(row.providerName)
-                            )}`}
-                        >
-                          {getInitials(row.providerName)}
-                        </span>
+                                            <ProviderAvatar
+                                                profilePictureUrl={row.profilePictureUrl}
+                                                providerName={row.providerName}
+                                                size={32}
+                                            />
                                             <div>
                                                 <p className="font-semibold text-slate-800">{row.providerName}</p>
                                                 <p className="text-slate-400 text-[11px]">{row.email}</p>
@@ -277,7 +274,7 @@ export default function SubscriptionTable({ onViewLogs, onExtend, onRevoke }: Pr
                             key={i}
                             onClick={() => dispatch(setListFilters({ page: i }))}
                             className={`w-7 h-7 rounded-lg text-[11px] font-semibold ${
-                                filters.page === i ? "bg-blue-600 text-white" : "border border-slate-200 text-slate-600"
+                                filters.page === i ? "bg-[#1e3a8a] text-white" : "border border-slate-200 text-slate-600"
                             }`}
                         >
                             {i + 1}

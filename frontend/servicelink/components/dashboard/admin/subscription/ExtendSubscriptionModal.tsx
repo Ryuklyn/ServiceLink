@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { extendSubscription, clearActionError } from "@/store/slices/features/admin-subscription/adminSubscriptionSlice";
 import type { ProviderSubscriptionRow } from "@/store/slices/features/admin-subscription/adminSubscriptionTypes";
-import { PlanBadge, StatusBadge, formatValidityWindow, getInitials } from "./utils";
+import { PlanBadge, StatusBadge, formatValidityWindow, ProviderAvatar } from "./utils";
 
 interface Props {
     row: ProviderSubscriptionRow;
@@ -53,9 +53,11 @@ export default function ExtendSubscriptionModal({ row, onClose }: Props) {
                 <div className="px-6 py-4 space-y-4">
                     <div className="flex items-center justify-between bg-slate-50 rounded-xl p-3">
                         <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-full bg-slate-700 text-white text-[11px] font-bold flex items-center justify-center">
-                {getInitials(row.providerName)}
-              </span>
+                            <ProviderAvatar
+                                profilePictureUrl={row.profilePictureUrl}
+                                providerName={row.providerName}
+                                size={32}
+                            />
                             <div>
                                 <p className="text-xs font-semibold text-slate-800">{row.providerName}</p>
                                 <p className="text-[11px] text-slate-400">
@@ -91,7 +93,7 @@ export default function ExtendSubscriptionModal({ row, onClose }: Props) {
                             value={days}
                             onChange={(e) => setDays(e.target.value)}
                             placeholder="Enter number of days (e.g., 15, 30, 90)"
-                            className="w-full mt-1.5 px-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full mt-1.5 px-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
                         />
                     </div>
 
@@ -102,7 +104,7 @@ export default function ExtendSubscriptionModal({ row, onClose }: Props) {
                             onChange={(e) => setReason(e.target.value)}
                             rows={3}
                             placeholder="Enter reason or ticket ID for this extension..."
-                            className="w-full mt-1.5 px-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full mt-1.5 px-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] resize-none"
                         />
                         <p className="text-[10px] text-slate-400 mt-1">This note will be recorded for audit purposes.</p>
                     </div>
@@ -121,7 +123,7 @@ export default function ExtendSubscriptionModal({ row, onClose }: Props) {
                     <button
                         onClick={handleSubmit}
                         disabled={!isValid || isSubmitting}
-                        className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#1e3a8a] text-white hover:bg-[#16316f] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? "Extending..." : "Extend Subscription"}
                     </button>

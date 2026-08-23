@@ -39,7 +39,7 @@ export default function ProviderSubscriptionPage() {
                 <button
                     onClick={() => setTab("subscriptions")}
                     className={`px-4 py-2 text-xs font-semibold rounded-lg transition ${
-                        tab === "subscriptions" ? "bg-blue-600 text-white shadow-sm" : "text-slate-600"
+                        tab === "subscriptions" ? "bg-[#e8683f] text-white shadow-sm" : "text-slate-600"
                     }`}
                 >
                     Provider Subscriptions
@@ -47,7 +47,7 @@ export default function ProviderSubscriptionPage() {
                 <button
                     onClick={() => setTab("audit")}
                     className={`px-4 py-2 text-xs font-semibold rounded-lg transition ${
-                        tab === "audit" ? "bg-blue-600 text-white shadow-sm" : "text-slate-600"
+                        tab === "audit" ? "bg-[#e8683f] text-white shadow-sm" : "text-slate-600"
                     }`}
                 >
                     Payment Audit Log

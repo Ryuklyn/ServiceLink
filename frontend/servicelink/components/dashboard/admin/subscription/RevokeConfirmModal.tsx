@@ -6,7 +6,7 @@ import { X, TriangleAlert } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { revokeSubscription, clearActionError } from "@/store/slices/features/admin-subscription/adminSubscriptionSlice";
 import type { ProviderSubscriptionRow } from "@/store/slices/features/admin-subscription/adminSubscriptionTypes";
-import { PlanBadge, getInitials } from "./utils";
+import { PlanBadge, ProviderAvatar } from "./utils";
 
 interface Props {
     row: ProviderSubscriptionRow;
@@ -59,9 +59,11 @@ export default function RevokeConfirmModal({ row, onClose }: Props) {
                 <div className="px-6 py-4 space-y-4">
                     <div className="flex items-center justify-between bg-slate-50 rounded-xl p-3">
                         <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-full bg-slate-700 text-white text-[11px] font-bold flex items-center justify-center">
-                {getInitials(row.providerName)}
-              </span>
+                            <ProviderAvatar
+                                profilePictureUrl={row.profilePictureUrl}
+                                providerName={row.providerName}
+                                size={32}
+                            />
                             <div>
                                 <p className="text-xs font-semibold text-slate-800">{row.providerName}</p>
                                 <p className="text-[11px] text-slate-400">

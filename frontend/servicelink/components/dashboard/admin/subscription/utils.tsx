@@ -1,4 +1,7 @@
 // src/components/dashboard/admin/subscription/utils.tsx
+"use client";
+
+import { useState } from "react";
 import type { PlanType, SubscriptionStatus, TransactionStatus, PaymentGateway } from "@/store/slices/features/admin-subscription/adminSubscriptionTypes";
 
 export function formatCurrency(amount: number): string {
@@ -58,7 +61,7 @@ export function initialsAvatarColor(initials: string): string {
 
 const PLAN_STYLES: Record<PlanType, string> = {
     FREE_TRIAL: "bg-slate-100 text-slate-600",
-    MONTHLY: "bg-blue-50 text-blue-700",
+    MONTHLY: "bg-blue-50 text-[#1e3a8a]",
     QUARTERLY: "bg-purple-50 text-purple-700",
     YEARLY: "bg-amber-50 text-amber-700",
 };
@@ -134,7 +137,45 @@ export function GatewayBadge({ gateway }: { gateway: PaymentGateway }) {
     );
 }
 
-/** Days remaining rendered red once overdue (subscription lapsed but not yet swept) */
+/** Renders the provider's profile photo when available, falling back to the
+ * initials circle (same color logic as before) if the URL is missing or the
+ * image fails to load — e.g. a stale/broken S3 link. */
+export function ProviderAvatar({
+                                   profilePictureUrl,
+                                   providerName,
+                                   size = 32,
+                               }: {
+    profilePictureUrl?: string | null;
+    providerName?: string | null;
+    size?: number;
+}) {
+    const [failed, setFailed] = useState(false);
+    const initials = getInitials(providerName);
+    const dimension = `${size}px`;
+
+    if (profilePictureUrl && !failed) {
+        return (
+            <img
+                src={profilePictureUrl}
+                alt={providerName ?? "Provider"}
+                onError={() => setFailed(true)}
+                style={{ width: dimension, height: dimension }}
+                className="rounded-full object-cover shrink-0"
+            />
+        );
+    }
+
+    return (
+        <span
+            style={{ width: dimension, height: dimension }}
+            className={`rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0 ${initialsAvatarColor(
+                initials
+            )}`}
+        >
+      {initials}
+    </span>
+    );
+}
 export function DaysRemainingCell({ days }: { days: number }) {
     return (
         <span className={days < 0 ? "text-red-600 font-semibold" : "text-slate-700"}>{days}</span>

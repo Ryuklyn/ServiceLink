@@ -24,6 +24,7 @@ public class AdminSubscriptionRowDTO {
     String providerName;
     String email;
     String category;
+    String profilePictureUrl;
     SubscriptionPlanType planType;
     SubscriptionStatus status;
     Instant startDate;

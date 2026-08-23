@@ -385,6 +385,7 @@ public class ProviderSubscriptionService {
                 .providerName(provider.getFullName())
                 .email(provider.getEmail())
                 .category(category)
+                .profilePictureUrl(provider.getProfilePictureUrl())
                 .planType(sub.getPlanType())
                 .status(sub.getStatus())
                 .startDate(sub.getStartDate())
