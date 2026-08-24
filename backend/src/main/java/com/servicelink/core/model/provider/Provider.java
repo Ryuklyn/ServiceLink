@@ -45,7 +45,7 @@ public class Provider {
     @Column(name = "email", nullable = false)
     private String email;
 
-//    @Enumerated(EnumType.STRING)
+    //    @Enumerated(EnumType.STRING)
 //    @Column(name = "primary_service", nullable = false)
 //    private ServiceCategory primaryService;
     @ManyToOne(fetch = FetchType.LAZY)
@@ -208,6 +208,19 @@ public class Provider {
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
+    }
+
+    /**
+     * Convenience accessor for the primary category's display name — same
+     * hand-written pattern as getCertifiedCategoryIds() above: there's no
+     * primaryCategoryName *field* for Lombok to generate a getter for, since
+     * the actual relationship is the primaryCategory ManyToOne. Added because
+     * ProviderPoolService/ProviderDirectoryService (business.pool /
+     * business.directory) call provider.getPrimaryCategoryName() directly
+     * rather than null-checking primaryCategory at every call site.
+     */
+    public String getPrimaryCategoryName() {
+        return primaryCategory != null ? primaryCategory.getName() : null;
     }
 
     public Double calculateAverageRating() {

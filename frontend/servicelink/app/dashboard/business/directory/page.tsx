@@ -1,130 +1,50 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Search, Star, ShieldCheck, Clock, MapPin, CheckCircle2, Plus } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
+import Link from "next/link";
+import { Search, Star, ShieldCheck, Clock, MapPin, CheckCircle2, Plus, Users } from "lucide-react";
+import type { AppDispatch, RootState } from "@/store";
+import {
+    fetchProviderDirectory,
+    addProviderToPool,
+    ProviderDirectoryCard,
+} from "@/store/slices/features/admin-subscription/directory/providerDirectorySlice";
 
 const NAVY = "#1e3a8a";
 const ORANGE = "#e8683f";
 
-// ---------- Mock data, mirroring the reference screens ----------
-
 const CATEGORIES = ["HVAC", "Electrical", "Cleaning", "Plumbing", "Security", "Pest Control"];
 
-const providers = [
-    {
-        id: "p1",
-        name: "Ram Shrestha",
-        category: "HVAC",
-        rating: 4.8,
-        specializesIn: "Commercial AC Systems",
-        responseTime: "Under 1 hour",
-        location: "Thamel",
-        jobsDone: 142,
-        kybVerified: true,
-        initial: "RS",
-    },
-    {
-        id: "p2",
-        name: "Nepal Electricals",
-        category: "Electrical",
-        rating: 4.9,
-        specializesIn: "High Voltage & Generators",
-        responseTime: "Under 30 mins",
-        location: "Patan",
-        jobsDone: 310,
-        kybVerified: true,
-        initial: "NE",
-    },
-    {
-        id: "p3",
-        name: "Sparkle Cleaning Co.",
-        category: "Cleaning",
-        rating: 4.5,
-        specializesIn: "Deep Cleaning",
-        responseTime: "Under 2 hours",
-        location: "Boudha",
-        jobsDone: 85,
-        kybVerified: true,
-        initial: "SC",
-    },
-    {
-        id: "p4",
-        name: "Cooling Masters",
-        category: "HVAC",
-        rating: 4.2,
-        specializesIn: "Refrigerator Repair",
-        responseTime: "Under 2 hours",
-        location: "Lazimpat",
-        jobsDone: 65,
-        kybVerified: true,
-        initial: "CM",
-    },
-    {
-        id: "p5",
-        name: "Bright Light Electric",
-        category: "Electrical",
-        rating: 4.1,
-        specializesIn: "Wiring",
-        responseTime: "Over 4 hours",
-        location: "Maharajgunj",
-        jobsDone: 45,
-        kybVerified: false,
-        initial: "BL",
-    },
-    {
-        id: "p6",
-        name: "Eco Cleaners",
-        category: "Cleaning",
-        rating: 4.8,
-        specializesIn: "Eco-friendly products",
-        responseTime: "Under 1 hour",
-        location: "Sanepa",
-        jobsDone: 150,
-        kybVerified: true,
-        initial: "EC",
-    },
-    {
-        id: "p7",
-        name: "Purna Plumbing",
-        category: "Plumbing",
-        rating: 4.6,
-        specializesIn: "Pipe Fitting & Leak Repair",
-        responseTime: "Under 2 hours",
-        location: "Baneshwor",
-        jobsDone: 215,
-        kybVerified: true,
-        initial: "PP",
-    },
-    {
-        id: "p8",
-        name: "Gurkha Security Services",
-        category: "Security",
-        rating: 4.9,
-        specializesIn: "Premises Guarding",
-        responseTime: "Under 1 hour",
-        location: "Naxal",
-        jobsDone: 54,
-        kybVerified: true,
-        initial: "GS",
-    },
-    {
-        id: "p9",
-        name: "Kathmandu Pest Control",
-        category: "Pest Control",
-        rating: 4.3,
-        specializesIn: "Termite & Rodent Control",
-        responseTime: "Under 3 hours",
-        location: "Jawalakhel",
-        jobsDone: 120,
-        kybVerified: false,
-        initial: "KP",
-    },
-];
+function initialsOf(name: string): string {
+    return name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((p) => p[0]?.toUpperCase())
+        .join("");
+}
+
+function resolveImageUrl(url?: string | null): string | null {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url)) return url;
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+    return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
+}
 
 export default function DirectoryPage() {
+    const dispatch = useDispatch<AppDispatch>();
+    const { items, status, error, addingProviderIds } = useSelector(
+        (s: RootState) => s.providerDirectory,
+    );
+
     const [query, setQuery] = useState("");
-    const [activeFilters, setActiveFilters] = useState<string[]>(["HVAC", "Electrical", "Cleaning"]);
-    const [pool, setPool] = useState<string[]>([]);
+    const [activeFilters, setActiveFilters] = useState<string[]>([]);
+
+    useEffect(() => {
+        dispatch(fetchProviderDirectory());
+    }, [dispatch]);
 
     const toggleFilter = (cat: string) => {
         setActiveFilters((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
@@ -135,25 +55,53 @@ export default function DirectoryPage() {
         setQuery("");
     };
 
-    const toggleAddToPool = (id: string) => {
-        setPool((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+    const handleAddToPool = async (provider: ProviderDirectoryCard) => {
+        const result = await dispatch(addProviderToPool(provider.providerId));
+        if (addProviderToPool.fulfilled.match(result)) {
+            toast.success(
+                `${provider.businessName || provider.fullName} added to your Provider Pool.`,
+            );
+        } else {
+            toast.error((result.payload as string) ?? "Failed to add provider to your pool.");
+        }
     };
 
     const filteredProviders = useMemo(() => {
-        return providers.filter((p) => {
-            const matchesFilter = activeFilters.length === 0 || activeFilters.includes(p.category);
+        return items.filter((p) => {
+            const matchesFilter =
+                activeFilters.length === 0 ||
+                (p.primaryCategoryName != null && activeFilters.includes(p.primaryCategoryName));
             const q = query.trim().toLowerCase();
             const matchesQuery =
                 q === "" ||
-                p.name.toLowerCase().includes(q) ||
-                p.category.toLowerCase().includes(q) ||
-                p.specializesIn.toLowerCase().includes(q);
+                p.fullName.toLowerCase().includes(q) ||
+                (p.primaryCategoryName ?? "").toLowerCase().includes(q) ||
+                (p.specializesIn ?? "").toLowerCase().includes(q);
             return matchesFilter && matchesQuery;
         });
-    }, [activeFilters, query]);
+    }, [items, activeFilters, query]);
+
+    const isLoading = status === "loading";
 
     return (
         <main className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 bg-slate-50/40 min-h-screen">
+            {/* Header */}
+            <div>
+                <h1 className="text-xl font-bold text-slate-900">Provider Directory</h1>
+                <p className="mt-1 text-sm text-slate-500">
+                    Providers who&apos;ve turned on Pro Orders and are ready to be added. Once added, manage them from{" "}
+                    <Link href="/dashboard/provider-pool" className="font-semibold text-[#1e3a8a] hover:underline">
+                        Provider Pool
+                    </Link>
+                    .
+                </p>
+            </div>
+
+            {error && (
+                <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm text-red-600">
+                    {error}
+                </div>
+            )}
 
             {/* Search + filters card */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
@@ -164,7 +112,7 @@ export default function DirectoryPage() {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search by provider name, category, or specialization..."
-                        className="w-full text-slate-800 placeholder-text-slate-400 rounded-xl border border-gray-200 pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                        className="w-full text-slate-800 placeholder-slate-400 rounded-xl border border-gray-200 pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
                     />
                 </div>
 
@@ -187,117 +135,208 @@ export default function DirectoryPage() {
                             </button>
                         );
                     })}
-                    <button
-                        onClick={clearFilters}
-                        className="text-sm font-bold ml-1 hover:underline"
-                        style={{ color: ORANGE }}
-                    >
-                        Clear filters
-                    </button>
+                    {activeFilters.length > 0 && (
+                        <button
+                            onClick={clearFilters}
+                            className="text-sm font-bold ml-1 hover:underline"
+                            style={{ color: ORANGE }}
+                        >
+                            Clear filters
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Result count row */}
             <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500 font-medium">Pre-filtered based on your workspace preferences.</p>
-                <p className="text-sm text-slate-400 font-medium">Showing {filteredProviders.length} results</p>
+                <p className="text-sm text-slate-500 font-medium">
+                    Only providers currently accepting Pro orders are shown here.
+                </p>
+                {!isLoading && <p className="text-sm text-slate-400 font-medium">Showing {filteredProviders.length} results</p>}
             </div>
 
-            {/* Provider cards grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProviders.map((p) => {
-                    const inPool = pool.includes(p.id);
-                    return (
-                        <div key={p.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex flex-col justify-between">
-                            <div>
-                                <div className="flex items-start gap-3">
-                                    <div className="w-11 h-11 rounded-full bg-[#1e3a8a]/10 text-[#1e3a8a] flex items-center justify-center font-bold text-sm shrink-0">
-                                        {p.initial}
-                                    </div>
-                                    <div>
-                                        <p className="text-base font-bold text-slate-900">{p.name}</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
-                                                {p.category}
-                                            </span>
-                                            <span className="flex items-center gap-1 text-xs font-bold" style={{ color: ORANGE }}>
-                                                <Star size={12} className="fill-current" />
-                                                {p.rating}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <p className="text-sm text-slate-600 mt-4">
-                                    <span className="text-slate-400 font-medium">Specializes in: </span>
-                                    <span className="font-semibold text-slate-800">{p.specializesIn}</span>
-                                </p>
-
-                                <div className="grid grid-cols-2 gap-4 mt-4">
-                                    <div>
-                                        <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                                            <Clock size={12} />
-                                            Response Time
-                                        </p>
-                                        <p className="text-sm font-bold text-slate-800 mt-0.5">{p.responseTime}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                                            <MapPin size={12} />
-                                            Location
-                                        </p>
-                                        <p className="text-sm font-bold text-slate-800 mt-0.5">{p.location}</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between border-t border-gray-100 mt-4 pt-3 text-xs font-semibold text-slate-500">
-                                    <span className="flex items-center gap-1.5">
-                                        <ShieldCheck size={14} className="text-slate-400" />
-                                        {p.jobsDone} Jobs Done
-                                    </span>
-                                    {p.kybVerified ? (
-                                        <span className="flex items-center gap-1.5" style={{ color: NAVY }}>
-                                            <CheckCircle2 size={14} />
-                                            KYB Verified
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-1.5 text-slate-400">
-                                            <ShieldCheck size={14} />
-                                            KYB Pending
-                                        </span>
-                                    )}
+            {/* Loading skeleton */}
+            {isLoading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="animate-pulse bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <div className="w-11 h-11 rounded-full bg-slate-100" />
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-3.5 w-2/3 rounded bg-slate-100" />
+                                    <div className="h-3 w-1/3 rounded bg-slate-100" />
                                 </div>
                             </div>
-
-                            <button
-                                onClick={() => toggleAddToPool(p.id)}
-                                className={`mt-5 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                                    inPool ? "bg-emerald-600 text-white" : "text-white"
-                                }`}
-                                style={!inPool ? { backgroundColor: NAVY } : undefined}
-                            >
-                                {inPool ? (
-                                    <>
-                                        <CheckCircle2 size={15} />
-                                        Added to Pool
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus size={15} />
-                                        Add to Pool
-                                    </>
-                                )}
-                            </button>
+                            <div className="h-9 rounded-xl bg-slate-100 mt-5" />
                         </div>
-                    );
-                })}
+                    ))}
+                </div>
+            )}
 
-                {filteredProviders.length === 0 && (
-                    <div className="col-span-full bg-white rounded-2xl border border-gray-100 p-12 text-center">
-                        <p className="text-sm text-slate-400 font-medium italic">No providers match your search or filters.</p>
-                    </div>
-                )}
-            </div>
+            {/* Provider cards */}
+            {!isLoading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredProviders.map((p) => (
+                        <ProviderCard
+                            key={p.providerId}
+                            provider={p}
+                            isAdding={addingProviderIds.includes(p.providerId)}
+                            onAdd={() => handleAddToPool(p)}
+                        />
+                    ))}
+
+                    {filteredProviders.length === 0 && (
+                        <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center">
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                                <Users size={22} className="text-slate-400" />
+                            </div>
+                            <p className="text-sm font-semibold text-slate-800">
+                                {items.length === 0
+                                    ? "No providers are currently accepting Pro orders."
+                                    : "No providers match your search or filters."}
+                            </p>
+                            <p className="text-xs text-slate-400 max-w-sm">
+                                {items.length === 0
+                                    ? "Providers appear here once they turn on \u201cAccept Business & Pro Orders\u201d on their own dashboard."
+                                    : "Try clearing a filter or adjusting your search."}
+                            </p>
+                            {items.length > 0 && (
+                                <button
+                                    onClick={clearFilters}
+                                    className="mt-1 px-4 py-2 text-sm font-bold border border-slate-900 rounded-lg hover:bg-slate-50 transition-colors text-slate-900"
+                                >
+                                    Clear filters
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
         </main>
+    );
+}
+
+// ─── Avatar ─────────────────────────────────────────────────────────────
+
+function ProviderAvatar({ name, url }: { name: string; url?: string | null }) {
+    const [failed, setFailed] = useState(false);
+    const resolved = resolveImageUrl(url);
+
+    if (resolved && !failed) {
+        return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+                src={resolved}
+                alt={name}
+                onError={() => setFailed(true)}
+                className="w-11 h-11 rounded-full object-cover shrink-0 border border-slate-100"
+            />
+        );
+    }
+
+    return (
+        <div className="w-11 h-11 rounded-full bg-[#1e3a8a]/10 text-[#1e3a8a] flex items-center justify-center font-bold text-sm shrink-0">
+            {initialsOf(name)}
+        </div>
+    );
+}
+
+// ─── Card ───────────────────────────────────────────────────────────────
+
+function ProviderCard({
+                          provider,
+                          isAdding,
+                          onAdd,
+                      }: {
+    provider: ProviderDirectoryCard;
+    isAdding: boolean;
+    onAdd: () => void;
+}) {
+    return (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex flex-col justify-between">
+            <div>
+                <div className="flex items-start gap-3">
+                    <ProviderAvatar name={provider.fullName} url={provider.profilePictureUrl} />
+                    <div className="min-w-0">
+                        <p className="text-base font-bold text-slate-900 truncate">
+                            {provider.businessName || provider.fullName}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {provider.primaryCategoryName && (
+                                <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                                    {provider.primaryCategoryName}
+                                </span>
+                            )}
+                            {provider.averageRating != null && (
+                                <span className="flex items-center gap-1 text-xs font-bold" style={{ color: ORANGE }}>
+                                    <Star size={12} className="fill-current" />
+                                    {provider.averageRating.toFixed(1)}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {provider.specializesIn && (
+                    <p className="text-sm text-slate-600 mt-4">
+                        <span className="text-slate-400 font-medium">Specializes in: </span>
+                        <span className="font-semibold text-slate-800">{provider.specializesIn}</span>
+                    </p>
+                )}
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                            <Clock size={12} />
+                            Response Time
+                        </p>
+                        <p className="text-sm font-bold text-slate-800 mt-0.5">
+                            {provider.responseTimeLabel ?? "—"}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                            <MapPin size={12} />
+                            Location
+                        </p>
+                        <p className="text-sm font-bold text-slate-800 mt-0.5">{provider.location ?? "—"}</p>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-gray-100 mt-4 pt-3 text-xs font-semibold text-slate-500">
+                    <span className="flex items-center gap-1.5">
+                        <ShieldCheck size={14} className="text-slate-400" />
+                        {provider.totalJobs ?? 0} Jobs Done
+                    </span>
+                    {provider.isVerified ? (
+                        <span className="flex items-center gap-1.5" style={{ color: NAVY }}>
+                            <CheckCircle2 size={14} />
+                            KYC Verified
+                        </span>
+                    ) : (
+                        <span className="flex items-center gap-1.5 text-slate-400">
+                            <ShieldCheck size={14} />
+                            KYC Pending
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            <button
+                onClick={onAdd}
+                disabled={isAdding}
+                className="mt-5 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ backgroundColor: NAVY }}
+            >
+                {isAdding ? (
+                    "Adding…"
+                ) : (
+                    <>
+                        <Plus size={15} />
+                        Add to Pool
+                    </>
+                )}
+            </button>
+        </div>
     );
 }

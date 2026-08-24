@@ -142,6 +142,10 @@ export default function AvailabilityTab() {
     // trial deliberately does not unlock this (matches the backend rule
     // enforced in ProviderScheduleSettingsService — this is a UX convenience,
     // not the real enforcement).
+    //
+    // Backend DTO (SubscriptionStatusDTO) explicitly pins the boolean field
+    // to `isActive` via @JsonProperty, overriding Jackson's default getIsX()
+    // -> "active" stripping. So `isActive` is the correct, stable wire name.
     const { data: subscription } = useSelector((s: RootState) => s.providerSubscription);
     const isPaidPlan = Boolean(subscription?.planType && subscription.planType !== "FREE_TRIAL");
     const proOrdersUnlocked = Boolean(subscription?.isActive && isPaidPlan);

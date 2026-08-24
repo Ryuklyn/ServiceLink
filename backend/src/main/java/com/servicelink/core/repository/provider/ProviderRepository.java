@@ -108,4 +108,35 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
             Long primaryCategoryId, Pageable pageable);
 
     List<Provider> findByReferredById(Long referrerId);
+
+    // =====================================================================
+    // ADDED — needed by ProviderDirectoryService / ProviderPoolService
+    // (business.directory / business.pool)
+    // =====================================================================
+
+    /**
+     * Backs ProviderDirectoryService's category filter. Traverses the
+     * primaryCategory ManyToOne (Category.name) rather than a flat column,
+     * same relationship findByCategoryAndDistrict etc. already query above —
+     * this is just the derived-query-method form of the same join, since the
+     * directory filter doesn't need any of the extra ORDER BY/isActive
+     * conditions those custom @Query methods bake in.
+     */
+    List<Provider> findAllByPrimaryCategory_Name(String categoryName);
+
+    /**
+     * Backs ProviderPoolService's CSV import row-matching. Either param may
+     * be null (the service already passes null when a CSV column was blank
+     * for that row), so this can't be a simple derived
+     * findByPhoneOrEmail(String, String) — that would match everything once
+     * either side is null under default JPQL null-handling. Explicit
+     * :param IS NOT NULL guards keep a null phone/email from matching every
+     * row.
+     */
+    @Query("""
+            SELECT p FROM Provider p
+            WHERE (:phone IS NOT NULL AND p.phone = :phone)
+               OR (:email IS NOT NULL AND p.email = :email)
+            """)
+    Optional<Provider> findByPhoneOrEmail(@Param("phone") String phone, @Param("email") String email);
 }
