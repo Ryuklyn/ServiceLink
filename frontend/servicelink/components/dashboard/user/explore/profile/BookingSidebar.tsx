@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -8,9 +8,11 @@ import {
     Phone, Mic, Upload, CheckCircle2,
     MapPin, Sun, Sunset, Moon, X, Navigation, Loader2,
     Calendar, ShieldCheck, MousePointerClick, Video, Image,
+    AlertTriangle,
 } from "lucide-react";
 import type { Map as LeafletMap } from "leaflet";
-import { ProviderData } from "./types";
+import { ProviderData, SelectedService, EstimateStatus } from "./types";
+import { STATUS_LABEL, buildQuantityFields } from "@/lib/api/smartEstimatorApi";
 import BookingDetailModal from "./BookingDetailsModal";
 import api from "@/utils/axios";
 import WhatsAppButton from "@/components/shared/WhatsAppButton";
@@ -21,7 +23,7 @@ const Marker       = dynamic(() => import("react-leaflet").then((m) => m.Marker)
 
 interface BookingSidebarProps {
     provider: ProviderData;
-    selectedServices?: { name: string; priceMin: number; priceMax: number; catalogId?: number }[];
+    selectedServices?: SelectedService[];
     issueDescription?: string;
     selectedDate?: Date;
     selectedPeriod?: "morning" | "afternoon" | "evening" | null;
@@ -60,9 +62,7 @@ interface AppointmentResponse {
     attachedAudioUrl: string | null;
 }
 
-// ProviderData doesn't declare `specialties` — kept as an optional extension
-// rather than `as any`, so the cast stays type-checked.
-interface ProviderWithSpecialties extends ProviderData {
+interface ProviderWithSpecialties extends Omit<ProviderData, "phone"> {
     specialties?: string[];
     phone?: string;
 }
@@ -77,6 +77,14 @@ const MONTH_NAMES_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep"
 const DAYS_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const DEFAULT_LAT = 27.7172;
 const DEFAULT_LNG = 85.324;
+
+const STATUS_COLOR: Record<EstimateStatus, { text: string; bg: string }> = {
+    ESTIMATED: { text: "#166534", bg: "#ecfdf3" },
+    STARTING_FROM: { text: "#92400e", bg: "#fef3e2" },
+    REQUIRES_INPUT: { text: "#0369a1", bg: "#eff9ff" },
+    REQUIRES_ASSESSMENT: { text: "#b91c1c", bg: "#fef2f2" },
+    FINALIZED: { text: "#1e3a8a", bg: "#eff3fb" },
+};
 
 function mapPeriodToTimeSlot(period: string): string {
     const map: Record<string, string> = {
@@ -100,7 +108,6 @@ function formatDateForBackend(date: Date | undefined): string {
     return `${year}-${month}-${day}`;
 }
 
-/** Type-safe extraction from an unknown catch value — replaces `catch (err: any)`. */
 function extractBookingError(err: unknown): { status: number; message: string } {
     if (axios.isAxiosError(err)) {
         const data = err.response?.data as { message?: string } | undefined;
@@ -148,23 +155,17 @@ export default function BookingSidebar({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mapRef        = useRef<LeafletMap | null>(null);
 
-    const prevIssueRef = useRef(externalIssue);
-    if (externalIssue !== undefined && externalIssue !== prevIssueRef.current) {
-        prevIssueRef.current = externalIssue;
-        setTaskSummary(externalIssue);
-    }
+    useEffect(() => {
+        if (externalIssue !== undefined) setTaskSummary(externalIssue);
+    }, [externalIssue]);
 
-    const prevDateRef = useRef(externalDate);
-    if (externalDate !== undefined && externalDate !== prevDateRef.current) {
-        prevDateRef.current = externalDate;
-        setLocalDate(externalDate);
-    }
+    useEffect(() => {
+        if (externalDate !== undefined) setLocalDate(externalDate);
+    }, [externalDate]);
 
-    const prevPeriodRef = useRef(externalPeriod);
-    if (externalPeriod !== prevPeriodRef.current) {
-        prevPeriodRef.current = externalPeriod;
+    useEffect(() => {
         setLocalPeriod(externalPeriod ?? null);
-    }
+    }, [externalPeriod]);
 
     useEffect(() => {
         return () => { if (media) URL.revokeObjectURL(media.previewUrl); };
@@ -216,8 +217,6 @@ export default function BookingSidebar({
         );
     };
 
-    // Dynamic import instead of require() — also avoids the SSR/window issue
-    // the same way the require() call did, without the lint violation.
     useEffect(() => {
         let cancelled = false;
         import("leaflet").then((L) => {
@@ -232,8 +231,60 @@ export default function BookingSidebar({
         return () => { cancelled = true; };
     }, []);
 
+    const services = externalServices ?? [];
+
+    const {
+        resolvedTotal,
+        pendingInputServices,
+        pendingAssessmentServices,
+        hasStartingFrom,
+        overallStatus,
+    } = useMemo(() => {
+        let total = 0;
+        const pendingInput: SelectedService[] = [];
+        const pendingAssessment: SelectedService[] = [];
+        let startingFrom = false;
+
+        for (const svc of services) {
+            if (svc.estimateStatus === "REQUIRES_INPUT") {
+                pendingInput.push(svc);
+                continue;
+            }
+            if (svc.estimateStatus === "REQUIRES_ASSESSMENT") {
+                pendingAssessment.push(svc);
+                continue;
+            }
+            if (svc.estimateStatus === "STARTING_FROM") startingFrom = true;
+            total += svc.estimatedAmount ?? 0;
+        }
+
+        let status: EstimateStatus | "MIXED" | "EMPTY";
+        if (services.length === 0) status = "EMPTY";
+        else if (pendingInput.length > 0) status = "REQUIRES_INPUT";
+        else if (pendingAssessment.length > 0) status = "REQUIRES_ASSESSMENT";
+        else if (startingFrom) status = "STARTING_FROM";
+        else status = "ESTIMATED";
+
+        return {
+            resolvedTotal: total,
+            pendingInputServices: pendingInput,
+            pendingAssessmentServices: pendingAssessment,
+            hasStartingFrom: startingFrom,
+            overallStatus: status,
+        };
+    }, [services]);
+
+    const hasServices = services.length > 0;
+    const hasBlockingInput = pendingInputServices.length > 0;
+
+    const dateDisplay  = formatDateDisplay(localDate);
+    const periodInfo   = localPeriod ? PERIOD_LABELS[localPeriod] : null;
+    const specialtiesLabel = (provider as ProviderWithSpecialties).specialties?.join(", ") ?? "Certified Local Expert";
+    const providerPhone    = (provider as ProviderWithSpecialties).phone ?? "";
+
     const validateBooking = (): string | null => {
         if (!services.length)  return "Please select at least one service.";
+        if (hasBlockingInput)  return "Please enter the required details for all selected services.";
         if (!localDate)        return "Please select an appointment date.";
         if (!localPeriod)      return "Please select a time slot (Morning / Afternoon / Evening).";
         if (!address.trim())   return "Please enter or detect your service address.";
@@ -277,18 +328,33 @@ export default function BookingSidebar({
                 }
             }
 
+            // BookingSidebar.tsx — inside handleBookNow, replace the voice note upload block
             if (voiceNoteBlob) {
-                const audioFormData = new FormData();
-                audioFormData.append("file", voiceNoteBlob, "voice-note.webm");
+                try {
+                    const audioFormData = new FormData();
+                    audioFormData.append("file", voiceNoteBlob, "voice-note.webm");
 
-                const { data: audioUploadData } = await api.post<{ url: string }>(
-                    "/media/upload",
-                    audioFormData,
-                    { headers: { "Content-Type": "multipart/form-data" } }
-                );
-
-                attachedAudioUrl = audioUploadData.url;
+                    const { data: audioUploadData } = await api.post<{ url: string }>(
+                        "/media/upload",
+                        audioFormData,
+                        { headers: { "Content-Type": "multipart/form-data" } }
+                    );
+                    attachedAudioUrl = audioUploadData.url;
+                } catch (err) {
+                    // Voice note is optional — don't let its upload failure block booking.
+                    console.warn("Voice note upload failed, continuing without it:", err);
+                    toast.warning("Couldn't attach your voice note, but continuing with booking.", {
+                        position: "top-right",
+                    });
+                    attachedAudioUrl = null;
+                }
             }
+
+            // ── FIX: Build quantity fields based on pricing unit ──
+            const quantityFields = buildQuantityFields(
+                firstService.pricingUnit,
+                firstService.quantity
+            );
 
             const payload = {
                 providerId:       Number(provider.id),
@@ -300,7 +366,7 @@ export default function BookingSidebar({
                 attachedImgUrl,
                 attachedVideoUrl,
                 attachedAudioUrl,
-                itemCount: 1,
+                ...quantityFields,
             };
 
             const { data } = await api.post<AppointmentResponse>("/appointments", payload);
@@ -320,6 +386,11 @@ export default function BookingSidebar({
                 toast.error("This service is currently unavailable.", { position: "top-right" });
             } else if (message.includes("upload") || message.includes("Supabase")) {
                 toast.error("Failed to upload media. Please try again or remove the file.", { position: "top-right" });
+            } else if (message.includes("MISSING_QUANTITY")) {
+                toast.error(
+                    "Please enter the required details (area, hours, or quantity) for the selected service.",
+                    { position: "top-right" }
+                );
             } else {
                 toast.error(message, { position: "top-right" });
             }
@@ -327,15 +398,6 @@ export default function BookingSidebar({
             setIsBooking(false);
         }
     };
-
-    const services     = externalServices ?? [];
-    const hasServices  = services.length > 0;
-    const estimatedMin = services.reduce((s, svc) => s + svc.priceMin, 0);
-    const estimatedMax = services.reduce((s, svc) => s + svc.priceMax, 0);
-    const dateDisplay  = formatDateDisplay(localDate);
-    const periodInfo   = localPeriod ? PERIOD_LABELS[localPeriod] : null;
-    const specialtiesLabel = (provider as ProviderWithSpecialties).specialties?.join(", ") ?? "Certified Local Expert";
-    const providerPhone    = (provider as ProviderWithSpecialties).phone ?? "";
 
     return (
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col gap-0 overflow-hidden w-full max-w-sm sm:max-w-md lg:max-w-sm mx-auto">
@@ -351,13 +413,39 @@ export default function BookingSidebar({
                 <div className="px-4 sm:px-5 py-3.5 sm:py-4">
                     <p className="text-xs font-semibold text-gray-500 mb-2">Selected Services</p>
                     {hasServices ? (
-                        <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto pr-0.5">
-                            {services.map((svc) => (
-                                <div key={svc.name} className="flex items-center justify-between gap-3 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
-                                    <span className="text-sm font-medium text-gray-800 truncate">{svc.name}</span>
-                                    <span className="text-sm font-bold text-[#e8683f] shrink-0">Rs. {svc.priceMin.toLocaleString()}</span>
-                                </div>
-                            ))}
+                        <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+                            {services.map((svc) => {
+                                const badge = STATUS_COLOR[svc.estimateStatus];
+                                return (
+                                    <div
+                                        key={svc.name}
+                                        className="flex items-center justify-between gap-3 border rounded-xl px-3 py-2"
+                                        style={{
+                                            background: svc.estimateStatus === "REQUIRES_INPUT" || svc.estimateStatus === "REQUIRES_ASSESSMENT"
+                                                ? "#fffbeb"
+                                                : "#f0fdf4",
+                                            borderColor: svc.estimateStatus === "REQUIRES_INPUT" || svc.estimateStatus === "REQUIRES_ASSESSMENT"
+                                                ? "#fde68a"
+                                                : "#bbf7d0",
+                                        }}
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-sm font-medium text-gray-800 truncate block">{svc.name}</span>
+                                            <span
+                                                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded inline-block mt-1"
+                                                style={{ color: badge.text, background: badge.bg }}
+                                            >
+                                                {STATUS_LABEL[svc.estimateStatus]}
+                                            </span>
+                                        </div>
+                                        <span className="text-sm font-bold text-[#e8683f] shrink-0">
+                                            {svc.estimatedAmount !== null
+                                                ? `Rs. ${svc.estimatedAmount.toLocaleString()}`
+                                                : "Rs. —"}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-5 px-3 text-center">
@@ -516,10 +604,6 @@ export default function BookingSidebar({
                     </button>
                     {showMap && (
                         <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 h-44 w-full">
-                            {/* MapContainer forwards `ref` to the underlying Leaflet Map instance
-                                in react-leaflet v4/v5 — this replaces the old `whenReady`
-                                callback (which no longer accepts an argument, causing the
-                                TS2769 overload mismatch) and removes the `any` typing. */}
                             <MapContainer ref={mapRef} center={markerPos} zoom={15} style={{ height: "100%", width: "100%" }}>
                                 <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                 <Marker position={markerPos} eventHandlers={{ click: async (e) => { const { lat, lng } = e.latlng; setMarkerPos([lat, lng]); await reverseGeocode(lat, lng); } }} />
@@ -530,11 +614,49 @@ export default function BookingSidebar({
 
                 {/* Estimated Price Section */}
                 <div className="px-4 sm:px-5 py-3.5 sm:py-4 bg-gray-50">
-                    <p className="text-xs text-gray-400 font-semibold mb-1">Estimated Price</p>
+                    <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs text-gray-400 font-semibold">Estimated Total</p>
+                        {hasServices && (
+                            <span
+                                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                                style={
+                                    overallStatus === "EMPTY"
+                                        ? undefined
+                                        : { color: STATUS_COLOR[overallStatus as EstimateStatus].text, background: STATUS_COLOR[overallStatus as EstimateStatus].bg }
+                                }
+                            >
+                                {overallStatus === "EMPTY" ? "" : STATUS_LABEL[overallStatus as EstimateStatus]}
+                            </span>
+                        )}
+                    </div>
+
                     {hasServices ? (
-                        <p className="text-xl sm:text-2xl font-bold text-[#1e3a8a] leading-none break-words">
-                            Rs. {estimatedMin === estimatedMax ? estimatedMin.toLocaleString() : `${estimatedMin.toLocaleString()} – ${estimatedMax.toLocaleString()}`}
-                        </p>
+                        <>
+                            <p className="text-xl sm:text-2xl font-bold text-[#1e3a8a] leading-none break-words">
+                                Rs. {resolvedTotal.toLocaleString()}
+                                {hasStartingFrom && <span className="text-sm font-medium text-gray-400"> +</span>}
+                            </p>
+
+                            {hasStartingFrom && (
+                                <p className="text-[11px] text-gray-400 mt-1">
+                                    Includes starting-from pricing — final amount may vary after assessment.
+                                </p>
+                            )}
+
+                            {pendingAssessmentServices.length > 0 && (
+                                <p className="flex items-start gap-1 text-[11px] text-amber-600 mt-1.5">
+                                    <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                                    {pendingAssessmentServices.length} service{pendingAssessmentServices.length > 1 ? "s" : ""} will be priced after provider assessment.
+                                </p>
+                            )}
+
+                            {pendingInputServices.length > 0 && (
+                                <p className="flex items-start gap-1 text-[11px] text-red-600 mt-1.5 font-medium">
+                                    <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                                    {pendingInputServices.length} service{pendingInputServices.length > 1 ? "s" : ""} need{pendingInputServices.length === 1 ? "s" : ""} more details before booking — scroll up and fill in the required value.
+                                </p>
+                            )}
+                        </>
                     ) : (
                         <p className="text-xs sm:text-sm text-gray-400 italic">Select services to see estimate</p>
                     )}
@@ -573,20 +695,22 @@ export default function BookingSidebar({
                 <div className="px-4 sm:px-5 py-4 flex flex-col gap-2">
                     <button
                         onClick={handleBookNow}
-                        disabled={!hasServices || isBooking}
+                        disabled={!hasServices || isBooking || hasBlockingInput}
                         type="button"
+                        title={hasBlockingInput ? "Fill in the required details for all selected services first" : undefined}
                         className="w-full bg-[#e8683f] hover:bg-[#d75930] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 sm:py-3.5 rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {isBooking ? (
                             <><Loader2 size={16} className="animate-spin" /> Booking...</>
-                        ) : hasServices ? (
-                            "Book Now"
-                        ) : (
+                        ) : !hasServices ? (
                             "Select Services to Book"
+                        ) : hasBlockingInput ? (
+                            "Complete Service Details"
+                        ) : (
+                            "Book Now"
                         )}
                     </button>
                     <div className="flex gap-2 w-full">
-                        {/* Reusable WhatsApp Button Integration — same component/pattern as ExploreSection */}
                         <WhatsAppButton
                             phone={providerPhone}
                             providerId={provider.id}
@@ -609,8 +733,8 @@ export default function BookingSidebar({
                     taskSummary,
                     dateDisplay,
                     timeDisplay: periodInfo ? `${periodInfo.label} (${periodInfo.time})` : "",
-                    estimatedMin,
-                    estimatedMax,
+                    estimatedMin: resolvedTotal,
+                    estimatedMax: resolvedTotal,
                     address,
                     photos: media ? [media.file] : [],
                     appointmentIds: bookedAppointments.map((a) => a.id),

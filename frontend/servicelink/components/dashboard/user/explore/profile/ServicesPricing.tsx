@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import {
   Zap,
   Hammer,
@@ -13,12 +13,21 @@ import {
   Minus,
   Info,
 } from "lucide-react";
-import { ProviderData } from "./types";
+import { estimatePrice, STATUS_LABEL, EstimateResult } from "@/lib/api/smartEstimatorApi";
+import {
+  ProviderData,
+  ProviderService,
+  SelectedService,
+  PricingUnit,
+  EstimateStatus,
+} from "./types";
 
 interface ServicesPricingProps {
   provider: ProviderData;
-  onBookService?: (serviceName: string) => void;
-  selectedServices?: { name: string; priceMin: number; priceMax: number }[];
+  selectedServices?: SelectedService[];
+  onAddService?: (entry: SelectedService) => void;
+  onRemoveService?: (name: string) => void;
+  onUpdateService?: (entry: SelectedService) => void;
 }
 
 type CategoryMeta = {
@@ -82,8 +91,26 @@ const FALLBACK_META: CategoryMeta = {
   border: "#e5e7eb",
 };
 
-function groupByCategory(services: ProviderData["services"]) {
-  const map: Record<string, ProviderData["services"]> = {};
+// Display label shown next to the price/quantity for each pricing unit.
+// Must cover every member of PricingUnit or this fails to typecheck.
+const UNIT_LABEL: Record<PricingUnit, string> = {
+  PER_JOB: "job",
+  PER_ITEM: "item",
+  PER_HOUR: "hour",
+  PER_SQ_FT: "sq. ft.",
+  PER_WALL: "wall",
+};
+
+const STATUS_COLOR: Record<EstimateStatus, { text: string; bg: string }> = {
+  ESTIMATED: { text: "#166534", bg: "#ecfdf3" },
+  STARTING_FROM: { text: "#92400e", bg: "#fef3e2" },
+  REQUIRES_INPUT: { text: "#0369a1", bg: "#eff9ff" },
+  REQUIRES_ASSESSMENT: { text: "#b91c1c", bg: "#fef2f2" },
+  FINALIZED: { text: "#1e3a8a", bg: "#eff3fb" },
+};
+
+function groupByCategory(services: ProviderService[]) {
+  const map: Record<string, ProviderService[]> = {};
   for (const svc of services) {
     const cat = svc.category ?? "Other";
     if (!map[cat]) map[cat] = [];
@@ -92,50 +119,258 @@ function groupByCategory(services: ProviderData["services"]) {
   return map;
 }
 
+function toSelectedService(
+    service: ProviderService,
+    estimate: EstimateResult,
+    quantity?: number
+): SelectedService {
+  return {
+    name: service.name,
+    catalogId: service.catalogId,
+    priceMin: service.priceMin,
+    priceMax: service.priceMax,
+    pricingUnit: service.pricingUnit,
+    rate: service.rate,
+    estimationMode: service.estimationMode,
+    quantity,
+    estimateStatus: estimate.status,
+    estimatedAmount: estimate.estimatedAmount,
+  };
+}
+
+// Placeholder text shown inside the quantity input before the user types
+// anything, when the backend hasn't supplied its own requiredInputLabel.
+function inferInputPlaceholder(unit?: PricingUnit): string {
+  switch (unit) {
+    case "PER_SQ_FT":
+      return "Area";
+    case "PER_HOUR":
+      return "Hours";
+    case "PER_ITEM":
+      return "Qty";
+    case "PER_WALL":
+      return "Walls";
+    default:
+      return "Value";
+  }
+}
+
 /**
  * Price displayed as a torn ticket stub — perforated divider on desktop,
- * echoing a service job-order slip. Notches use an inset shadow so they
- * read as "punched" regardless of what's behind the card.
+ * echoing a service job-order slip. Now status-aware: shows the estimator's
+ * verdict (Estimated / Starting from / needs input / needs assessment)
+ * instead of assuming every service resolves to a flat number (spec §6).
  */
 function PriceStub({
-                     priceMin,
-                     priceMax,
+                     service,
+                     estimate,
                      accentColor,
+                     quantity,
+                     onQuantityChange,
                    }: {
-  priceMin: number;
-  priceMax: number;
+  service: ProviderService;
+  estimate: EstimateResult;
   accentColor: string;
+  quantity?: number;
+  onQuantityChange: (quantity: number | undefined) => void;
 }) {
+  const unitLabel = service.pricingUnit ? UNIT_LABEL[service.pricingUnit] : "job";
+  const statusColor = STATUS_COLOR[estimate.status];
+  // Input-based services (sq ft, hours, item count, walls) always let the
+  // customer type their own value — never a system-predicted number — and
+  // keep that field editable even after it resolves to an estimate, so
+  // they can correct it any time. Spec §4/§7: the system must not invent
+  // a quantity.
+  const isInputBased = service.estimationMode === "INPUT_BASED";
+
   return (
-      <div className="relative flex items-center pl-4 sm:pl-6">
+      <div className="relative flex flex-col items-end pl-4 sm:pl-6 gap-1 min-w-[128px]">
         <div className="hidden sm:block absolute left-0 top-0 bottom-0 border-l border-dashed border-slate-200" />
         <div className="hidden sm:block absolute left-0 -top-[7px] h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-slate-100 shadow-[inset_0_1px_2px_rgba(15,23,42,0.12)]" />
         <div className="hidden sm:block absolute left-0 -bottom-[7px] h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-slate-100 shadow-[inset_0_1px_2px_rgba(15,23,42,0.12)]" />
-        <div className="text-right sm:text-left">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-            Rate
+
+        <span
+            className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded whitespace-nowrap"
+            style={{ color: statusColor.text, background: statusColor.bg }}
+        >
+          {STATUS_LABEL[estimate.status]}
+        </span>
+
+        {isInputBased && (
+            <div className="flex items-center gap-1">
+              <input
+                  type="number"
+                  min={0}
+                  inputMode="decimal"
+                  value={quantity ?? ""}
+                  onChange={(e) =>
+                      onQuantityChange(e.target.value ? Number(e.target.value) : undefined)
+                  }
+                  placeholder={estimate.requiredInputLabel ?? inferInputPlaceholder(service.pricingUnit)}
+                  className="w-24 text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-right outline-none focus:border-blue-300 bg-white"
+              />
+              <span className="text-[10px] text-slate-400 whitespace-nowrap">{unitLabel}</span>
+            </div>
+        )}
+
+        {isInputBased && quantity !== undefined && quantity > 0 && (
+            <p className="text-[10px] text-slate-400 whitespace-nowrap tabular-nums">
+              {quantity.toLocaleString()} {unitLabel} × Rs {estimate.displayRate.toLocaleString()}
+            </p>
+        )}
+
+        <p
+            className="text-base sm:text-lg font-bold tabular-nums whitespace-nowrap leading-tight"
+            style={{ color: accentColor }}
+        >
+          {estimate.estimatedAmount !== null
+              ? `Rs ${estimate.estimatedAmount.toLocaleString()}`
+              : "Rs —"}
+        </p>
+
+        {!isInputBased && (
+            <p className="text-[10px] text-slate-400 whitespace-nowrap">
+              Rs {estimate.displayRate.toLocaleString()} / {unitLabel}
+            </p>
+        )}
+      </div>
+  );
+}
+
+function ServiceRow({
+                      service,
+                      meta,
+                      added,
+                      onAdd,
+                      onRemove,
+                      onUpdate,
+                    }: {
+  service: ProviderService;
+  meta: CategoryMeta;
+  added: boolean;
+  onAdd: (entry: SelectedService) => void;
+  onRemove: (name: string) => void;
+  onUpdate: (entry: SelectedService) => void;
+}) {
+  const [quantity, setQuantity] = useState<number | undefined>(undefined);
+  const estimate = useMemo(
+      () => estimatePrice(service, quantity),
+      [service, quantity]
+  );
+
+  // ── FIX: infinite update-depth loop ──
+  // `onUpdate` (and often `service`) are recreated on every render of the
+  // parent (ServicesPricing maps over grouped services and builds a fresh
+  // inline arrow function each time: `onUpdate={(entry) => onUpdateService?.(entry)}`).
+  // If those unstable references sit in this effect's dependency array,
+  // the effect re-fires purely because of identity churn — not because
+  // anything meaningful changed — which calls onUpdate, which triggers a
+  // parent setState, which re-renders the parent, which creates a new
+  // onUpdate reference, which re-fires the effect again. Infinite loop.
+  //
+  // Fix: keep the *latest* onUpdate/service in refs (always fresh, no
+  // stale-closure risk) and drive the effect only off the values that
+  // should actually cause a re-sync: added, quantity, and the resolved
+  // estimate. Identity changes in callback props no longer matter.
+  const onUpdateRef = useRef(onUpdate);
+  const serviceRef = useRef(service);
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+    serviceRef.current = service;
+  });
+
+  useEffect(() => {
+    if (!added) return;
+    onUpdateRef.current(toSelectedService(serviceRef.current, estimate, quantity));
+    // Intentionally NOT depending on onUpdate/service — see comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [added, quantity, estimate.status, estimate.estimatedAmount]);
+
+  // Spec §7: never let an unresolved estimate (missing required input) enter
+  // the cart as if it were a real price.
+  const canAdd = estimate.estimatedAmount !== null || estimate.status === "STARTING_FROM";
+
+  const handleToggle = () => {
+    if (added) {
+      onRemove(service.name);
+      return;
+    }
+    if (!canAdd) return;
+    onAdd(toSelectedService(service, estimate, quantity));
+  };
+
+  return (
+      <div
+          className="relative flex flex-col xs:flex-row xs:items-center justify-between gap-3 overflow-hidden rounded-xl pl-4 pr-3 py-3 sm:pl-5 sm:pr-4 sm:py-4 transition-all duration-200 hover:shadow-sm"
+          style={{
+            border: added ? "1.5px solid #10b981" : "1px solid #e5e9f2",
+            background: added ? "#f0fdf4" : "#fafbff",
+          }}
+      >
+        <span
+            className="absolute left-0 top-0 bottom-0 w-1"
+            style={{ background: added ? "#10b981" : meta.color }}
+        />
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-slate-900 leading-snug break-words">
+            {service.name}
           </p>
-          <p
-              className="text-base sm:text-lg font-bold tabular-nums whitespace-nowrap leading-tight"
-              style={{ color: accentColor }}
+          <p className="flex items-center gap-1 text-xs text-slate-400 mt-1">
+            <Clock size={11} strokeWidth={2} />
+            {service.duration}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between xs:justify-end gap-4 sm:gap-6 flex-shrink-0 pt-2 xs:pt-0 border-t xs:border-t-0 border-slate-100">
+          <PriceStub
+              service={service}
+              estimate={estimate}
+              accentColor="#e8683f"
+              quantity={quantity}
+              onQuantityChange={setQuantity}
+          />
+
+          <button
+              onClick={handleToggle}
+              disabled={!added && !canAdd}
+              title={!added && !canAdd ? "Enter the required value to add this service" : undefined}
+              className="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all duration-150 flex-shrink-0 hover:opacity-90 active:scale-95 w-24 sm:w-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#e8683f]/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
+              style={
+                added
+                    ? { background: "#f1f5f9", color: "#64748b", border: "1px solid #e2e8f0" }
+                    : { background: "#e8683f", color: "#fff", boxShadow: "0 2px 6px rgba(232,104,63,0.25)" }
+              }
           >
-            Rs {priceMin.toLocaleString()}
-            {priceMax !== priceMin && (
-                <span className="text-sm font-medium text-slate-400">
-              {" "}
-                  – {priceMax.toLocaleString()}
-            </span>
+            {added ? (
+                <>
+                  <Minus size={13} strokeWidth={2.8} />
+                  Remove
+                </>
+            ) : (
+                <>
+                  <Plus size={13} strokeWidth={2.8} />
+                  Add
+                </>
             )}
-          </p>
+          </button>
         </div>
       </div>
   );
 }
 
+// NOTE: The real fix for the 422 MISSING_QUANTITY bug lives upstream in
+// page.tsx's mapBackendToProviderData(), where `estimationMode` should be
+// derived via inferEstimationMode(pricingUnit, s.estimationMode) instead of
+// being read directly off the backend response (which never sends it).
+// See smartEstimatorApi.ts for the inferEstimationMode() helper.
+
 export default function ServicesPricing({
                                           provider,
-                                          onBookService,
                                           selectedServices = [],
+                                          onAddService,
+                                          onRemoveService,
+                                          onUpdateService,
                                         }: ServicesPricingProps) {
   const grouped = useMemo(() => groupByCategory(provider.services), [provider.services]);
   const categories = Object.keys(grouped);
@@ -182,8 +417,8 @@ export default function ServicesPricing({
                     color: active === "All" ? "#fff" : "#6b7280",
                   }}
               >
-              {provider.services.length}
-            </span>
+                {provider.services.length}
+              </span>
             </button>
 
             {categories.map((cat) => {
@@ -209,8 +444,8 @@ export default function ServicesPricing({
                           color: isActiveTab ? "#fff" : "#6b7280",
                         }}
                     >
-                  {grouped[cat].length}
-                </span>
+                      {grouped[cat].length}
+                    </span>
                   </button>
               );
             })}
@@ -231,91 +466,33 @@ export default function ServicesPricing({
                 return (
                     <div key={cat}>
                       <div className="flex items-center gap-2 mb-3">
-                  <span
-                      className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0"
-                      style={{ background: meta.bg, color: meta.color }}
-                  >
-                    {meta.icon}
-                  </span>
+                        <span
+                            className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0"
+                            style={{ background: meta.bg, color: meta.color }}
+                        >
+                          {meta.icon}
+                        </span>
                         <span
                             className="font-bold uppercase tracking-wide text-xs sm:text-sm"
                             style={{ color: meta.color }}
                         >
-                    {meta.label}
-                  </span>
+                          {meta.label}
+                        </span>
                         <span className="h-px flex-1 bg-slate-100" />
                       </div>
 
                       <div className="flex flex-col gap-2.5 sm:gap-3">
-                        {grouped[cat].map((service) => {
-                          const added = isSelected(service.name);
-                          return (
-                              <div
-                                  key={service.name}
-                                  className="relative flex flex-col xs:flex-row xs:items-center justify-between gap-3 overflow-hidden rounded-xl pl-4 pr-3 py-3 sm:pl-5 sm:pr-4 sm:py-4 transition-all duration-200 hover:shadow-sm"
-                                  style={{
-                                    border: added ? "1.5px solid #10b981" : "1px solid #e5e9f2",
-                                    background: added ? "#f0fdf4" : "#fafbff",
-                                  }}
-                              >
-                                {/* category accent bar */}
-                                <span
-                                    className="absolute left-0 top-0 bottom-0 w-1"
-                                    style={{ background: added ? "#10b981" : meta.color }}
-                                />
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-bold text-slate-900 leading-snug break-words">
-                                    {service.name}
-                                  </p>
-                                  <p className="flex items-center gap-1 text-xs text-slate-400 mt-1">
-                                    <Clock size={11} strokeWidth={2} />
-                                    {service.duration}
-                                  </p>
-                                </div>
-
-                                {/* Price + action */}
-                                <div className="flex items-center justify-between xs:justify-end gap-4 sm:gap-6 flex-shrink-0 pt-2 xs:pt-0 border-t xs:border-t-0 border-slate-100">
-                                  <PriceStub
-                                      priceMin={service.priceMin}
-                                      priceMax={service.priceMax}
-                                      accentColor="#e8683f"
-                                  />
-
-                                  <button
-                                      onClick={() => onBookService?.(service.name)}
-                                      className="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all duration-150 flex-shrink-0 hover:opacity-90 active:scale-95 w-24 sm:w-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#e8683f]/50"
-                                      style={
-                                        added
-                                            ? {
-                                              background: "#f1f5f9",
-                                              color: "#64748b",
-                                              border: "1px solid #e2e8f0",
-                                            }
-                                            : {
-                                              background: "#e8683f",
-                                              color: "#fff",
-                                              boxShadow: "0 2px 6px rgba(232,104,63,0.25)",
-                                            }
-                                      }
-                                  >
-                                    {added ? (
-                                        <>
-                                          <Minus size={13} strokeWidth={2.8} />
-                                          Remove
-                                        </>
-                                    ) : (
-                                        <>
-                                          <Plus size={13} strokeWidth={2.8} />
-                                          Add
-                                        </>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                          );
-                        })}
+                        {grouped[cat].map((service) => (
+                            <ServiceRow
+                                key={service.name}
+                                service={service}
+                                meta={meta}
+                                added={isSelected(service.name)}
+                                onAdd={(entry) => onAddService?.(entry)}
+                                onRemove={(name) => onRemoveService?.(name)}
+                                onUpdate={(entry) => onUpdateService?.(entry)}
+                            />
+                        ))}
                       </div>
                     </div>
                 );

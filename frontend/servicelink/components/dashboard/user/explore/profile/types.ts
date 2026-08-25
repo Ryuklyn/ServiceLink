@@ -1,13 +1,50 @@
 import type { PortfolioProject } from "@/types/portfolio";
 
+// --- Smart Price Estimation (spec §3–§6) ---
+
+export type PricingUnit = "PER_JOB" | "PER_ITEM" | "PER_HOUR" | "PER_SQ_FT" | "PER_WALL";
+
+export type EstimationMode =
+    | "FIXED"              // AUTOMATIC — rate × 1, or rate × known qty
+    | "INPUT_BASED"        // needs customer-supplied qty / hours / area / walls
+    | "INSPECTION_REQUIRED";
+
+export type EstimateStatus =
+    | "ESTIMATED"
+    | "STARTING_FROM"
+    | "REQUIRES_INPUT"
+    | "REQUIRES_ASSESSMENT"
+    | "FINALIZED";
+
 export interface ProviderService {
   name: string;
   duration: string;
   priceMin: number;
   priceMax: number;
-  category: string; // <-- ADDED: Crucial for separating Electrician, Carpentry, Painting, etc.
-  priceNote?: string; // <-- ADDED: For sub-labels like "(Minimum 1 hour)" or "(Includes first visit)"
-  catalogId?: number; // ADD THIS
+  category: string;
+  priceNote?: string;
+  catalogId?: number;
+
+  // --- new: drives the Smart Estimator (optional so existing data keeps working) ---
+  pricingUnit?: PricingUnit;
+  rate?: number;                 // provider's active rate — spec §8, never recommendedRate
+  estimationMode?: EstimationMode;
+  requiredInputLabel?: string;   // e.g. "Approximate area (sq. ft.)" or "Number of walls"
+}
+
+// --- append to the existing types.ts from before ---
+
+export interface SelectedService {
+  name: string;
+  catalogId?: number;
+  priceMin: number;
+  priceMax: number;
+  pricingUnit?: PricingUnit;
+  rate?: number;
+  estimationMode?: EstimationMode;
+  quantity?: number;
+  estimateStatus: EstimateStatus;
+  estimatedAmount: number | null; // null while REQUIRES_INPUT / REQUIRES_ASSESSMENT
 }
 
 export interface ProviderReview {
@@ -19,11 +56,6 @@ export interface ProviderReview {
   text: string;
   date: string;
 }
-
-// export interface PortfolioItem {
-//   label: string;
-//   gradient: string;
-// }
 
 export interface ProviderData {
   id: string;
@@ -62,8 +94,7 @@ export interface ProviderData {
   };
   coverageRadius: number;
   coverageCenter: { lat: number; lng: number };
-  services: ProviderService[]; // <-- Harnesses our upgraded ProviderService schema layout
+  services: ProviderService[];
   providerReviews: ProviderReview[];
-  // portfolio: PortfolioItem[];
   portfolio: PortfolioProject[];
 }

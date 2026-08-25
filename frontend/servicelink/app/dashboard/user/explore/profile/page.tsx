@@ -8,7 +8,8 @@ import BookingSidebar from "../../../../../components/dashboard/user/explore/pro
 import ServicesPricing from "../../../../../components/dashboard/user/explore/profile/ServicesPricing";
 import DescribeIssue from "../../../../../components/dashboard/user/explore/profile/DescribeIssue";
 import AvailabilityCalendar from "../../../../../components/dashboard/user/explore/profile/AvailabilityCalender";
-import { ProviderData } from "../../../../../components/dashboard/user/explore/profile/types";
+import { ProviderData, SelectedService } from "../../../../../components/dashboard/user/explore/profile/types";
+import { normalizePricingUnit, inferEstimationMode } from "@/lib/api/smartEstimatorApi";
 import {
   AboutSection,
   CoverageMap,
@@ -18,13 +19,6 @@ import {
   RatingsBreakdown,
   ReviewsSection,
 } from "@/components/dashboard/user/explore/profile";
-
-interface SelectedService {
-  name: string;
-  priceMin: number;
-  priceMax: number;
-  catalogId?: number;
-}
 
 function getInitials(name: string): string {
   return name
@@ -79,14 +73,24 @@ function mapBackendToProviderData(data: any): ProviderData {
       lng: data.longitude ?? 85.324,
     },
     services:
-        data.services?.map((s: any) => ({
-          name: s.subServiceName,
-          category: s.categoryName ?? s.category,
-          priceMin: s.customPrice,
-          priceMax: s.customPrice,
-          duration: s.effectiveDuration ?? "1 hr",
-          catalogId: s.catalogId,
-        })) ?? [],
+        data.services?.map((s: any) => {
+          const pricingUnit = normalizePricingUnit(s.pricingUnit);
+          return {
+            name: s.subServiceName,
+            category: s.categoryName ?? s.category,
+            priceMin: s.customPrice,
+            priceMax: s.customPrice,
+            duration: s.effectiveDuration ?? "1 hr",
+            catalogId: s.catalogId,
+            pricingUnit,
+            rate: s.customPrice,
+            // FIX: backend doesn't send estimationMode yet — derive it from
+            // pricingUnit so input-based services actually show the quantity
+            // field instead of silently allowing "Add" with no area/hours/etc.
+            estimationMode: inferEstimationMode(pricingUnit, s.estimationMode),
+            requiredInputLabel: s.requiredInputLabel,
+          };
+        }) ?? [],
     providerReviews:
         data.recentReviews?.map((r: any) => ({
           id: String(r.id),
@@ -144,20 +148,25 @@ export default function ProviderPage() {
     fetchProvider();
   }, [providerId]);
 
-  const handleToggleService = (serviceName: string) => {
-    if (!provider) return;
-    const service = provider.services.find((s) => s.name === serviceName);
-    if (!service) return;
+  // --- Smart Price Estimation selection handlers ---
+  // ServicesPricing computes the EstimateResult per service (spec §5) and
+  // hands back a fully-formed SelectedService; page.tsx just keeps the list.
+
+  const handleAddService = (entry: SelectedService) => {
     setSelectedServices((prev) => {
-      const alreadySelected = prev.find((s) => s.name === serviceName);
-      if (alreadySelected) return prev.filter((s) => s.name !== serviceName);
-      return [...prev, {
-        name: service.name,
-        priceMin: service.priceMin,
-        priceMax: service.priceMax,
-        catalogId: service.catalogId,
-      }];
+      if (prev.some((s) => s.name === entry.name)) return prev;
+      return [...prev, entry];
     });
+  };
+
+  const handleRemoveService = (name: string) => {
+    setSelectedServices((prev) => prev.filter((s) => s.name !== name));
+  };
+
+  const handleUpdateService = (entry: SelectedService) => {
+    setSelectedServices((prev) =>
+        prev.map((s) => (s.name === entry.name ? entry : s))
+    );
   };
 
   if (loading) {
@@ -185,8 +194,10 @@ export default function ProviderPage() {
 
           <ServicesPricing
               provider={provider}
-              onBookService={handleToggleService}
               selectedServices={selectedServices}
+              onAddService={handleAddService}
+              onRemoveService={handleRemoveService}
+              onUpdateService={handleUpdateService}
           />
 
           <AvailabilityCalendar
