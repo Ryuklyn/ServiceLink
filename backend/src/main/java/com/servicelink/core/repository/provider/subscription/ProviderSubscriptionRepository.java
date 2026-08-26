@@ -17,6 +17,8 @@ public interface ProviderSubscriptionRepository extends JpaRepository<ProviderSu
 
     Optional<ProviderSubscription> findByProvider_Id(Long providerId);
 
+    Optional<ProviderSubscription> findTopByProvider_IdOrderByCreatedAtDesc(Long providerId);
+
     boolean existsByProvider_Id(Long providerId);
 
     // Feeds the daily expiry sweep.

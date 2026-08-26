@@ -11,11 +11,12 @@ import {
     addProviderToPool,
     ProviderDirectoryCard,
 } from "@/store/slices/features/admin-subscription/directory/providerDirectorySlice";
+import api from "@/utils/axios";
 
 const NAVY = "#1e3a8a";
 const ORANGE = "#e8683f";
 
-const CATEGORIES = ["HVAC", "Electrical", "Cleaning", "Plumbing", "Security", "Pest Control"];
+type CategoryFilter = { id: number; name: string };
 
 function initialsOf(name: string): string {
     return name
@@ -41,10 +42,24 @@ export default function DirectoryPage() {
 
     const [query, setQuery] = useState("");
     const [activeFilters, setActiveFilters] = useState<string[]>([]);
+    const [categories, setCategories] = useState<CategoryFilter[]>([]);
+    const [categoryError, setCategoryError] = useState<string | null>(null);
 
     useEffect(() => {
         dispatch(fetchProviderDirectory());
     }, [dispatch]);
+
+    useEffect(() => {
+        let active = true;
+        api.get<CategoryFilter[]>("/providers/categories")
+            .then(({ data }) => {
+                if (active) setCategories(data);
+            })
+            .catch(() => {
+                if (active) setCategoryError("Service filters could not be loaded. You can still search providers.");
+            });
+        return () => { active = false; };
+    }, []);
 
     const toggleFilter = (cat: string) => {
         setActiveFilters((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
@@ -90,7 +105,7 @@ export default function DirectoryPage() {
                 <h1 className="text-xl font-bold text-slate-900">Provider Directory</h1>
                 <p className="mt-1 text-sm text-slate-500">
                     Providers who&apos;ve turned on Pro Orders and are ready to be added. Once added, manage them from{" "}
-                    <Link href="/dashboard/provider-pool" className="font-semibold text-[#1e3a8a] hover:underline">
+                    <Link href="/dashboard/business/providerpool" className="font-semibold text-[#1e3a8a] hover:underline">
                         Provider Pool
                     </Link>
                     .
@@ -118,12 +133,12 @@ export default function DirectoryPage() {
 
                 <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold text-slate-500 mr-1">Filters:</span>
-                    {CATEGORIES.map((cat) => {
-                        const active = activeFilters.includes(cat);
+                    {categories.map((category) => {
+                        const active = activeFilters.includes(category.name);
                         return (
                             <button
-                                key={cat}
-                                onClick={() => toggleFilter(cat)}
+                                key={category.id}
+                                onClick={() => toggleFilter(category.name)}
                                 className={`px-3.5 py-1.5 rounded-full text-sm font-bold transition-colors border ${
                                     active
                                         ? "text-white border-transparent"
@@ -131,7 +146,7 @@ export default function DirectoryPage() {
                                 }`}
                                 style={active ? { backgroundColor: NAVY } : undefined}
                             >
-                                {cat}
+                                {category.name}
                             </button>
                         );
                     })}
@@ -145,6 +160,7 @@ export default function DirectoryPage() {
                         </button>
                     )}
                 </div>
+                {categoryError && <p className="text-xs text-amber-700">{categoryError}</p>}
             </div>
 
             {/* Result count row */}

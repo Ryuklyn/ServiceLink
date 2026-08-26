@@ -2,7 +2,7 @@
 
 import AuthLayout from "@/components/forgetpassword/AuthLayout";
 import StepIndicator from "@/components/forgetpassword/StepIndicator";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
@@ -10,7 +10,7 @@ import { toast } from "react-toastify";
 import api from "@/utils/axios";
 import { useSearchParams } from "next/navigation";
 
-export default function Page() {
+function ResetPasswordPageInner() {
   const router = useRouter();
 
   const [password, setPassword] = useState("");
@@ -202,5 +202,13 @@ export default function Page() {
         </p>
       </div>
     </AuthLayout>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Loading reset details...</div>}>
+      <ResetPasswordPageInner />
+    </Suspense>
   );
 }

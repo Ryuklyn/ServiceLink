@@ -594,7 +594,30 @@ export default function ProfilePortfolio() {
     const [description, setDescription] = useState("");
     const [completionDate, setCompletionDate] = useState("");
     const [location, setLocation] = useState("");
+    const [sourceAppointmentId, setSourceAppointmentId] = useState<number | undefined>(undefined);
     const [formError, setFormError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const pendingRaw = sessionStorage.getItem("sl_add_to_portfolio_pending");
+        if (pendingRaw) {
+            try {
+                const data = JSON.parse(pendingRaw);
+                if (data.sourceAppointmentId) {
+                    setTitle(data.title || "");
+                    setServiceType(data.serviceType || serviceTypes[0]);
+                    setDescription(data.description || "");
+                    setCompletionDate(data.completionDate || "");
+                    setLocation(data.location || "");
+                    setSourceAppointmentId(data.sourceAppointmentId);
+                    setModalOpen(true);
+                }
+            } catch (e) {
+                console.error("Error parsing pending portfolio details", e);
+            } finally {
+                sessionStorage.removeItem("sl_add_to_portfolio_pending");
+            }
+        }
+    }, []);
 
     // Client-side pagination — the backend returns the whole list (max 10) at once
     const totalPages = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
@@ -633,6 +656,7 @@ export default function ProfilePortfolio() {
         setDescription("");
         setCompletionDate("");
         setLocation("");
+        setSourceAppointmentId(undefined);
         setFormError(null);
     };
 
@@ -650,6 +674,7 @@ export default function ProfilePortfolio() {
             location,
             photos,
             video,
+            sourceAppointmentId,
         };
 
         const success = await addProject(values);
@@ -906,7 +931,7 @@ export default function ProfilePortfolio() {
                                         onChange={(e) => setServiceType(e.target.value)}
                                         className="w-full text-slate-900 placeholder:text-slate-400  rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20"
                                     >
-                                        {serviceTypes.map((s) => (
+                                        {Array.from(new Set([...serviceTypes, serviceType])).map((s) => (
                                             <option key={s} value={s}>
                                                 {s}
                                             </option>

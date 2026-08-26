@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 
-export default function OAuthCallbackPage() {
+function OAuthCallbackPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -55,5 +55,13 @@ export default function OAuthCallbackPage() {
 
             </div>
         </div>
+    );
+}
+
+export default function OAuthCallbackPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500 font-medium">Completing verification...</div>}>
+            <OAuthCallbackPageInner />
+        </Suspense>
     );
 }

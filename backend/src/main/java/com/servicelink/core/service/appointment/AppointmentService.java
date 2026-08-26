@@ -78,6 +78,7 @@ public class AppointmentService {
                     "APPOINTMENT_SLOT_TAKEN");
         }
 
+        int calculatedPrice = pricingService.calculateTotalPrice(providerService, req);
         Appointment appointment = Appointment.builder()
                 .provider(provider)
                 .serviceCatalog(catalog)
@@ -94,7 +95,11 @@ public class AppointmentService {
                 .areaSqFt(req.getAreaSqFt())
                 .wallCount(req.getWallCount())
                 .itemCount(req.getItemCount())
-                .totalPrice(pricingService.calculateTotalPrice(providerService, req))
+                .hours(req.getHours())
+                .providerRate(providerService.getCustomPrice())
+                .pricingUnit(catalog.getPricingUnit())
+                .estimatedAmount(calculatedPrice)
+                .totalPrice(calculatedPrice)
                 .status(AppointmentStatus.PENDING)
                 .build();
 
@@ -217,8 +222,8 @@ public class AppointmentService {
         Appointment appointment = appointmentRepo.findByIdAndProviderId(appointmentId, providerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
 
-        assertTransition(appointment, req.getStatus());
-        applyStatusTransition(appointment, req.getStatus(), providerId, req.getReason());
+        assertTransitionAndOperational(appointment, req.getStatus(), req.getOperationalStatus());
+        applyStatusTransition(appointment, req, providerId);
 
         log.info("Appointment {} changed to {} by provider {}", appointmentId, req.getStatus(), providerId);
 
@@ -254,17 +259,90 @@ public class AppointmentService {
                 .collect(Collectors.toMap(User::getId, u -> u));
     }
 
-    private void assertTransition(Appointment appointment, AppointmentStatus next) {
-        if (!appointment.canTransitionTo(next)) {
+    private void assertTransition(Appointment appointment, AppointmentStatus nextStatus) {
+        assertTransitionAndOperational(appointment, nextStatus, null);
+    }
+
+    private void applyStatusTransition(Appointment appointment, AppointmentStatus nextStatus, Long actorId, String reason) {
+        AppointmentStatusUpdateDTO req = new AppointmentStatusUpdateDTO();
+        req.setStatus(nextStatus);
+        req.setReason(reason);
+        applyStatusTransition(appointment, req, actorId);
+    }
+
+    private void assertTransitionAndOperational(Appointment appointment, AppointmentStatus nextStatus, String nextOpStatus) {
+        if (appointment.getStatus() != nextStatus && !appointment.canTransitionTo(nextStatus)) {
             throw new BusinessException(
-                    "Cannot transition appointment from [" + appointment.getStatus() + "] to [" + next + "]",
+                    "Cannot transition appointment from [" + appointment.getStatus() + "] to [" + nextStatus + "]",
                     "INVALID_STATUS_TRANSITION");
+        }
+
+        AppointmentStatus currentStatus = appointment.getStatus();
+        String currentOpStatus = appointment.getOperationalStatus() != null ? appointment.getOperationalStatus() : "CONFIRMED";
+
+        if (nextStatus == AppointmentStatus.CANCELLED) {
+            if (currentStatus == AppointmentStatus.COMPLETED || currentStatus == AppointmentStatus.CANCELLED) {
+                throw new BusinessException("Cannot cancel a completed or cancelled job", "INVALID_STATUS_TRANSITION");
+            }
+            return;
+        }
+
+        if (currentStatus == AppointmentStatus.PENDING) {
+            if (nextStatus != AppointmentStatus.CONFIRMED) {
+                throw new BusinessException("Pending appointment can only transition to CONFIRMED", "INVALID_STATUS_TRANSITION");
+            }
+            return;
+        }
+
+        if (currentStatus == AppointmentStatus.CONFIRMED) {
+            if (nextStatus == AppointmentStatus.CONFIRMED) {
+                if ("CONFIRMED".equals(currentOpStatus)) {
+                    if (!"ON_THE_WAY".equals(nextOpStatus)) {
+                        throw new BusinessException("From CONFIRMED, the next operational status must be ON_THE_WAY", "INVALID_STATUS_TRANSITION");
+                    }
+                } else if ("ON_THE_WAY".equals(currentOpStatus)) {
+                    if (!"ARRIVED".equals(nextOpStatus)) {
+                        throw new BusinessException("From ON_THE_WAY, the next operational status must be ARRIVED", "INVALID_STATUS_TRANSITION");
+                    }
+                } else {
+                    throw new BusinessException("Cannot transition within CONFIRMED when status is already " + currentOpStatus, "INVALID_STATUS_TRANSITION");
+                }
+            } else if (nextStatus == AppointmentStatus.IN_PROGRESS) {
+                if (!"ARRIVED".equals(currentOpStatus)) {
+                    throw new BusinessException("Cannot start job before arriving", "INVALID_STATUS_TRANSITION");
+                }
+            } else {
+                throw new BusinessException("Invalid status transition from CONFIRMED to " + nextStatus, "INVALID_STATUS_TRANSITION");
+            }
+            return;
+        }
+
+        if (currentStatus == AppointmentStatus.IN_PROGRESS) {
+            if (nextStatus != AppointmentStatus.COMPLETED) {
+                throw new BusinessException("Work in progress can only transition to COMPLETED", "INVALID_STATUS_TRANSITION");
+            }
+            return;
         }
     }
 
     private void applyStatusTransition(
-            Appointment appointment, AppointmentStatus next, Long actorId, String reason) {
+            Appointment appointment, AppointmentStatusUpdateDTO req, Long actorId) {
+        AppointmentStatus next = req.getStatus();
         appointment.setStatus(next);
+
+        if (req.getOperationalStatus() != null) {
+            appointment.setOperationalStatus(req.getOperationalStatus());
+        } else {
+            if (next == AppointmentStatus.CONFIRMED) {
+                appointment.setOperationalStatus("CONFIRMED");
+            } else if (next == AppointmentStatus.IN_PROGRESS) {
+                appointment.setOperationalStatus("IN_PROGRESS");
+            } else if (next == AppointmentStatus.COMPLETED) {
+                appointment.setOperationalStatus("COMPLETED");
+            } else if (next == AppointmentStatus.CANCELLED) {
+                appointment.setOperationalStatus("CANCELLED");
+            }
+        }
 
         switch (next) {
             case CONFIRMED -> {
@@ -284,6 +362,27 @@ public class AppointmentService {
             case IN_PROGRESS -> appointment.setStartedAt(LocalDateTime.now());
             case COMPLETED -> {
                 appointment.setCompletedAt(LocalDateTime.now());
+                if (req.getFinalAmount() != null) {
+                    appointment.setFinalAmount(req.getFinalAmount());
+                    appointment.setTotalPrice(req.getFinalAmount());
+                } else {
+                    appointment.setFinalAmount(appointment.getTotalPrice());
+                }
+                if (req.getMeasuredQuantity() != null && appointment.getPricingUnit() != null) {
+                    int qty = req.getMeasuredQuantity();
+                    switch (appointment.getPricingUnit()) {
+                        case PER_SQFT -> appointment.setAreaSqFt(qty);
+                        case PER_WALL -> appointment.setWallCount(qty);
+                        case PER_ITEM -> appointment.setItemCount(qty);
+                        case PER_HOUR -> appointment.setHours(qty);
+                        default -> {}
+                    }
+                    if (req.getFinalAmount() == null && appointment.getProviderRate() != null) {
+                        int finalAmt = appointment.getProviderRate() * qty;
+                        appointment.setFinalAmount(finalAmt);
+                        appointment.setTotalPrice(finalAmt);
+                    }
+                }
                 incrementProviderJobCount(appointment.getProvider());
 
                 // Optional but often expected: notify customer job is done
@@ -299,11 +398,95 @@ public class AppointmentService {
             case CANCELLED -> {
                 appointment.setCancelledAt(LocalDateTime.now());
                 appointment.setCancelledBy(actorId);
-                appointment.setCancellationReason(reason);
+                appointment.setCancellationReason(req.getReason());
             }
             default -> {
             }
         }
+    }
+
+    @Transactional
+    public AppointmentResponseDTO updateAppointment(Long customerId, Long appointmentId, AppointmentRequestDTO req) {
+        Appointment appointment = appointmentRepo.findByIdAndCustomerId(appointmentId, customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
+
+        if (appointment.getStatus() != AppointmentStatus.PENDING) {
+            throw new BusinessException("Only pending appointments can be updated", "EDIT_NOT_ELIGIBLE");
+        }
+
+        if (appointmentRepo.isSlotTakenExcluding(req.getProviderId(), req.getAppointmentDate(), req.getTimeSlot(), appointmentId)) {
+            throw new ConflictException(
+                    "The " + req.getTimeSlot().getDisplayLabel() + " slot on "
+                            + req.getAppointmentDate() + " is already booked for this provider",
+                    "APPOINTMENT_SLOT_TAKEN");
+        }
+
+        Provider provider = providerRepo.findById(req.getProviderId())
+                .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
+                .filter(p -> Boolean.TRUE.equals(p.getIsVerified()))
+                .orElseThrow(() -> new ResourceNotFoundException("Provider", req.getProviderId()));
+
+        ServiceCatalog catalog = catalogRepo.findByIdAndIsActiveTrue(req.getServiceCatalogId())
+                .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", req.getServiceCatalogId()));
+
+        ProviderService providerService = providerServiceRepo
+                .findAvailableByProviderAndCatalog(req.getProviderId(), req.getServiceCatalogId())
+                .orElseThrow(() -> new BusinessException("Provider does not offer this service", "SERVICE_UNAVAILABLE"));
+
+        appointment.setProvider(provider);
+        appointment.setServiceCatalog(catalog);
+        appointment.setAppointmentDate(req.getAppointmentDate());
+        appointment.setTimeSlot(req.getTimeSlot());
+        appointment.setEstimatedStartTime(req.getTimeSlot().getStartTime());
+        appointment.setEstimatedEndTime(req.getTimeSlot().getEndTime());
+        appointment.setAddress(req.getAddress());
+        appointment.setNotes(req.getNotes());
+        appointment.setAttachedImgUrl(req.getAttachedImgUrl());
+        appointment.setAttachedVideoUrl(req.getAttachedVideoUrl());
+        appointment.setAttachedAudioUrl(req.getAttachedAudioUrl());
+        appointment.setAreaSqFt(req.getAreaSqFt());
+        appointment.setWallCount(req.getWallCount());
+        appointment.setItemCount(req.getItemCount());
+        appointment.setHours(req.getHours());
+        appointment.setProviderRate(providerService.getCustomPrice());
+        appointment.setPricingUnit(catalog.getPricingUnit());
+
+        int calculatedPrice = pricingService.calculateTotalPrice(providerService, req);
+        appointment.setEstimatedAmount(calculatedPrice);
+        appointment.setTotalPrice(calculatedPrice);
+
+        Appointment saved = appointmentRepo.save(appointment);
+        User customer = userRepo.findById(customerId).orElse(null);
+        return mapper.toResponseDTO(saved, providerService, customer);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getFinalAmount(Long appointmentId) {
+        Appointment appointment = appointmentRepo.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
+
+        Integer finalAmt = appointment.getFinalAmount();
+        if (finalAmt == null) {
+            finalAmt = appointment.getTotalPrice();
+        }
+
+        Integer qty = null;
+        if (appointment.getPricingUnit() != null) {
+            qty = switch (appointment.getPricingUnit()) {
+                case PER_SQFT -> appointment.getAreaSqFt();
+                case PER_WALL -> appointment.getWallCount();
+                case PER_ITEM -> appointment.getItemCount();
+                case PER_HOUR -> appointment.getHours();
+                default -> null;
+            };
+        }
+
+        return Map.of(
+            "appointmentId", appointment.getId(),
+            "finalAmount", finalAmt != null ? finalAmt : 0,
+            "measuredQuantity", qty != null ? qty : 0,
+            "confirmedAt", appointment.getCompletedAt() != null ? appointment.getCompletedAt().toString() : LocalDateTime.now().toString()
+        );
     }
 
     private void incrementProviderJobCount(Provider provider) {

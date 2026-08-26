@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, CheckCircle2, Shield } from "lucide-react";
 import Link from "next/link";
 import api from "@/utils/axios";
 import { toast } from "react-toastify";
 
-export default function AcceptInvitePage() {
+function AcceptInvitePageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get("token") || "";
@@ -150,5 +150,13 @@ export default function AcceptInvitePage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function AcceptInvitePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#f0f4fb]">Loading invitation details...</div>}>
+            <AcceptInvitePageInner />
+        </Suspense>
     );
 }

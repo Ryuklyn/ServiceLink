@@ -7,6 +7,74 @@ import SearchBar from "@/components/dashboard/user/SearchBar";
 import OnboardingGate from "@/components/dashboard/user/onboarding/OnboardingGate";
 import { Provider } from "react-redux";
 import { store } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { initUserPreferences } from "@/store/slices/userPreferencesSlice";
+
+function UserDashboardContent({ children }: { children: React.ReactNode }) {
+    const dispatch = useAppDispatch();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { theme } = useAppSelector((state) => state.userPreferences);
+    const [isDark, setIsDark] = useState(false);
+
+    useEffect(() => {
+        const storedTheme = localStorage.getItem("userTheme") as "system" | "light" | "dark" | null;
+        const storedLang = localStorage.getItem("userLanguage") as "en" | "ne" | null;
+        dispatch(initUserPreferences({
+            theme: storedTheme || "system",
+            language: storedLang || "en"
+        }));
+    }, [dispatch]);
+
+    useEffect(() => {
+        const determineDark = () => {
+            if (theme === "dark") return true;
+            if (theme === "system") {
+                return window.matchMedia("(prefers-color-scheme: dark)").matches;
+            }
+            return false;
+        };
+        setIsDark(determineDark());
+
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const handleSystemThemeChange = () => {
+            if (theme === "system") {
+                setIsDark(mediaQuery.matches);
+            }
+        };
+        mediaQuery.addEventListener("change", handleSystemThemeChange);
+        return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+    }, [theme]);
+
+    return (
+        <div className={`flex h-screen overflow-hidden ${isDark ? "user-dashboard-dark dark" : "user-dashboard-light bg-background"}`}>
+            {/* ✅ Mobile overlay — sidebar खुला हुँदा background dim हुने + tap गर्दा बन्द हुने */}
+            {isSidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
+            {/* ✅ Sidebar — desktop मा static, mobile मा fixed slide-in */}
+            <div
+                className={`
+        fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
+        lg:static lg:translate-x-0
+        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+      `}
+            >
+                <Sidebar onNavigate={() => setIsSidebarOpen(false)} />
+            </div>
+
+            <div className="flex-1 flex flex-col overflow-hidden w-full">
+                <SearchBar onMenuClick={() => setIsSidebarOpen(true)} />
+                <div className="flex-1 overflow-y-auto">
+                    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function UserDashboardLayout({
                                                 children,
@@ -15,7 +83,6 @@ export default function UserDashboardLayout({
 }) {
     const router = useRouter();
     const [hasMounted, setHasMounted] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // ✅ mobile drawer state
 
     useEffect(() => {
         setHasMounted(true);
@@ -39,34 +106,9 @@ export default function UserDashboardLayout({
 
     return (
         <Provider store={store}>
-            <div className="flex h-screen bg-gray-50 overflow-hidden">
-                {/* ✅ Mobile overlay — sidebar खुला हुँदा background dim हुने + tap गर्दा बन्द हुने */}
-                {isSidebarOpen && (
-                    <div
-                        className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-                        onClick={() => setIsSidebarOpen(false)}
-                    />
-                )}
-
-                {/* ✅ Sidebar — desktop मा static, mobile मा fixed slide-in */}
-                <div
-                    className={`
-            fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
-            lg:static lg:translate-x-0
-            ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          `}
-                >
-                    <Sidebar onNavigate={() => setIsSidebarOpen(false)} />
-                </div>
-
-                <div className="flex-1 flex flex-col overflow-hidden w-full">
-                    <SearchBar onMenuClick={() => setIsSidebarOpen(true)} />
-                    <div className="flex-1 overflow-y-auto">
-                        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
-                    </div>
-                </div>
-            </div>
-
+            <UserDashboardContent>
+                {children}
+            </UserDashboardContent>
             <OnboardingGate />
         </Provider>
     );

@@ -20,4 +20,6 @@ public class CreatePortfolioDTO {
     private String completionDate;
 
     private String location;
+
+    private Long sourceAppointmentId;
 }

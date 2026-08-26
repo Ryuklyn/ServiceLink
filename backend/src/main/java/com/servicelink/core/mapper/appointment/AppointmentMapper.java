@@ -49,6 +49,11 @@ public class AppointmentMapper {
                 .startedAt(appt.getStartedAt())
                 .completedAt(appt.getCompletedAt())
                 .cancelledAt(appt.getCancelledAt())
+                .hours(appt.getHours())
+                .operationalStatus(appt.getOperationalStatus())
+                .estimatedAmount(appt.getEstimatedAmount())
+                .finalAmount(appt.getFinalAmount())
+                .providerRate(appt.getProviderRate())
                 // Customer snapshot — name/phone/photo resolved from UserProfile,
                 // email is the one field that legitimately lives on User itself.
                 .customerName(snapshot.name())
@@ -74,6 +79,9 @@ public class AppointmentMapper {
                 .status(appt.getStatus())
                 .totalPrice(appt.getTotalPrice())
                 .address(appt.getAddress())
+                .operationalStatus(appt.getOperationalStatus())
+                .hours(appt.getHours())
+                .serviceCatalogId(appt.getServiceCatalog().getId())
                 .customerName(snapshot.name())
                 .customerPhone(snapshot.phone())
                 .customerProfilePictureUrl(snapshot.photo())

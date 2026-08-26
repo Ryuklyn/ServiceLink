@@ -15,6 +15,7 @@ import {
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchUser, clearUser } from "@/store/slices/userSlice";
+import { useUserTranslation } from "@/hooks/useUserTranslation";
 
 const menuItems = [
   { label: "Home", icon: Home, href: "/dashboard/user" },
@@ -37,6 +38,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const { t } = useUserTranslation();
 
   const dispatch = useAppDispatch();
   const { data: user } = useAppSelector((state) => state.user);
@@ -67,8 +69,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
 
   return (
       <div
-          className="w-64 sm:w-56 text-white h-screen flex flex-col shrink-0"
-          style={{ background: "#1e3a8a" }}
+          className="w-64 sm:w-56 bg-sidebar text-sidebar-text h-screen flex flex-col shrink-0 border-r border-border"
       >
 
         {/* Logo */}
@@ -87,7 +88,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                 Service<span className="text-[#e8683f]">Link</span>
               </p>
               <p className="text-[10px] font-medium text-slate-500 tracking-wide leading-none">
-                Trusted Local Services
+                {t("Trusted Local Services")}
               </p>
             </div>
           </div>
@@ -108,26 +109,26 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                 flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 relative whitespace-nowrap
                 ${
                         active
-                            ? "bg-[#3a57b5] text-[#e8683f] font-bold"
-                            : "text-blue-100 hover:bg-white/10 hover:text-white font-normal"
+                            ? "bg-sidebar-active text-sidebar-active-text font-bold"
+                            : "text-sidebar-text/80 hover:bg-sidebar-active/30 hover:text-sidebar-active-text font-normal"
                     }
               `}
                 >
                   {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 bg-[#e8683f] rounded-r-full" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 bg-primary rounded-r-full" />
                   )}
                   <Icon
                       className={`w-[18px] h-[18px] shrink-0 ${active ? "ml-1.5" : "ml-1.5"}`}
                       strokeWidth={active ? 2.2 : 1.8}
                   />
-                  <span className="text-[13.5px] tracking-wide">{item.label}</span>
+                  <span className="text-[13.5px] tracking-wide">{t(item.label)}</span>
                 </Link>
             );
           })}
         </nav>
 
         {/* User Profile Section */}
-        <div className="border-t border-white/10 mx-3 pt-4 pb-5">
+        <div className="border-t border-border mx-3 pt-4 pb-5">
           <div className="relative">
             <button
                 onClick={() => setShowAccountMenu(!showAccountMenu)}
@@ -147,56 +148,56 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                       />
                     </div>
                 ) : (
-                    <div className="w-full h-full bg-[#e8683f] rounded-full flex items-center justify-center text-sm font-bold text-white">
+                    <div className="w-full h-full bg-primary rounded-full flex items-center justify-center text-sm font-bold text-primary-foreground">
                       {initials}
                     </div>
                 )}
                 {/* Online green dot */}
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-[#2a4499] rounded-full z-10" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-sidebar rounded-full z-10" />
               </div>
 
               <div className="text-left overflow-hidden">
-                <p className="text-sm font-semibold truncate leading-tight">
+                <p className="text-sm font-semibold truncate leading-tight text-text-primary">
                   {user?.fullName || "User"}
                 </p>
-                <p className="text-xs text-blue-200 leading-tight">
-                  Verified User
+                <p className="text-xs text-text-secondary leading-tight">
+                  {t("Verified User")}
                 </p>
               </div>
             </button>
 
             {/* Dropdown */}
             {showAccountMenu && (
-                <div className="absolute bottom-full left-0 right-0 bg-white text-gray-800 rounded-lg shadow-xl mb-2 overflow-hidden border border-gray-100 z-50">
+                <div className="absolute bottom-full left-0 right-0 bg-surface text-text-primary rounded-lg shadow-xl mb-2 overflow-hidden border border-border z-50">
                   <Link
                       href="/dashboard/user/settings"
-                      className="block px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+                      className="block px-4 py-2.5 text-sm font-medium hover:bg-surface-hover transition-colors"
                       onClick={() => {
                         setShowAccountMenu(false);
                         onNavigate?.(); // ✅ थप्ने
                       }}
                   >
-                    Profile & Account
+                    {t("Profile & Account")}
                   </Link>
                   <Link
                       href="/dashboard/user/bookings"
-                      className="block px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+                      className="block px-4 py-2.5 text-sm font-medium hover:bg-surface-hover transition-colors"
                       onClick={() => {
                         setShowAccountMenu(false);
                         onNavigate?.(); // ✅ थप्ने
                       }}
                   >
-                    My Bookings
+                    {t("My Bookings")}
                   </Link>
-                  <button className="w-full px-4 py-2.5 text-sm font-medium hover:bg-gray-50 text-left transition-colors">
-                    Pair Device
+                  <button className="w-full px-4 py-2.5 text-sm font-medium hover:bg-surface-hover text-left transition-colors">
+                    {t("Pair Device")}
                   </button>
                   <button
                       onClick={handleLogout}
-                      className="w-full px-4 py-2.5 text-sm font-medium text-[#e8683f] hover:bg-gray-50 text-left border-t border-gray-100 flex items-center gap-2 transition-colors"
+                      className="w-full px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface-hover text-left border-t border-border flex items-center gap-2 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
-                    Log out
+                    {t("Log out")}
                   </button>
                 </div>
             )}

@@ -4,7 +4,10 @@ import com.servicelink.core.dto.response.business.pool.ProviderPoolCardDTO;
 import com.servicelink.core.model.business.providerpool.ProviderPoolStatus;
 import com.servicelink.core.security.CurrentOrganization;
 import com.servicelink.core.service.business.pool.ProviderPoolService;
+import com.servicelink.core.service.business.BusinessAuthorizationService;
+import com.servicelink.core.model.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +18,7 @@ import java.util.List;
 public class ProviderPoolController {
 
     private final ProviderPoolService providerPoolService;
+    private final BusinessAuthorizationService businessAuthorizationService;
 
     /**
      * GET /api/pro/provider-pool?status=ACTIVE&search=ram
@@ -23,9 +27,11 @@ public class ProviderPoolController {
     @GetMapping
     public List<ProviderPoolCardDTO> list(
             @CurrentOrganization Long organizationId,
+            @AuthenticationPrincipal User user,
             @RequestParam(required = false) ProviderPoolStatus status,
             @RequestParam(required = false) String search
     ) {
+        businessAuthorizationService.requireDirectoryAccess(user, organizationId);
         return providerPoolService.listForOrganization(organizationId, status, search);
     }
 
@@ -36,8 +42,10 @@ public class ProviderPoolController {
     @PostMapping("/{providerId}")
     public ProviderPoolCardDTO add(
             @CurrentOrganization Long organizationId,
+            @AuthenticationPrincipal User user,
             @PathVariable Long providerId
     ) {
+        businessAuthorizationService.requirePoolManagement(user, organizationId);
         return providerPoolService.addToPool(organizationId, providerId);
     }
 
@@ -48,8 +56,10 @@ public class ProviderPoolController {
     @DeleteMapping("/{poolEntryId}")
     public void remove(
             @CurrentOrganization Long organizationId,
+            @AuthenticationPrincipal User user,
             @PathVariable Long poolEntryId
     ) {
+        businessAuthorizationService.requirePoolManagement(user, organizationId);
         providerPoolService.removeFromPool(organizationId, poolEntryId);
     }
 }

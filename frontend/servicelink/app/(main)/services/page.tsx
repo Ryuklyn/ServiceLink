@@ -133,7 +133,17 @@ const SERVICES_BOTTOM = [
     },
 ];
 
-function ServiceCard({ service }) {
+interface ServiceItem {
+    title: string;
+    img: string;
+    rating: number;
+    reviews: number;
+    providers: number;
+    duration: string;
+    price: string;
+}
+
+function ServiceCard({ service }: { service: ServiceItem }) {
     return (
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
             <div className="relative h-48">

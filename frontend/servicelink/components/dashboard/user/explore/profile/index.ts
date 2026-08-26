@@ -15,5 +15,4 @@ export type {
   ProviderData,
   ProviderService,
   ProviderReview,
-  PortfolioItem,
 } from "./types";

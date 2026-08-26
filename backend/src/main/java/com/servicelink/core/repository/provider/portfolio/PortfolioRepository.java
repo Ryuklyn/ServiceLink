@@ -30,6 +30,8 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, Long> {
 
     boolean existsByIdAndProviderId(Long id, Long providerId);
 
+    boolean existsBySourceAppointmentId(Long sourceAppointmentId);
+
     // NOTE: the old file's clearPrimaryForProvider() and the
     // isPrimary-ordered query are intentionally left out — Portfolio has
     // no isPrimary field in the current schema. If you want a "featured

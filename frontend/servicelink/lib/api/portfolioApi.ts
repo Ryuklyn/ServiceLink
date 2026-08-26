@@ -13,6 +13,7 @@ function buildPortfolioFormData(values: PortfolioFormValues): FormData {
     formData.append("description", values.description);
     if (values.completionDate) formData.append("completionDate", values.completionDate);
     if (values.location) formData.append("location", values.location);
+    if (values.sourceAppointmentId) formData.append("sourceAppointmentId", String(values.sourceAppointmentId));
 
     values.photos.forEach((photo) => {
         formData.append("photos", photo); // repeated key -> List<MultipartFile> photos

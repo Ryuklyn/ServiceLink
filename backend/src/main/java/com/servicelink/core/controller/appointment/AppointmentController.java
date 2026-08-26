@@ -22,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -48,6 +49,32 @@ public class AppointmentController {
 
         AppointmentResponseDTO response = appointmentService.book(user.getId(), req);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * PUT /api/appointments/{id}
+     * Customer updates an existing pending appointment.
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<AppointmentResponseDTO> updateAppointment(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @Valid @RequestBody AppointmentRequestDTO req) {
+
+        AppointmentResponseDTO response = appointmentService.updateAppointment(user.getId(), id, req);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/appointments/{id}/final-amount
+     * Get the finalized estimate for an appointment.
+     */
+    @GetMapping("/{id}/final-amount")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> getFinalAmount(@PathVariable Long id) {
+        Map<String, Object> finalAmountMap = appointmentService.getFinalAmount(id);
+        return ResponseEntity.ok(finalAmountMap);
     }
 
     /**

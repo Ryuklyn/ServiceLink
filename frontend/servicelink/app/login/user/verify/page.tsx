@@ -3,13 +3,13 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import AuthLayout from "@/components/forgetpassword/AuthLayout";
 import StepIndicator from "@/components/forgetpassword/StepIndicator";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { toast } from "react-toastify";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import api from "@/utils/axios";
 
-export default function Page() {
+function VerifyPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -210,7 +210,7 @@ export default function Page() {
         {otp.map((digit, i) => (
           <input
             key={i}
-            ref={(el) => (inputsRef.current[i] = el)}
+            ref={(el) => { inputsRef.current[i] = el; }}
             value={digit}
             maxLength={1}
             onChange={(e) => handleChange(e.target.value, i)}
@@ -269,5 +269,13 @@ export default function Page() {
         </p>
       </div>
     </AuthLayout>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Loading verification details...</div>}>
+      <VerifyPageInner />
+    </Suspense>
   );
 }

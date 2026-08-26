@@ -30,7 +30,14 @@ public class ServiceCatalog {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "pricing_unit", nullable = false)
-    private PricingUnit pricingUnit; // PER_JOB, PER_SQFT, PER_WALL, PER_ITEM
+    private PricingUnit pricingUnit; // PER_JOB, PER_SQFT, PER_WALL, PER_ITEM, PER_HOUR
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estimation_mode")
+    private EstimationMode estimationMode;
+
+    @Column(name = "required_input_label")
+    private String requiredInputLabel;
 
     @Column(name = "base_price")
     private Integer basePrice; // in NPR
@@ -47,7 +54,13 @@ public class ServiceCatalog {
         PER_JOB,    // Fixed price (most sub-services)
         PER_SQFT,   // Full room painting, flooring
         PER_WALL,   // Touch-up painting
-        PER_ITEM    // Countable installs: fans, fixtures, taps
-        // HOURLY intentionally removed — conflicts with slot-based booking
+        PER_ITEM,   // Countable installs: fans, fixtures, taps
+        PER_HOUR    // Hourly rate
+    }
+
+    public enum EstimationMode {
+        FIXED,
+        INPUT_BASED,
+        INSPECTION_REQUIRED
     }
 }

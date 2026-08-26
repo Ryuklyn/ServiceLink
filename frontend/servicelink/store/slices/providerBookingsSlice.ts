@@ -18,6 +18,7 @@ export interface AppointmentSummary {
     customerName: string;
     customerPhone: string | null;
     customerProfilePictureUrl: string | null;
+    operationalStatus: string | null;
 }
 
 export interface AppointmentDetail extends AppointmentSummary {
@@ -89,11 +90,11 @@ AppointmentDetail, number, { rejectValue: string }
 
 export const updateBookingStatus = createAsyncThunk<
 AppointmentDetail,
-    { id: number; status: BackendAppointmentStatus; reason?: string },
+    { id: number; status: BackendAppointmentStatus; operationalStatus?: string; measuredQuantity?: number; reason?: string },
 { rejectValue: string }
->("providerBookings/updateStatus", async ({ id, status, reason }, { rejectWithValue }) => {
+> ("providerBookings/updateStatus", async ({ id, status, operationalStatus, measuredQuantity, reason }, { rejectWithValue }) => {
     try {
-        const { data } = await api.patch(`/appointments/provider/${id}/status`, { status, reason });
+        const { data } = await api.patch(`/appointments/provider/${id}/status`, { status, operationalStatus, measuredQuantity, reason });
         return data as AppointmentDetail;
     } catch (err: any) {
         return rejectWithValue(err?.response?.data?.message ?? err?.message ?? "Failed to update booking status");
@@ -136,7 +137,9 @@ const providerBookingsSlice = createSlice({
                 state.updatingId = null;
                 state.detailsById[action.payload.id] = action.payload;
                 state.items = state.items.map((b) =>
-                    b.id === action.payload.id ? { ...b, status: action.payload.status } : b,
+                    b.id === action.payload.id
+                        ? { ...b, status: action.payload.status, operationalStatus: action.payload.operationalStatus }
+                        : b,
                 );
             })
             .addCase(updateBookingStatus.rejected, (state, action) => {

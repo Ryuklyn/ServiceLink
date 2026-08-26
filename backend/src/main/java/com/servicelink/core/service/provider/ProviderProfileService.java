@@ -220,6 +220,13 @@ public class ProviderProfileService {
                                                     MultipartFile video) throws Exception {
         Provider provider = resolveActiveProvider(userId);
 
+        if (request.getSourceAppointmentId() != null) {
+            if (portfolioRepo.existsBySourceAppointmentId(request.getSourceAppointmentId())) {
+                throw new ConflictException(
+                        "This completed booking has already been added to your portfolio", "PORTFOLIO_DUPLICATE");
+            }
+        }
+
         long existingCount = portfolioRepo.countByProviderId(provider.getId());
         if (existingCount >= MAX_PORTFOLIO_PROJECTS) {
             throw new BusinessException(
@@ -240,6 +247,7 @@ public class ProviderProfileService {
                 .description(request.getDescription())
                 .completionDate(parseCompletionDate(request.getCompletionDate()))
                 .location(request.getLocation())
+                .sourceAppointmentId(request.getSourceAppointmentId())
                 .build();
 
         if (photos != null) {

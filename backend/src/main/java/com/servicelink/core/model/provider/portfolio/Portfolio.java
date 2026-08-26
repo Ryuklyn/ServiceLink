@@ -41,6 +41,9 @@ public class Portfolio {
     @Column(name = "location")
     private String location;
 
+    @Column(name = "source_appointment_id", unique = true)
+    private Long sourceAppointmentId;
+
     @Builder.Default
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("displayOrder ASC")

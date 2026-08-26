@@ -40,6 +40,12 @@ public class PortfolioService {
             MultipartFile video
     ) throws Exception {
 
+        if (request.getSourceAppointmentId() != null) {
+            if (portfolioRepository.existsBySourceAppointmentId(request.getSourceAppointmentId())) {
+                throw new IllegalStateException("This completed booking has already been added to your portfolio.");
+            }
+        }
+
         long existingCount = portfolioRepository.countByProviderId(providerId);
         if (existingCount >= MAX_PROJECTS) {
             throw new IllegalStateException("Maximum of " + MAX_PROJECTS + " portfolio projects allowed.");
@@ -58,6 +64,7 @@ public class PortfolioService {
                 .description(request.getDescription())
                 .completionDate(parseCompletionDate(request.getCompletionDate()))
                 .location(request.getLocation())
+                .sourceAppointmentId(request.getSourceAppointmentId())
                 .build();
 
         // Upload each photo to Supabase, then attach the returned URL as media

@@ -3,7 +3,6 @@ package com.servicelink.core.service.business.pool;
 import com.servicelink.core.dto.response.business.pool.ProviderPoolCardDTO;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.availability.ProviderScheduleSettings;
-import com.servicelink.core.model.provider.subscription.ProviderSubscription;
 import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import com.servicelink.core.model.provider.subscription.SubscriptionStatus;
 import com.servicelink.core.model.business.providerpool.ProviderPoolEntry;
@@ -11,7 +10,8 @@ import com.servicelink.core.model.business.providerpool.ProviderPoolStatus;
 import com.servicelink.core.repository.business.ProviderPoolEntryRepository;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.provider.availability.ProviderScheduleSettingsRepository;
-import com.servicelink.core.repository.provider.subscription.ProviderSubscriptionRepository;
+import com.servicelink.core.service.provider.subscription.ProOrdersEligibilityChecker;
+import com.servicelink.core.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,17 +24,20 @@ public class ProviderPoolService {
 
     private final ProviderPoolEntryRepository poolEntryRepository;
     private final ProviderRepository providerRepository;
-    private final ProviderSubscriptionRepository providerSubscriptionRepository;
     private final ProviderScheduleSettingsRepository scheduleSettingsRepository;
+    private final ProOrdersEligibilityChecker proOrdersEligibilityChecker;
 
     // ────────────────────────────────────────────────────────────────────
     // ELIGIBILITY: The single source of truth for Pro Orders eligibility
     // ────────────────────────────────────────────────────────────────────
 
     public boolean computeProOrdersEligible(Provider provider) {
-        boolean paidAndActive = providerSubscriptionRepository.findByProvider_Id(provider.getId())
-                .map(this::isPaidAndActive)
-                .orElse(false);
+        if (!Boolean.TRUE.equals(provider.getIsActive())
+                || !Boolean.TRUE.equals(provider.getIsVerified())
+                || !Boolean.TRUE.equals(provider.getHasCompletedOnboarding())) {
+            return false;
+        }
+        boolean paidAndActive = proOrdersEligibilityChecker.isEligible(provider.getId());
 
         boolean acceptsProOrders = scheduleSettingsRepository.findById(provider.getId())
                 .map(ProviderScheduleSettings::getAcceptsProOrders)
@@ -42,12 +45,6 @@ public class ProviderPoolService {
                 .orElse(false);
 
         return paidAndActive && acceptsProOrders;
-    }
-
-    private boolean isPaidAndActive(ProviderSubscription sub) {
-        return sub.getPlanType() != SubscriptionPlanType.FREE_TRIAL
-                && sub.getStatus() == SubscriptionStatus.ACTIVE
-                && sub.isCurrentlyActive();
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -112,12 +109,24 @@ public class ProviderPoolService {
         Provider provider = providerRepository.findById(providerId)
                 .orElseThrow(() -> new IllegalArgumentException("Provider not found with ID: " + providerId));
 
+        if (!Boolean.TRUE.equals(provider.getIsVerified())) {
+            throw new BusinessException("Only verified providers can join a Pro provider pool", "PROVIDER_NOT_VERIFIED");
+        }
+        if (!Boolean.TRUE.equals(provider.getIsActive()) || !Boolean.TRUE.equals(provider.getHasCompletedOnboarding())) {
+            throw new BusinessException("Provider is not active and ready for new Pro work", "PROVIDER_NOT_ELIGIBLE");
+        }
         if (!computeProOrdersEligible(provider)) {
-            throw new IllegalStateException("Provider is not eligible for Pro Orders");
+            throw new BusinessException("Provider is not currently visible for Pro Orders", "PROVIDER_NOT_PRO_VISIBLE");
         }
 
-        if (poolEntryRepository.existsByOrganizationIdAndProviderId(organizationId, providerId)) {
-            throw new IllegalStateException("Provider already exists in your pool");
+        var existing = poolEntryRepository.findByOrganizationIdAndProviderId(organizationId, providerId);
+        if (existing.isPresent()) {
+            ProviderPoolEntry entry = existing.get();
+            if (entry.getStatus() == ProviderPoolStatus.ACTIVE) {
+                throw new BusinessException("Provider already exists in your pool", "DUPLICATE_POOL_ENTRY");
+            }
+            entry.setStatus(ProviderPoolStatus.ACTIVE);
+            return toCard(poolEntryRepository.save(entry));
         }
 
         ProviderPoolEntry entry = ProviderPoolEntry.builder()
@@ -140,6 +149,9 @@ public class ProviderPoolService {
         ProviderPoolEntry entry = poolEntryRepository.findByIdAndOrganizationId(poolEntryId, organizationId)
                 .orElseThrow(() -> new IllegalArgumentException("Pool entry not found or belongs to another organization"));
 
-        poolEntryRepository.delete(entry);
+        // Keep membership history for Pro jobs, billing, and compliance. A later
+        // add request reactivates this same row instead of creating a duplicate.
+        entry.setStatus(ProviderPoolStatus.INACTIVE);
+        poolEntryRepository.save(entry);
     }
 }

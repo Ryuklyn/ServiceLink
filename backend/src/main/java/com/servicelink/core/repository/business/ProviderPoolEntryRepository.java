@@ -17,10 +17,12 @@ public interface ProviderPoolEntryRepository extends JpaRepository<ProviderPoolE
 
     Optional<ProviderPoolEntry> findByIdAndOrganizationId(Long id, Long organizationId);
 
+    Optional<ProviderPoolEntry> findByOrganizationIdAndProviderId(Long organizationId, Long providerId);
+
     boolean existsByOrganizationIdAndProviderId(Long organizationId, Long providerId);
 
     // Used by ProviderDirectoryService to exclude already-pooled providers —
     // once added, a provider is only managed from the Provider Pool page.
-    @Query("select e.provider.id from ProviderPoolEntry e where e.organizationId = :organizationId")
+    @Query("select e.provider.id from ProviderPoolEntry e where e.organizationId = :organizationId and e.status = 'ACTIVE'")
     List<Long> findProviderIdsByOrganizationId(@Param("organizationId") Long organizationId);
 }

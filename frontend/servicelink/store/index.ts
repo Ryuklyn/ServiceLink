@@ -16,6 +16,8 @@ import uiReducer from "@/store/slices/uiSlice";
 import notificationReducer from "./slices/notificationSlice";
 import providerDirectoryReducer from "@/store/slices/features/admin-subscription/directory/providerDirectorySlice"
 import providerPoolReducer from "@/store/slices/features/admin-subscription/pool/providerPoolSlice"
+import userPreferencesReducer from "@/store/slices/userPreferencesSlice";
+import providerPreferencesReducer from "@/store/slices/providerPreferencesSlice";
 
 export const store = configureStore({
     reducer: {
@@ -35,7 +37,9 @@ export const store = configureStore({
         ui: uiReducer,
         notifications: notificationReducer,
         providerDirectory:providerDirectoryReducer,
-        providerPool:providerPoolReducer
+        providerPool:providerPoolReducer,
+        userPreferences: userPreferencesReducer,
+        providerPreferences: providerPreferencesReducer
     },
 });
 

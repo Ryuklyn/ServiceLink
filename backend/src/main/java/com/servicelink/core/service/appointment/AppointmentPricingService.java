@@ -41,6 +41,13 @@ public class AppointmentPricingService {
                             "itemCount is required for PER_ITEM services", "MISSING_QUANTITY");
                 yield unitPrice * req.getItemCount();
             }
+
+            case PER_HOUR -> {
+                if (req.getHours() == null || req.getHours() <= 0)
+                    throw new BusinessException(
+                            "hours is required for PER_HOUR services", "MISSING_QUANTITY");
+                yield unitPrice * req.getHours();
+            }
         };
     }
 }

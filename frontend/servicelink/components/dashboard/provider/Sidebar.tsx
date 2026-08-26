@@ -11,6 +11,7 @@ import { clearUser } from "@/store/slices/userSlice";
 import { providerNavItems } from "@/lib/navigation/providerNavItems";
 import { getPlanBadgeLabelUpper } from "@/utils/subscriptionDisplay";
 import { fetchProviderSubscription } from "@/store/slices/providerSubscriptionSlice";
+import { useProviderTranslation } from "@/hooks/useProviderTranslation";
 
 interface SidebarProps {
     isOpen?: boolean;         // Control mobile visibility
@@ -20,6 +21,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen = false, onNavigate }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
+    const { t } = useProviderTranslation();
 
     const dispatch = useAppDispatch();
     const { data: provider } = useAppSelector((state) => state.providerProfile);
@@ -64,7 +66,7 @@ export default function Sidebar({ isOpen = false, onNavigate }: SidebarProps) {
 
             <aside className={`
                 fixed inset-y-0 left-0 z-50 lg:static 
-                w-64 h-full flex flex-col bg-gradient-to-b from-[#E8683F] to-[#C8501F] flex-shrink-0
+                w-64 h-full flex flex-col sidebar-theme-container border-r border-border flex-shrink-0
                 transform transition-transform duration-200 ease-in-out
                 ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
             `}>
@@ -115,23 +117,23 @@ export default function Sidebar({ isOpen = false, onNavigate }: SidebarProps) {
                                     flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
                                     ${
                                     isActive
-                                        ? "bg-white text-[#1E3A8A] shadow-md shadow-black/10 font-semibold"
-                                        : "text-white/70 hover:text-white hover:bg-white/10"
+                                        ? "bg-sidebar-active text-sidebar-active-text shadow-md shadow-black/10 font-semibold"
+                                        : "text-sidebar-text/80 hover:text-sidebar-active-text hover:bg-sidebar-active/30"
                                 }
                                 `}
                             >
                                 <Icon
                                     size={18}
-                                    className={isActive ? "text-[#E8683F]" : "text-white/70"}
+                                    className={isActive ? "text-sidebar-active-text" : "text-sidebar-text/70"}
                                 />
-                                {label}
+                                {t(label)}
                             </Link>
                         );
                     })}
                 </nav>
 
                 {/* Footer Profile Card */}
-                <div className="m-3 mt-4 bg-[#1E3A8A] rounded-2xl p-4 shadow-lg">
+                <div className="m-3 mt-4 bg-surface border border-border rounded-2xl p-4 shadow-lg">
                     <div className="flex items-center gap-3">
                         <div className="relative w-11 h-11 flex-shrink-0">
                             {provider?.profilePictureUrl ? (
@@ -146,38 +148,38 @@ export default function Sidebar({ isOpen = false, onNavigate }: SidebarProps) {
                                     />
                                 </div>
                             ) : (
-                                <div className="w-full h-full bg-white rounded-full flex items-center justify-center text-[#1E3A8A] font-bold text-sm shadow">
+                                <div className="w-full h-full bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm shadow">
                                     {initials}
-                                    clearance</div>
+                                </div>
                             )}
                         </div>
 
-                        <div className="min-w-0">
-                            <p className="text-white font-semibold text-sm truncate">
+                        <div className="min-w-0 text-text-primary">
+                            <p className="font-semibold text-sm truncate">
                                 {displayName}
                             </p>
-                            <div className="flex items-center gap-1 mt-0.5">
-                                <BadgeCheck size={12} className="text-[#E8683F] flex-shrink-0" />
-                                <p className="text-white/60 text-xs truncate">
-                                    {provider?.isVerified ? "Verified Provider" : "Pending Verification"}
+                            <div className="flex items-center gap-1 mt-0.5 text-text-secondary">
+                                <BadgeCheck size={12} className="text-primary flex-shrink-0" />
+                                <p className="text-xs truncate">
+                                    {provider?.isVerified ? t("Verified Provider") : t("Pending Verification")}
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between">
+                    <div className="mt-3 flex items-center justify-between text-text-primary">
                         {/*<span className="bg-[#E8683F] text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-wide">*/}
                         {/*    MONTHLY PLAN ✓*/}
                         {/*</span>*/}
-                        <span className="bg-[#E8683F] text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-wide">
+                        <span className="bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-full tracking-wide">
                             {getPlanBadgeLabelUpper(subscription?.planType)} ✓
                         </span>
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-1 text-white/50 hover:text-white/80 transition text-xs"
+                            className="flex items-center gap-1 text-text-muted hover:text-text-secondary transition text-xs"
                         >
                             <LogOut size={13} />
-                            <span>Out</span>
+                            <span>{t("Out")}</span>
                         </button>
                     </div>
                 </div>

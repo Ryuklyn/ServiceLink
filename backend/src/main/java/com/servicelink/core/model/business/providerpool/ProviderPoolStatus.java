@@ -6,6 +6,7 @@ package com.servicelink.core.model.business.providerpool;
  */
 public enum ProviderPoolStatus {
     ACTIVE,
+    INACTIVE,
     PENDING_APPROVAL,
     DECLINED
 }

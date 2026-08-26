@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { MeResponse } from "@/lib/api/authApi";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchUser, updateUserLocally } from "@/store/slices/userSlice";
+import { setUserTheme, setUserLanguage } from "@/store/slices/userPreferencesSlice";
+import { useUserTranslation } from "@/hooks/useUserTranslation";
 import AddPhoneModal from "@/components/dashboard/user/settings/AddPhoneModal";
 import EditProfileModal from "@/components/dashboard/user/settings/EditProfileModal";
 import AvatarMenu from "@/components/dashboard/user/settings/AvatarMenu";
@@ -139,10 +141,17 @@ export default function SettingsPage() {
   const [arrivalAlerts, setArrivalAlerts] = useState(true);
   const [defaultCity, setDefaultCity] = useState("Kathmandu");
 
-  const [appearance, setAppearance] = useState<"system" | "light" | "dark">(
-      "light",
-  );
-  const [language, setLanguage] = useState<"ENG" | "NEP">("ENG");
+  const { t } = useUserTranslation();
+  const { theme: appearance, language: reduxLang } = useAppSelector((state) => state.userPreferences);
+  const language = reduxLang === "ne" ? "NEP" : "ENG";
+
+  const setAppearance = (themeVal: "system" | "light" | "dark") => {
+    dispatch(setUserTheme(themeVal));
+  };
+
+  const setLanguageState = (langVal: "ENG" | "NEP") => {
+    dispatch(setUserLanguage(langVal === "NEP" ? "ne" : "en"));
+  };
 
   // ── 2FA state — hydrated from real user data once it loads, not hardcoded ──
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
@@ -498,17 +507,17 @@ export default function SettingsPage() {
         {/* ──────────────────────────────────────────────────────── */}
         {/* CARD 4: PREFERENCES PANEL SECTION                        */}
         {/* ──────────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6 space-y-5">
-          <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-            Preferences
+        <div className="bg-surface rounded-2xl border border-border shadow-xs p-6 space-y-5">
+          <h3 className="text-sm font-bold text-text-primary tracking-tight">
+            {t("settings.preferences")}
           </h3>
 
-          <div className="divide-y divide-gray-100 text-xs font-medium text-gray-600">
+          <div className="divide-y divide-border text-xs font-medium text-text-secondary">
             <div className="flex items-center justify-between py-3.5">
-              <span className="text-gray-700">Booking Updates</span>
+              <span className="text-text-primary">{t("settings.bookingUpdates")}</span>
               <button
                   onClick={() => setBookingUpdates(!bookingUpdates)}
-                  className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${bookingUpdates ? "bg-[#1e3a8a]" : "bg-gray-200"}`}
+                  className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${bookingUpdates ? "bg-primary" : "bg-surface-hover"}`}
               >
                 <div
                     className={`bg-white w-4.5 h-4.5 rounded-full shadow-xs transform duration-200 ${bookingUpdates ? "translate-x-4.5" : "translate-x-0"}`}
@@ -517,10 +526,10 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex items-center justify-between py-3.5">
-              <span className="text-gray-700">Promotions & Offers</span>
+              <span className="text-text-primary">{t("settings.promotions")}</span>
               <button
                   onClick={() => setPromotions(!promotions)}
-                  className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${promotions ? "bg-[#1e3a8a]" : "bg-gray-200"}`}
+                  className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${promotions ? "bg-primary" : "bg-surface-hover"}`}
               >
                 <div
                     className={`bg-white w-4.5 h-4.5 rounded-full shadow-xs transform duration-200 ${promotions ? "translate-x-4.5" : "translate-x-0"}`}
@@ -529,10 +538,10 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex items-center justify-between py-3.5">
-              <span className="text-gray-700">Provider Arrival Alerts</span>
+              <span className="text-text-primary">{t("settings.arrivalAlerts")}</span>
               <button
                   onClick={() => setArrivalAlerts(!arrivalAlerts)}
-                  className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${arrivalAlerts ? "bg-[#1e3a8a]" : "bg-gray-200"}`}
+                  className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${arrivalAlerts ? "bg-primary" : "bg-surface-hover"}`}
               >
                 <div
                     className={`bg-white w-4.5 h-4.5 rounded-full shadow-xs transform duration-200 ${arrivalAlerts ? "translate-x-4.5" : "translate-x-0"}`}
@@ -541,11 +550,11 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex items-center justify-between py-3.5">
-              <span className="text-gray-700">Default City</span>
+              <span className="text-text-primary">{t("settings.defaultCity")}</span>
               <select
                   value={defaultCity}
                   onChange={(e) => setDefaultCity(e.target.value)}
-                  className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold text-gray-700 focus:outline-none cursor-pointer hover:border-gray-300"
+                  className="bg-surface border border-border rounded-lg px-2 py-1 text-xs font-semibold text-text-primary focus:outline-none cursor-pointer hover:border-border-subtle"
               >
                 <option value="Kathmandu">Kathmandu</option>
                 <option value="Lalitpur">Lalitpur</option>
@@ -555,45 +564,45 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex items-center justify-between py-3.5">
-              <span className="text-gray-700">Appearance</span>
-              <div className="bg-gray-100 rounded-lg p-0.5 flex items-center border border-gray-200/50">
+              <span className="text-text-primary">{t("settings.appearance")}</span>
+              <div className="bg-surface-secondary rounded-lg p-0.5 flex items-center border border-border">
                 <button
                     onClick={() => setAppearance("system")}
-                    className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide ${appearance === "system" ? "bg-[#1e3a8a] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"}`}
+                    className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide ${appearance === "system" ? "bg-primary text-primary-foreground shadow-xs" : "text-text-muted hover:text-text-secondary"}`}
                 >
-                  <Laptop size={12} /> System
+                  <Laptop size={12} /> {t("settings.system")}
                 </button>
                 <button
                     onClick={() => setAppearance("light")}
-                    className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide ${appearance === "light" ? "bg-[#1e3a8a] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"}`}
+                    className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide ${appearance === "light" ? "bg-primary text-primary-foreground shadow-xs" : "text-text-muted hover:text-text-secondary"}`}
                 >
-                  <Sun size={12} /> Light
+                  <Sun size={12} /> {t("settings.light")}
                 </button>
                 <button
                     onClick={() => setAppearance("dark")}
-                    className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide ${appearance === "dark" ? "bg-[#1e3a8a] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"}`}
+                    className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide ${appearance === "dark" ? "bg-primary text-primary-foreground shadow-xs" : "text-text-muted hover:text-text-secondary"}`}
                 >
-                  <Moon size={12} /> Dark
+                  <Moon size={12} /> {t("settings.dark")}
                 </button>
               </div>
             </div>
 
             <div className="flex items-center justify-between py-3.5">
-            <span className="text-gray-700 flex items-center gap-1.5">
-              Language
+            <span className="text-text-primary flex items-center gap-1.5">
+              {t("settings.language")}
             </span>
-              <div className="bg-gray-100 rounded-lg p-0.5 flex items-center border border-gray-200/50 relative">
+              <div className="bg-surface-secondary rounded-lg p-0.5 flex items-center border border-border relative">
                 <button
-                    onClick={() => setLanguage("ENG")}
-                    className={`w-12 py-1 text-center rounded-md text-[10px] font-extrabold transition-all relative z-10 ${language === "ENG" ? "bg-[#1e3a8a] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"}`}
+                    onClick={() => setLanguageState("ENG")}
+                    className={`w-12 py-1 text-center rounded-md text-[10px] font-extrabold transition-all relative z-10 ${language === "ENG" ? "bg-primary text-primary-foreground shadow-xs" : "text-text-muted hover:text-text-secondary"}`}
                 >
-                  ENG
+                  {t("settings.eng")}
                 </button>
                 <button
-                    onClick={() => setLanguage("NEP")}
-                    className={`w-12 py-1 text-center rounded-md text-[10px] font-extrabold transition-all relative z-10 ${language === "NEP" ? "bg-[#1e3a8a] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"}`}
+                    onClick={() => setLanguageState("NEP")}
+                    className={`w-12 py-1 text-center rounded-md text-[10px] font-extrabold transition-all relative z-10 ${language === "NEP" ? "bg-primary text-primary-foreground shadow-xs" : "text-text-muted hover:text-text-secondary"}`}
                 >
-                  NEP
+                  {t("settings.nep")}
                 </button>
               </div>
             </div>
@@ -606,11 +615,10 @@ export default function SettingsPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
           <div>
             <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-              Security & Support
+              {t("Security & Support")}
             </h3>
             <p className="text-xs text-gray-400 mt-0.5 font-medium">
-              Manage your account security configurations, authentication
-              factors, and legal resources.
+              {t("Manage your account security configurations, authentication factors, and legal resources.")}
             </p>
           </div>
 
@@ -625,10 +633,10 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-gray-800 font-bold block">
-                    Change Password
+                    {t("Change Password")}
                   </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                    Update your master security passphrase regularly
+                    {t("Update your master security passphrase regularly")}
                   </span>
                 </div>
               </div>
@@ -648,10 +656,10 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-gray-800 font-bold block">
-                    {user?.phoneNumber ? "Update Contact Number" : "Add Contact Number"}
+                    {user?.phoneNumber ? t("Update Contact Number") : t("Add Contact Number")}
                   </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                    Modify linked phone for emergency token dynamic alerts
+                    {t("Modify linked phone for emergency token dynamic alerts")}
                   </span>
                 </div>
               </div>
@@ -669,14 +677,14 @@ export default function SettingsPage() {
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="text-gray-800 font-bold">
-                      Two-Factor Authentication
+                      {t("Two-Factor Authentication")}
                     </span>
                     <span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1.5 py-0.5 rounded-md font-bold">
-                      {is2FAEnabled ? "Enabled" : "Disabled"}
+                      {is2FAEnabled ? t("Enabled") : t("Disabled")}
                     </span>
                   </div>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                    Secure login sessions using secondary verification strings
+                    {t("Secure login sessions using secondary verification strings")}
                   </span>
                 </div>
               </div>
@@ -705,10 +713,10 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-gray-800 font-bold block">
-                    Report an Issue
+                    {t("Report an Issue")}
                   </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                    Flag bugs, incorrect metrics, or provider exceptions
+                    {t("Flag bugs, incorrect metrics, or provider exceptions")}
                   </span>
                 </div>
               </div>
@@ -725,10 +733,10 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-gray-800 font-bold block">
-                    Contact Support
+                    {t("Contact Support")}
                   </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                    Connect with operations teams regarding flex transactions
+                    {t("Connect with operations teams regarding flex transactions")}
                   </span>
                 </div>
               </div>
@@ -745,11 +753,10 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-gray-800 font-bold block">
-                    Terms of Service & Privacy Policy
+                    {t("Terms of Service & Privacy Policy")}
                   </span>
                   <span className="text-[10px] text-gray-400 font-normal block">
-                    Review cancellation legalities and account privacy
-                    parameters
+                    {t("Review cancellation legalities and account privacy parameters")}
                   </span>
                 </div>
               </div>
@@ -766,7 +773,7 @@ export default function SettingsPage() {
                 className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors group"
             >
               <LogOut size={14} className="text-slate-500 group-hover:text-slate-700" />
-              <span>Sign Out</span>
+              <span>{t("Sign Out")}</span>
             </button>
 
             <button
@@ -774,7 +781,7 @@ export default function SettingsPage() {
                 className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-red-50/40 hover:bg-red-50 text-red-600 border border-transparent hover:border-red-100 font-bold text-xs transition-all group"
             >
               <Trash2 size={14} className="text-red-500" />
-              <span>Delete Account</span>
+              <span>{t("Delete Account")}</span>
             </button>
           </div>
         </div>

@@ -112,6 +112,8 @@ public class ProviderMapper {
                 .categoryId(category != null ? category.getId() : null)
                 .categoryName(category != null ? category.getName() : null)
                 .pricingUnit(c != null ? c.getPricingUnit() : null)
+                .estimationMode(c != null ? c.getEstimationMode() : null)
+                .requiredInputLabel(c != null ? c.getRequiredInputLabel() : null)
                 .customPrice(ps.getCustomPrice())
                 .effectiveDuration(ps.getEffectiveDuration())
                 .isAvailable(ps.getIsAvailable())
@@ -130,6 +132,8 @@ public class ProviderMapper {
                 .subServiceName(sc.getSubServiceName())
                 .defaultDuration(sc.getDefaultDuration())
                 .pricingUnit(sc.getPricingUnit())
+                .estimationMode(sc.getEstimationMode())
+                .requiredInputLabel(sc.getRequiredInputLabel())
                 .basePrice(sc.getBasePrice())
                 .isActive(sc.getIsActive())
                 .build();

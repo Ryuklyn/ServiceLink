@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
     Eye, EyeOff, Wrench, Users, BarChart2, Clock, Shield, Star, Building2, ArrowLeft, CheckCircle2,
@@ -22,7 +22,7 @@ const STATS = [
     { value: "99.9%", label: "Uptime" },
 ];
 
-export default function BusinessResetPasswordPage() {
+function BusinessResetPasswordPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const email = searchParams.get("email") || "";
@@ -271,5 +271,13 @@ export default function BusinessResetPasswordPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function BusinessResetPasswordPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Loading password reset details...</div>}>
+            <BusinessResetPasswordPageInner />
+        </Suspense>
     );
 }

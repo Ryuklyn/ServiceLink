@@ -12,8 +12,20 @@ import {
     Pie,
     Cell,
 } from "recharts";
-import MapComponent from "@/components/dashboard/user/map/MapComponent";
+import dynamic from "next/dynamic";
 import { MapPin, ChevronDown, Star } from "lucide-react";
+
+const MapComponent = dynamic(
+    () => import("@/components/dashboard/user/map/MapComponent"),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                Loading map...
+            </div>
+        ),
+    }
+);
 
 const tabs = ["This Week", "This Month", "Last 3 Months", "This Year"];
 
@@ -148,7 +160,7 @@ export default function AnalyticsPage() {
                                     domain={[0, 8]}
                                 />
                                 <Tooltip
-                                    formatter={(v: number) => [v, "Bookings"]}
+                                    formatter={(v: any) => [v, "Bookings"]}
                                     contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
                                 />
                                 <Line

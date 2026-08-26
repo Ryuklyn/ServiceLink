@@ -1,0 +1,640 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------------< com.servicelink:core >------------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.5.0:clean (default-clean) @ core ---
+[INFO] Deleting C:\Users\Ryuk\Desktop\ServiceLink\backend\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ core ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ core ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 323 source files with javac [debug parameters release 17] to target\classes
+[INFO] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/JwtAuthenticationFilter.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/JwtAuthenticationFilter.java: Recompile with -Xlint:deprecation for details.
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/model/business/job/JobAssignment.java:[10,53] cannot find symbol
+  symbol:   method columnList()
+  location: @interface jakarta.persistence.UniqueConstraint
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/model/business/job/JobAssignment.java:[10,5] annotation @jakarta.persistence.UniqueConstraint is missing a default value for the element 'columnNames'
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/config/AdminInitializer.java:[26,26] cannot find symbol
+  symbol:   method builder()
+  location: class com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[54,17] cannot find symbol
+  symbol:   method setEmail(java.lang.String)
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[55,17] cannot find symbol
+  symbol:   method setProvider(com.servicelink.core.model.auth.AuthProvider)
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[56,17] cannot find symbol
+  symbol:   method setRole(com.servicelink.core.model.user.Role)
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[57,17] cannot find symbol
+  symbol:   method setVerified(boolean)
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[60,20] cannot find symbol
+  symbol:   method setFullName(java.lang.String)
+  location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[61,20] cannot find symbol
+  symbol:   method setProfileImage(java.lang.String)
+  location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[62,20] cannot find symbol
+  symbol:   method setUser(com.servicelink.core.model.user.User)
+  location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[64,17] cannot find symbol
+  symbol:   method setProfile(com.servicelink.core.model.user.UserProfile)
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[68,39] cannot find symbol
+  symbol:   method getProfile()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[72,24] cannot find symbol
+  symbol:   method setUser(com.servicelink.core.model.user.User)
+  location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[75,20] cannot find symbol
+  symbol:   method setFullName(java.lang.String)
+  location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[76,20] cannot find symbol
+  symbol:   method setProfileImage(java.lang.String)
+  location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[78,17] cannot find symbol
+  symbol:   method setProfile(com.servicelink.core.model.user.UserProfile)
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[80,21] cannot find symbol
+  symbol:   method getRole()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[81,21] cannot find symbol
+  symbol:   method setRole(com.servicelink.core.model.user.Role)
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[88,33] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[89,32] cannot find symbol
+  symbol:   method getProfile()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[90,35] cannot find symbol
+  symbol:   method getProfile()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[91,32] cannot find symbol
+  symbol:   method getRole()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[92,36] cannot find symbol
+  symbol:   method getProvider()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[95,61] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[98,53] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[103,21] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/JwtAuthenticationFilter.java:[79,46] cannot find symbol
+  symbol:   method getRole()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[57,27] cannot find symbol
+  symbol:   method getId()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[62,27] cannot find symbol
+  symbol:   method getWorkspace()
+  location: variable proUser of type com.servicelink.core.model.business.ProUser
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[63,27] cannot find symbol
+  symbol:   method getWorkspace()
+  location: variable proUser of type com.servicelink.core.model.business.ProUser
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[64,27] cannot find symbol
+  symbol:   method getWorkspace()
+  location: variable proUser of type com.servicelink.core.model.business.ProUser
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[69,45] cannot find symbol
+  symbol:   method getWorkspaceId()
+  location: variable teamMember of type com.servicelink.core.model.business.TeamMember
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[70,74] cannot find symbol
+  symbol:   method getWorkspaceId()
+  location: variable teamMember of type com.servicelink.core.model.business.TeamMember
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[71,47] cannot find symbol
+  symbol:   method getOrganization()
+  location: variable workspace of type com.servicelink.core.model.business.Workspace
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[72,33] cannot find symbol
+  symbol:   method getOrganization()
+  location: variable workspace of type com.servicelink.core.model.business.Workspace
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[70,55] cannot find symbol
+  symbol:   method getReviewNotes()
+  location: variable request of type com.servicelink.core.dto.request.admin.KycReviewRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[72,34] constructor ApiResponse in class com.servicelink.core.dto.response.admin.ApiResponse cannot be applied to given types;
+  required: no arguments
+  found:    java.lang.String
+  reason: actual and formal argument lists differ in length
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[80,49] cannot find symbol
+  symbol:   method getReviewNotes()
+  location: variable request of type @jakarta.validation.Valid com.servicelink.core.dto.request.admin.KycReviewRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[81,34] constructor ApiResponse in class com.servicelink.core.dto.response.admin.ApiResponse cannot be applied to given types;
+  required: no arguments
+  found:    java.lang.String
+  reason: actual and formal argument lists differ in length
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[90,34] constructor ApiResponse in class com.servicelink.core.dto.response.admin.ApiResponse cannot be applied to given types;
+  required: no arguments
+  found:    java.lang.String
+  reason: actual and formal argument lists differ in length
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[83,61] cannot find symbol
+  symbol:   method getPrimaryCategoryId()
+  location: variable dto of type com.servicelink.core.dto.request.KycSubmitRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[98,56] cannot find symbol
+  symbol:   method getReferenceNumber()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[102,56] cannot find symbol
+  symbol:   method getId()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[103,52] cannot find symbol
+  symbol:   method getReferenceNumber()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[108,27] cannot find symbol
+  symbol:   method getReferenceNumber()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[112,20] cannot find symbol
+  symbol:   method getEmail()
+  location: variable dto of type com.servicelink.core.dto.request.KycSubmitRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[112,45] cannot find symbol
+  symbol:   method getEmail()
+  location: variable dto of type com.servicelink.core.dto.request.KycSubmitRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[116,27] cannot find symbol
+  symbol:   method getReferenceNumber()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[122,53] cannot find symbol
+  symbol:   method getReferenceNumber()
+  location: variable response of type com.servicelink.core.dto.response.KycSubmitResponseDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[133,42] cannot find symbol
+  symbol:   method getIsActive()
+  location: variable category of type com.servicelink.core.model.provider.service.Category
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[152,29] cannot find symbol
+  symbol:   method getFullName()
+  location: variable s of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[153,29] cannot find symbol
+  symbol:   method getEmail()
+  location: variable s of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[154,29] cannot find symbol
+  symbol:   method getReferenceNumber()
+  location: variable s of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[170,23] cannot find symbol
+  symbol:   method getStatus()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[172,36] cannot find symbol
+  symbol:   method getApplicantIdentifier()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[176,19] cannot find symbol
+  symbol:   method setStatus(com.servicelink.core.model.common.KycStatus)
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[177,19] cannot find symbol
+  symbol:   method setReviewedAt(java.time.Instant)
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[181,23] cannot find symbol
+  symbol:   method setReviewNotes(java.lang.String)
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[186,71] cannot find symbol
+  symbol:   method getApplicantIdentifier()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[188,68] cannot find symbol
+  symbol:   method getPrimaryCategoryId()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[190,37] cannot find symbol
+  symbol:   method builder()
+  location: class com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[193,31] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[194,44] cannot find symbol
+  symbol:   method getPrimaryDistrict()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[195,48] cannot find symbol
+  symbol:   method getSecondaryDistricts()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[196,49] cannot find symbol
+  symbol:   method getProfilePhotoUrl()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[197,66] cannot find symbol
+  symbol:   method getTravelRadius()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[198,17] cannot find symbol
+  symbol:   method setCertifiedCategories(java.lang.String)
+  location: variable provider of type com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[200,17] cannot find symbol
+  symbol:   method setIsVerified(boolean)
+  location: variable provider of type com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[201,17] cannot find symbol
+  symbol:   method setIsActive(boolean)
+  location: variable provider of type com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[205,69] cannot find symbol
+  symbol:   method getApplicantIdentifier()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[206,50] cannot find symbol
+  symbol:   method getId()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[207,46] cannot find symbol
+  symbol:   method getReferenceNumber()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[208,72] cannot find symbol
+  symbol:   method getId()
+  location: variable provider of type com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[208,86] cannot find symbol
+  symbol:   method getId()
+  location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[210,53] cannot find symbol
+  symbol:   method getEmail()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[210,76] cannot find symbol
+  symbol:   method getFullName()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[210,102] cannot find symbol
+  symbol:   method getReferenceNumber()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[219,19] cannot find symbol
+  symbol:   method setStatus(com.servicelink.core.model.common.KycStatus)
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[220,19] cannot find symbol
+  symbol:   method setReviewedAt(java.time.Instant)
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[224,19] cannot find symbol
+  symbol:   method setReviewNotes(java.lang.String)
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[228,69] cannot find symbol
+  symbol:   method getApplicantIdentifier()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[231,27] cannot find symbol
+  symbol:   method getEmail()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[232,27] cannot find symbol
+  symbol:   method getFullName()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[233,27] cannot find symbol
+  symbol:   method getReferenceNumber()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[244,16] cannot find symbol
+  symbol:   method getScheduledAt()
+  location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[245,30] cannot find symbol
+  symbol:   method getScheduledAt()
+  location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[246,23] cannot find symbol
+  symbol:   method getMeetDate()
+  location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[246,52] cannot find symbol
+  symbol:   method getMeetTime()
+  location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[247,65] cannot find symbol
+  symbol:   method getMeetDate()
+  location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[247,91] cannot find symbol
+  symbol:   method getMeetTime()
+  location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[253,30] cannot find symbol
+  symbol:   method getMeetLink()
+  location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[259,35] cannot find symbol
+  symbol:   method getEmail()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[260,35] cannot find symbol
+  symbol:   method getFullName()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[265,90] cannot find symbol
+  symbol:   method getEmail()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[270,19] cannot find symbol
+  symbol:   method setStatus(com.servicelink.core.model.common.KycStatus)
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[271,19] cannot find symbol
+  symbol:   method setScheduledMeetLink(java.lang.String)
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[272,19] cannot find symbol
+  symbol:   method setScheduledMeetAt(java.time.Instant)
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[276,16] cannot find symbol
+  symbol:   method isSendEmail()
+  location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[278,31] cannot find symbol
+  symbol:   method getEmail()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[279,31] cannot find symbol
+  symbol:   method getFullName()
+  location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[INFO] 100 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  6.384 s
+[INFO] Finished at: 2026-08-26T19:15:29+05:45
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.13.0:compile (default-compile) on project core: Compilation failure: Compilation failure: 
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/model/business/job/JobAssignment.java:[10,53] cannot find symbol
+[ERROR]   symbol:   method columnList()
+[ERROR]   location: @interface jakarta.persistence.UniqueConstraint
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/model/business/job/JobAssignment.java:[10,5] annotation @jakarta.persistence.UniqueConstraint is missing a default value for the element 'columnNames'
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/config/AdminInitializer.java:[26,26] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[54,17] cannot find symbol
+[ERROR]   symbol:   method setEmail(java.lang.String)
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[55,17] cannot find symbol
+[ERROR]   symbol:   method setProvider(com.servicelink.core.model.auth.AuthProvider)
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[56,17] cannot find symbol
+[ERROR]   symbol:   method setRole(com.servicelink.core.model.user.Role)
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[57,17] cannot find symbol
+[ERROR]   symbol:   method setVerified(boolean)
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[60,20] cannot find symbol
+[ERROR]   symbol:   method setFullName(java.lang.String)
+[ERROR]   location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[61,20] cannot find symbol
+[ERROR]   symbol:   method setProfileImage(java.lang.String)
+[ERROR]   location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[62,20] cannot find symbol
+[ERROR]   symbol:   method setUser(com.servicelink.core.model.user.User)
+[ERROR]   location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[64,17] cannot find symbol
+[ERROR]   symbol:   method setProfile(com.servicelink.core.model.user.UserProfile)
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[68,39] cannot find symbol
+[ERROR]   symbol:   method getProfile()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[72,24] cannot find symbol
+[ERROR]   symbol:   method setUser(com.servicelink.core.model.user.User)
+[ERROR]   location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[75,20] cannot find symbol
+[ERROR]   symbol:   method setFullName(java.lang.String)
+[ERROR]   location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[76,20] cannot find symbol
+[ERROR]   symbol:   method setProfileImage(java.lang.String)
+[ERROR]   location: variable profile of type com.servicelink.core.model.user.UserProfile
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[78,17] cannot find symbol
+[ERROR]   symbol:   method setProfile(com.servicelink.core.model.user.UserProfile)
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[80,21] cannot find symbol
+[ERROR]   symbol:   method getRole()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[81,21] cannot find symbol
+[ERROR]   symbol:   method setRole(com.servicelink.core.model.user.Role)
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[88,33] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[89,32] cannot find symbol
+[ERROR]   symbol:   method getProfile()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[90,35] cannot find symbol
+[ERROR]   symbol:   method getProfile()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[91,32] cannot find symbol
+[ERROR]   symbol:   method getRole()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[92,36] cannot find symbol
+[ERROR]   symbol:   method getProvider()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[95,61] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[98,53] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/OAuth2LoginSuccessHandler.java:[103,21] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/JwtAuthenticationFilter.java:[79,46] cannot find symbol
+[ERROR]   symbol:   method getRole()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[57,27] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[62,27] cannot find symbol
+[ERROR]   symbol:   method getWorkspace()
+[ERROR]   location: variable proUser of type com.servicelink.core.model.business.ProUser
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[63,27] cannot find symbol
+[ERROR]   symbol:   method getWorkspace()
+[ERROR]   location: variable proUser of type com.servicelink.core.model.business.ProUser
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[64,27] cannot find symbol
+[ERROR]   symbol:   method getWorkspace()
+[ERROR]   location: variable proUser of type com.servicelink.core.model.business.ProUser
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[69,45] cannot find symbol
+[ERROR]   symbol:   method getWorkspaceId()
+[ERROR]   location: variable teamMember of type com.servicelink.core.model.business.TeamMember
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[70,74] cannot find symbol
+[ERROR]   symbol:   method getWorkspaceId()
+[ERROR]   location: variable teamMember of type com.servicelink.core.model.business.TeamMember
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[71,47] cannot find symbol
+[ERROR]   symbol:   method getOrganization()
+[ERROR]   location: variable workspace of type com.servicelink.core.model.business.Workspace
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/security/CurrentOrganizationArgumentResolver.java:[72,33] cannot find symbol
+[ERROR]   symbol:   method getOrganization()
+[ERROR]   location: variable workspace of type com.servicelink.core.model.business.Workspace
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[70,55] cannot find symbol
+[ERROR]   symbol:   method getReviewNotes()
+[ERROR]   location: variable request of type com.servicelink.core.dto.request.admin.KycReviewRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[72,34] constructor ApiResponse in class com.servicelink.core.dto.response.admin.ApiResponse cannot be applied to given types;
+[ERROR]   required: no arguments
+[ERROR]   found:    java.lang.String
+[ERROR]   reason: actual and formal argument lists differ in length
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[80,49] cannot find symbol
+[ERROR]   symbol:   method getReviewNotes()
+[ERROR]   location: variable request of type @jakarta.validation.Valid com.servicelink.core.dto.request.admin.KycReviewRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[81,34] constructor ApiResponse in class com.servicelink.core.dto.response.admin.ApiResponse cannot be applied to given types;
+[ERROR]   required: no arguments
+[ERROR]   found:    java.lang.String
+[ERROR]   reason: actual and formal argument lists differ in length
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/controller/AdminKycController.java:[90,34] constructor ApiResponse in class com.servicelink.core.dto.response.admin.ApiResponse cannot be applied to given types;
+[ERROR]   required: no arguments
+[ERROR]   found:    java.lang.String
+[ERROR]   reason: actual and formal argument lists differ in length
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[83,61] cannot find symbol
+[ERROR]   symbol:   method getPrimaryCategoryId()
+[ERROR]   location: variable dto of type com.servicelink.core.dto.request.KycSubmitRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[98,56] cannot find symbol
+[ERROR]   symbol:   method getReferenceNumber()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[102,56] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[103,52] cannot find symbol
+[ERROR]   symbol:   method getReferenceNumber()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[108,27] cannot find symbol
+[ERROR]   symbol:   method getReferenceNumber()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[112,20] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable dto of type com.servicelink.core.dto.request.KycSubmitRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[112,45] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable dto of type com.servicelink.core.dto.request.KycSubmitRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[116,27] cannot find symbol
+[ERROR]   symbol:   method getReferenceNumber()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[122,53] cannot find symbol
+[ERROR]   symbol:   method getReferenceNumber()
+[ERROR]   location: variable response of type com.servicelink.core.dto.response.KycSubmitResponseDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[133,42] cannot find symbol
+[ERROR]   symbol:   method getIsActive()
+[ERROR]   location: variable category of type com.servicelink.core.model.provider.service.Category
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[152,29] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable s of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[153,29] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable s of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[154,29] cannot find symbol
+[ERROR]   symbol:   method getReferenceNumber()
+[ERROR]   location: variable s of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[170,23] cannot find symbol
+[ERROR]   symbol:   method getStatus()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[172,36] cannot find symbol
+[ERROR]   symbol:   method getApplicantIdentifier()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[176,19] cannot find symbol
+[ERROR]   symbol:   method setStatus(com.servicelink.core.model.common.KycStatus)
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[177,19] cannot find symbol
+[ERROR]   symbol:   method setReviewedAt(java.time.Instant)
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[181,23] cannot find symbol
+[ERROR]   symbol:   method setReviewNotes(java.lang.String)
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[186,71] cannot find symbol
+[ERROR]   symbol:   method getApplicantIdentifier()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[188,68] cannot find symbol
+[ERROR]   symbol:   method getPrimaryCategoryId()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[190,37] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[193,31] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[194,44] cannot find symbol
+[ERROR]   symbol:   method getPrimaryDistrict()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[195,48] cannot find symbol
+[ERROR]   symbol:   method getSecondaryDistricts()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[196,49] cannot find symbol
+[ERROR]   symbol:   method getProfilePhotoUrl()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[197,66] cannot find symbol
+[ERROR]   symbol:   method getTravelRadius()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[198,17] cannot find symbol
+[ERROR]   symbol:   method setCertifiedCategories(java.lang.String)
+[ERROR]   location: variable provider of type com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[200,17] cannot find symbol
+[ERROR]   symbol:   method setIsVerified(boolean)
+[ERROR]   location: variable provider of type com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[201,17] cannot find symbol
+[ERROR]   symbol:   method setIsActive(boolean)
+[ERROR]   location: variable provider of type com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[205,69] cannot find symbol
+[ERROR]   symbol:   method getApplicantIdentifier()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[206,50] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[207,46] cannot find symbol
+[ERROR]   symbol:   method getReferenceNumber()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[208,72] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable provider of type com.servicelink.core.model.provider.Provider
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[208,86] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable user of type com.servicelink.core.model.user.User
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[210,53] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[210,76] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[210,102] cannot find symbol
+[ERROR]   symbol:   method getReferenceNumber()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[219,19] cannot find symbol
+[ERROR]   symbol:   method setStatus(com.servicelink.core.model.common.KycStatus)
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[220,19] cannot find symbol
+[ERROR]   symbol:   method setReviewedAt(java.time.Instant)
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[224,19] cannot find symbol
+[ERROR]   symbol:   method setReviewNotes(java.lang.String)
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[228,69] cannot find symbol
+[ERROR]   symbol:   method getApplicantIdentifier()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[231,27] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[232,27] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[233,27] cannot find symbol
+[ERROR]   symbol:   method getReferenceNumber()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[244,16] cannot find symbol
+[ERROR]   symbol:   method getScheduledAt()
+[ERROR]   location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[245,30] cannot find symbol
+[ERROR]   symbol:   method getScheduledAt()
+[ERROR]   location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[246,23] cannot find symbol
+[ERROR]   symbol:   method getMeetDate()
+[ERROR]   location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[246,52] cannot find symbol
+[ERROR]   symbol:   method getMeetTime()
+[ERROR]   location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[247,65] cannot find symbol
+[ERROR]   symbol:   method getMeetDate()
+[ERROR]   location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[247,91] cannot find symbol
+[ERROR]   symbol:   method getMeetTime()
+[ERROR]   location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[253,30] cannot find symbol
+[ERROR]   symbol:   method getMeetLink()
+[ERROR]   location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[259,35] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[260,35] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[265,90] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[270,19] cannot find symbol
+[ERROR]   symbol:   method setStatus(com.servicelink.core.model.common.KycStatus)
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[271,19] cannot find symbol
+[ERROR]   symbol:   method setScheduledMeetLink(java.lang.String)
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[272,19] cannot find symbol
+[ERROR]   symbol:   method setScheduledMeetAt(java.time.Instant)
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[276,16] cannot find symbol
+[ERROR]   symbol:   method isSendEmail()
+[ERROR]   location: variable req of type com.servicelink.core.dto.request.admin.ScheduleVideoAuditRequestDTO
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[278,31] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] /C:/Users/Ryuk/Desktop/ServiceLink/backend/src/main/java/com/servicelink/core/service/KycService.java:[279,31] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable submission of type com.servicelink.core.model.common.KycSubmission
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

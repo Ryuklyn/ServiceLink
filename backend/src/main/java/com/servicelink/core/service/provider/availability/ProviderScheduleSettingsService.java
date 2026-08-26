@@ -9,7 +9,7 @@ import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import com.servicelink.core.model.provider.subscription.SubscriptionStatus;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.provider.availability.ProviderScheduleSettingsRepository;
-import com.servicelink.core.repository.provider.subscription.ProviderSubscriptionRepository;
+import com.servicelink.core.service.provider.subscription.ProOrdersEligibilityChecker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +20,7 @@ public class ProviderScheduleSettingsService {
 
     private final ProviderScheduleSettingsRepository repo;
     private final ProviderRepository providerRepo;
-    private final ProviderSubscriptionRepository subscriptionRepo; // new
+    private final ProOrdersEligibilityChecker eligibilityChecker;
 
     @Transactional
     public ProviderScheduleSettings getOrCreate(Long providerId) {
@@ -45,7 +45,7 @@ public class ProviderScheduleSettingsService {
 
         // ── Pro-orders enforcement — trial or lapsed/cancelled subscriptions
         // can never turn this on, regardless of what the client sends. ──────
-        if (Boolean.TRUE.equals(dto.acceptsProOrders()) && !isEligibleForProOrders(provider.getId())) {
+        if (Boolean.TRUE.equals(dto.acceptsProOrders()) && !eligibilityChecker.isEligible(provider.getId())) {
             throw new BusinessException(
                     "Activate a paid subscription to accept Business & Pro orders.",
                     "SUBSCRIPTION_REQUIRED");
@@ -55,14 +55,6 @@ public class ProviderScheduleSettingsService {
         if (dto.defaultSlots() != null) s.setDefaultSlots(dto.defaultSlots());
         if (dto.acceptsProOrders() != null) s.setAcceptsProOrders(dto.acceptsProOrders());
         repo.save(s);
-    }
-
-    private boolean isEligibleForProOrders(Long providerId) {
-        return subscriptionRepo.findByProvider_Id(providerId)
-                .filter(sub -> sub.getPlanType() != SubscriptionPlanType.FREE_TRIAL)
-                .filter(sub -> sub.getStatus() == SubscriptionStatus.ACTIVE)
-                .map(ProviderSubscription::isCurrentlyActive) // trusts endDate over the stored status too
-                .orElse(false);
     }
 
     private Provider requireProvider(Long userId) {

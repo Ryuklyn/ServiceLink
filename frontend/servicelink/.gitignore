@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Ignore servicelink markdown files
+servicelink_frontend_reweaer.md
+servicelink_pro_backend_master_prompt.md
+servicelink_reweaer.md

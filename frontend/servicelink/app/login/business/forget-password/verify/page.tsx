@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Wrench, Users, BarChart2, Clock, Shield, Star, Building2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -22,7 +22,7 @@ const STATS = [
 
 const OTP_LENGTH = 6;
 
-export default function BusinessForgotPasswordVerifyPage() {
+function BusinessForgotPasswordVerifyPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const email = searchParams.get("email") || "";
@@ -125,28 +125,6 @@ export default function BusinessForgotPasswordVerifyPage() {
             setResending(false);
         }
     };
-
-    // const handleResend = async () => {
-    //     if (!email) {
-    //         toast.error("Email missing. Please restart the process.");
-    //         router.push("/login/business/forget-password");
-    //         return;
-    //     }
-    //
-    //     try {
-    //         setResending(true);
-    //         await api.post("/auth/send-email-otp", { email });
-    //         setOtp(Array(OTP_LENGTH).fill(""));
-    //         inputsRef.current[0]?.focus();
-    //         setTimer(59);
-    //         setCanResend(false);
-    //         toast.success("OTP resent successfully");
-    //     } catch (error: any) {
-    //         toast.error(error?.response?.data?.message ?? "Could not resend OTP");
-    //     } finally {
-    //         setResending(false);
-    //     }
-    // };
 
     if (!email) {
         return (
@@ -310,5 +288,13 @@ export default function BusinessForgotPasswordVerifyPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function BusinessForgotPasswordVerifyPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Loading verification details...</div>}>
+            <BusinessForgotPasswordVerifyPageInner />
+        </Suspense>
     );
 }

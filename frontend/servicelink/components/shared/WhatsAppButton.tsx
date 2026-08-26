@@ -12,6 +12,7 @@ interface WhatsAppButtonProps {
     providerId?: string | number;  // ties the check/click-log to the right provider thread
     variant?: "solid" | "outline" | "icon-only";
     label?: string;
+    className?: string;
 }
 
 // TODO: point this at your actual "edit profile" route.
@@ -42,6 +43,7 @@ export default function WhatsAppButton({
                                            providerId,
                                            variant = "solid",
                                            label = "WhatsApp",
+                                           className,
                                        }: WhatsAppButtonProps) {
     const router = useRouter();
     const [isChecking, setIsChecking]         = useState(false);
@@ -77,12 +79,14 @@ export default function WhatsAppButton({
         router.push(PROFILE_ROUTE);
     };
 
-    const buttonClasses =
+    const baseClasses =
         variant === "icon-only"
             ? "flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white hover:bg-[#20bd5a] transition-colors disabled:opacity-60"
             : variant === "solid"
                 ? "flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#20bd5a] transition-colors disabled:opacity-60"
                 : "flex items-center gap-2 rounded-lg border border-[#25D366] px-4 py-2.5 text-sm font-semibold text-[#25D366] hover:bg-[#25D366]/5 transition-colors disabled:opacity-60";
+
+    const buttonClasses = `${baseClasses} ${className || ""}`;
 
     return (
         <>

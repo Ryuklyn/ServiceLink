@@ -16,4 +16,10 @@ public class AppointmentStatusUpdateDTO {
 
     @Size(max = 1000, message = "Reason must not exceed 1000 characters")
     private String reason;
+
+    private String operationalStatus;
+
+    private Integer finalAmount;
+
+    private Integer measuredQuantity;
 }

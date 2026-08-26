@@ -79,6 +79,11 @@ public class AppointmentResponseDTO {
     private Integer areaSqFt;
     private Integer wallCount;
     private Integer itemCount;
+    private Integer hours;
+    private String  operationalStatus;
+    private Integer estimatedAmount;
+    private Integer finalAmount;
+    private Integer providerRate;
 
     // ── Scheduling ────────────────────────────────────────────────────────────
     private LocalDate     appointmentDate;

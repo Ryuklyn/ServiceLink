@@ -213,7 +213,7 @@ export default function ProfileOverview() {
     if (!profile) return null;
 
     const initials = getInitials(profile.fullName ?? "");
-    const subtitle = [profile.primaryService, profile.baseDistrict].filter(Boolean).join(" • ") || "—";
+    const subtitle = [profile.primaryCategoryName, profile.baseDistrict].filter(Boolean).join(" • ") || "—";
 
     return (
         <div className="space-y-6">

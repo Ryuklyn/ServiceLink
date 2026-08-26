@@ -212,6 +212,7 @@ export default function AvailabilityTab() {
             dispatch(fetchMonthAvailability(currentMonth)); // refresh the calendar's computed defaults
         } else {
             toast.error(result.payload as string);
+            setDraftSettings(settings); // revert UI to last known-persisted state
         }
     };
 

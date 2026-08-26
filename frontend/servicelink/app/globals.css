@@ -7,6 +7,30 @@
   --brand-primary: #1e3a8a;
   --brand-accent: #e8683f;
   --brand-accent-hover: #d95a2f;
+
+  /* Default theme values */
+  --primary: #1e3a8a;
+  --primary-hover: #172e6b;
+  --primary-foreground: #ffffff;
+  --surface: #ffffff;
+  --surface-secondary: #f8fafc;
+  --surface-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --input: #ffffff;
+  --input-border: #cbd5e1;
+  --ring: #3b82f6;
+
+  /* Shell backgrounds */
+  --navbar-bg: #ffffff;
+  --navbar-text: #0f172a;
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #475569;
+  --sidebar-active-bg: #f1f5f9;
+  --sidebar-active-text: #1e3a8a;
 }
 
 @theme inline {
@@ -17,16 +41,34 @@
   --color-accent-500: var(--brand-accent-hover);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* Centralized Semantic Tokens */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-input: var(--input);
+  --color-input-border: var(--input-border);
+  --color-ring: var(--ring);
+
+  /* Navbar / Sidebar custom variables */
+  --color-navbar: var(--navbar-bg);
+  --color-navbar-text: var(--navbar-text);
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-active: var(--sidebar-active-bg);
+  --color-sidebar-active-text: var(--sidebar-active-text);
+
   --font-sans: "DM Sans", var(--font-geist-sans), sans-serif;
   --font-heading: "Outfit", sans-serif;
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
@@ -85,3 +127,237 @@ h6 {
 .animate-wave-bar {
   animation: soundWave 0.6s ease-in-out infinite;
 }
+
+/* ──────────────────────────────────────────────────────── */
+/* USER DASHBOARD DESIGN SYSTEM                             */
+/* ──────────────────────────────────────────────────────── */
+
+/* Light Mode / Default User Dashboard */
+.user-dashboard-light {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --primary: #1e3a8a;
+  --primary-hover: #172e6b;
+  --primary-foreground: #ffffff;
+  --surface: #ffffff;
+  --surface-secondary: #f1f5f9;
+  --surface-hover: #e2e8f0;
+  --border: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --input: #ffffff;
+  --input-border: #cbd5e1;
+  --ring: #1e3a8a;
+
+  /* Shells colors */
+  --navbar-bg: #ffffff;
+  --navbar-text: #0f172a;
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #475569;
+  --sidebar-active-bg: #eff6ff;
+  --sidebar-active-text: #1e3a8a;
+}
+
+/* Dark Mode User Dashboard */
+.user-dashboard-dark {
+  --background: #090d16;
+  --foreground: #f8fafc;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-foreground: #ffffff;
+  --surface: #131924;
+  --surface-secondary: #1a2336;
+  --surface-hover: #222d44;
+  --border: #222d44;
+  --border-subtle: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --input: #090d16;
+  --input-border: #222d44;
+  --ring: #3b82f6;
+
+  /* Shells colors */
+  --navbar-bg: #1e3a8a;
+  --navbar-text: #ffffff;
+  --sidebar-bg: #1e3a8a;
+  --sidebar-text: #cbd5e1;
+  --sidebar-active-bg: #1d4ed8;
+  --sidebar-active-text: #ffffff;
+}
+
+/* ──────────────────────────────────────────────────────── */
+/* PROVIDER DASHBOARD DESIGN SYSTEM                         */
+/* ──────────────────────────────────────────────────────── */
+
+/* Light Mode / Default Provider Dashboard */
+.provider-dashboard-light {
+  --background: #fcfcfc;
+  --foreground: #18181b;
+  --primary: #e8683f;
+  --primary-hover: #c8501f;
+  --primary-foreground: #ffffff;
+  --surface: #ffffff;
+  --surface-secondary: #f4f4f5;
+  --surface-hover: #e4e4e7;
+  --border: #e4e4e7;
+  --border-subtle: #f4f4f5;
+  --text-primary: #09090b;
+  --text-secondary: #27272a;
+  --text-muted: #71717a;
+  --input: #ffffff;
+  --input-border: #d4d4d8;
+  --ring: #e8683f;
+
+  /* Shells colors */
+  --navbar-bg: #ffffff;
+  --navbar-text: #18181b;
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #52525b;
+  --sidebar-active-bg: #fff7ed;
+  --sidebar-active-text: #e8683f;
+}
+
+/* Dark Mode Provider Dashboard */
+.provider-dashboard-dark {
+  --background: #0d0f14;
+  --foreground: #f1f5f9;
+  --primary: #e8683f;
+  --primary-hover: #f07f59;
+  --primary-foreground: #ffffff;
+  --surface: #161b26;
+  --surface-secondary: #1f2736;
+  --surface-hover: #293448;
+  --border: #262e3d;
+  --border-subtle: #1f2736;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --input: #0d0f14;
+  --input-border: #262e3d;
+  --ring: #e8683f;
+
+  /* Shells colors */
+  --navbar-bg: linear-gradient(to right, #e8683f, #c8501f);
+  --navbar-text: #ffffff;
+  --sidebar-bg: linear-gradient(to bottom, #e8683f, #c8501f);
+  --sidebar-text: #cbd5e1;
+  --sidebar-active-bg: #c8501f;
+  --sidebar-active-text: #ffffff;
+}
+
+/* ──────────────────────────────────────────────────────── */
+/* SHELL CLASS CONTAINERS (GRADIENT COMPATIBILITY)          */
+/* ──────────────────────────────────────────────────────── */
+.sidebar-theme-container {
+  background: var(--sidebar-bg) !important;
+  color: var(--sidebar-text) !important;
+}
+
+.navbar-theme-container {
+  background: var(--navbar-bg) !important;
+  color: var(--navbar-text) !important;
+}
+
+/* ──────────────────────────────────────────────────────── */
+/* DARK THEME GLOBAL COMPATIBILITY FALLBACKS                */
+/* ──────────────────────────────────────────────────────── */
+.dark body {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .bg-gray-50,
+.dark .bg-slate-50,
+.dark .bg-\[\#F7F8FA\] {
+  background-color: var(--background) !important;
+}
+
+.dark .bg-white {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-gray-50,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-200\/50,
+.dark .border-slate-200\/50 {
+  border-color: var(--border) !important;
+}
+
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-slate-700,
+.dark .text-gray-700 {
+  color: var(--text-primary) !important;
+}
+
+.dark .text-slate-600,
+.dark .text-gray-600,
+.dark .text-slate-500,
+.dark .text-gray-500,
+.dark .text-slate-400,
+.dark .text-gray-400 {
+  color: var(--text-muted) !important;
+}
+
+.dark .text-indigo-600,
+.dark .text-\[\#1e3a8a\],
+.dark .text-\[\#1E3A8A\] {
+  color: var(--primary) !important;
+}
+
+.dark .bg-indigo-50\/60,
+.dark .bg-blue-50\/50,
+.dark .bg-slate-50 {
+  background-color: var(--surface-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-50\/70:hover,
+.dark .hover\:bg-slate-100:hover {
+  background-color: var(--surface-hover) !important;
+}
+
+.dark .divide-slate-100 > * + *,
+.dark .divide-gray-100 > * + * {
+  border-color: var(--border) !important;
+}
+
+.dark input[type="text"],
+.dark input[type="file"],
+.dark textarea,
+.dark select {
+  background-color: var(--input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--input-border) !important;
+}
+
+.dark select option {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: var(--surface-secondary) !important;
+  border-color: var(--border) !important;
+}
+
+.dark .bg-gray-100 button {
+  color: var(--text-muted) !important;
+}
+
+.dark .bg-gray-100 button.text-white {
+  color: #ffffff !important;
+}
+
+

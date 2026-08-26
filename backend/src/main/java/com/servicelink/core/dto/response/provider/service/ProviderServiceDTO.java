@@ -14,6 +14,8 @@ public class ProviderServiceDTO {
     private Long                       categoryId;
     private String                     categoryName;
     private ServiceCatalog.PricingUnit pricingUnit;
+    private ServiceCatalog.EstimationMode estimationMode;
+    private String                     requiredInputLabel;
     private Integer                    customPrice;
     private String                     effectiveDuration;
     private Boolean                    isAvailable;

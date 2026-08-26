@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Eye, ArrowRight } from "lucide-react";
 import ProfileOverview from "@/components/dashboard/provider/ProfileOverview";
 import ProfilePortfolio from "@/components/dashboard/provider/ProfilePortfolio";
@@ -16,8 +17,16 @@ const TABS: { key: TabKey; label: string }[] = [
     { key: "kyc", label: "KYC" },
 ];
 
-export default function ProviderProfilePage() {
+function ProviderProfileContent() {
+    const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<TabKey>("overview");
+
+    useEffect(() => {
+        const tabParam = searchParams.get("tab");
+        if (tabParam === "portfolio" || tabParam === "overview" || tabParam === "reviews" || tabParam === "kyc") {
+            setActiveTab(tabParam as TabKey);
+        }
+    }, [searchParams]);
 
     return (
         <div className="min-h-screen bg-[#f9f8f6] px-4 py-6 sm:px-6 lg:px-8">
@@ -65,5 +74,13 @@ export default function ProviderProfilePage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function ProviderProfilePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500 font-medium bg-[#f9f8f6]">Loading profile...</div>}>
+            <ProviderProfileContent />
+        </Suspense>
     );
 }

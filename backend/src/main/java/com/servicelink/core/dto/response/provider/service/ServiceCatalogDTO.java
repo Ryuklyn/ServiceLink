@@ -14,6 +14,8 @@ public class ServiceCatalogDTO {
     private String                     subServiceName;
     private String                     defaultDuration;
     private ServiceCatalog.PricingUnit pricingUnit;
+    private ServiceCatalog.EstimationMode estimationMode;
+    private String                     requiredInputLabel;
     private Integer                    basePrice;
     private Boolean                    isActive;
 }

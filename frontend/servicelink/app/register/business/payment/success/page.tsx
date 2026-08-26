@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import PaymentSuccess from "@/components/business/payment/PaymentSuccess";
 import { BusinessSetupProvider } from "@/contexts/BusinessSetupContext";
 
@@ -9,7 +10,9 @@ export const metadata = {
 export default function PaymentSuccessPage() {
   return (
     <BusinessSetupProvider>
-      <PaymentSuccess />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500 font-medium">Loading details...</div>}>
+        <PaymentSuccess />
+      </Suspense>
     </BusinessSetupProvider>
   );
 }

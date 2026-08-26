@@ -391,7 +391,17 @@ export default function BookingsPage() {
                           {tab === "Upcoming" && (
                               <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full">
                                 <div className="flex gap-2 flex-1 w-full">
-                                  {isLateWindow ? (
+                                  {appt.status === "PENDING" ? (
+                                      <button
+                                          onClick={() => {
+                                            setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                                            setIsCancelModalOpen(true);
+                                          }}
+                                          className="flex-1 px-2 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
+                                      >
+                                        Cancel
+                                      </button>
+                                  ) : isLateWindow ? (
                                       <>
                                         <button
                                             onClick={() => {
@@ -458,7 +468,7 @@ export default function BookingsPage() {
                               <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full">
                                 {appt.status === "COMPLETED" ? (
                                     <Link
-                                        href="/dashboard/user/bookings/review"
+                                        href={`/dashboard/user/bookings/review?appointmentId=${appt.id}&providerId=${appt.providerId}&providerName=${encodeURIComponent(appt.providerName)}&serviceName=${encodeURIComponent(appt.subServiceName)}&date=${encodeURIComponent(dateDisplay)}`}
                                         className="flex-1 px-4 py-2.5 bg-[#e8683f] hover:bg-[#d45b34] text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm text-center"
                                     >
                                       <Star size={13} fill="white" /> Leave Review
@@ -469,7 +479,7 @@ export default function BookingsPage() {
                                     </button>
                                 )}
                                 <Link
-                                    href={`/dashboard/user/explore/profile?id=${appt.id}`}
+                                    href={`/dashboard/user/explore/profile?id=${appt.providerId}`}
                                     className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 text-center"
                                 >
                                   <Eye size={13} /> Book Again
@@ -535,7 +545,7 @@ export default function BookingsPage() {
                   name: selectedBooking.providerName,
                   specialty: selectedBooking.serviceName,
                   categories: [],
-                }}
+                } as any}
                 bookingDetails={{
                   services: [
                     {

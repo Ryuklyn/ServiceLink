@@ -184,7 +184,7 @@ export default function EarningsPage() {
                                     domain={[0, 14000]}
                                 />
                                 <Tooltip
-                                    formatter={(value: number) => [`Rs. ${value.toLocaleString()}`, "Revenue"]}
+                                    formatter={(value: any) => [`Rs. ${value.toLocaleString()}`, "Revenue"]}
                                     contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
                                     cursor={{ fill: "rgba(0,0,0,0.04)" }}
                                 />

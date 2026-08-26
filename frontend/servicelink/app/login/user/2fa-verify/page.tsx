@@ -1,15 +1,15 @@
 "use client";
 
+import { useEffect, useRef, useState, KeyboardEvent, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import AuthLayout from "@/components/forgetpassword/AuthLayout";
-import { useEffect, useRef, useState, KeyboardEvent } from "react";
 import { toast } from "react-toastify";
 import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { verifyLoginTwoFactor, resendLoginTwoFactor } from "@/lib/api/authApi";
 import { AxiosError } from "axios";
 
-export default function TwoFactorLoginPage() {
+function TwoFactorLoginPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const preAuthToken = searchParams.get("token") || "";
@@ -152,5 +152,13 @@ export default function TwoFactorLoginPage() {
                 </Link>
             </div>
         </AuthLayout>
+    );
+}
+
+export default function TwoFactorLoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Loading 2FA details...</div>}>
+            <TwoFactorLoginPageInner />
+        </Suspense>
     );
 }

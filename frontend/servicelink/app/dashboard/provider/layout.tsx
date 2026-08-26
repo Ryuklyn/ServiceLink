@@ -10,12 +10,44 @@ import type { RootState, AppDispatch } from "@/store";
 import { fetchProviderSubscription } from "@/store/slices/providerSubscriptionSlice";
 import { fetchNotifications, fetchUnreadCount } from "@/store/slices/notificationSlice";
 import { useNotificationSocket } from "@/hooks/useNotificationSocket";
+import { initProviderPreferences } from "@/store/slices/providerPreferencesSlice";
 
 export default function ProviderDashboardLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const dispatch = useDispatch<AppDispatch>();
     const { data: profile, loading } = useSelector((s: RootState) => s.providerProfile);
     const { data: subscription } = useSelector((s: RootState) => s.providerSubscription);
+    const { theme } = useSelector((s: RootState) => s.providerPreferences);
+    const [isDark, setIsDark] = useState(false);
+
+    useEffect(() => {
+        const storedTheme = localStorage.getItem("providerTheme") as "system" | "light" | "dark" | null;
+        const storedLang = localStorage.getItem("providerLanguage") as "en" | "ne" | null;
+        dispatch(initProviderPreferences({
+            theme: storedTheme || "system",
+            language: storedLang || "en"
+        }));
+    }, [dispatch]);
+
+    useEffect(() => {
+        const determineDark = () => {
+            if (theme === "dark") return true;
+            if (theme === "system") {
+                return window.matchMedia("(prefers-color-scheme: dark)").matches;
+            }
+            return false;
+        };
+        setIsDark(determineDark());
+
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const handleSystemThemeChange = () => {
+            if (theme === "system") {
+                setIsDark(mediaQuery.matches);
+            }
+        };
+        mediaQuery.addEventListener("change", handleSystemThemeChange);
+        return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+    }, [theme]);
 
     useEffect(() => {
         if (!profile) dispatch(fetchProviderProfile());
@@ -41,7 +73,7 @@ export default function ProviderDashboardLayout({ children }: { children: React.
     const showWizard = !loading && profile && !profile.hasCompletedOnboarding;
 
     return (
-        <div className="flex h-screen w-full overflow-hidden bg-[#F7F8FA]">
+        <div className={`flex h-screen w-full overflow-hidden ${isDark ? "provider-dashboard-dark dark" : "provider-dashboard-light bg-background"}`}>
             <Sidebar isOpen={isSidebarOpen} onNavigate={() => setIsSidebarOpen(false)} />
             <div className="flex flex-col flex-1 overflow-hidden">
                 <Navbar onMenuClick={() => setIsSidebarOpen(true)} />

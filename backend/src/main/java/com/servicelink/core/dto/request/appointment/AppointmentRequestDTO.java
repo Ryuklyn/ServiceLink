@@ -50,4 +50,8 @@ public class AppointmentRequestDTO {
     /** Required when pricingUnit = PER_ITEM (e.g. fan installation x 3) */
     @Min(value = 1, message = "Item count must be at least 1")
     private Integer itemCount;
+
+    /** Required when pricingUnit = PER_HOUR */
+    @Min(value = 1, message = "Hours must be at least 1")
+    private Integer hours;
 }

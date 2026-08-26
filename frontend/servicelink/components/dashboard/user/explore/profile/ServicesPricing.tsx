@@ -95,10 +95,10 @@ const FALLBACK_META: CategoryMeta = {
 // Must cover every member of PricingUnit or this fails to typecheck.
 const UNIT_LABEL: Record<PricingUnit, string> = {
   PER_JOB: "job",
-  PER_ITEM: "item",
-  PER_HOUR: "hour",
+  PER_ITEM: "items",
+  PER_HOUR: "hours",
   PER_SQ_FT: "sq. ft.",
-  PER_WALL: "wall",
+  PER_WALL: "walls",
 };
 
 const STATUS_COLOR: Record<EstimateStatus, { text: string; bg: string }> = {
@@ -143,13 +143,13 @@ function toSelectedService(
 function inferInputPlaceholder(unit?: PricingUnit): string {
   switch (unit) {
     case "PER_SQ_FT":
-      return "Area";
+      return "Approximate area";
     case "PER_HOUR":
-      return "Hours";
+      return "Estimated duration";
     case "PER_ITEM":
-      return "Qty";
+      return "Quantity";
     case "PER_WALL":
-      return "Walls";
+      return "Number of walls";
     default:
       return "Value";
   }

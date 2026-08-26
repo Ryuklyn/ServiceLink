@@ -20,7 +20,7 @@ public class MediaController {
     private final SupabaseStorageService supabaseStorageService;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> upload(@RequestParam("file") MultipartFile file) throws Exception {
 
         String contentType = file.getContentType();

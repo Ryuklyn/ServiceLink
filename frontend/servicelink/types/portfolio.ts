@@ -30,4 +30,5 @@ export interface PortfolioFormValues {
     location: string;
     photos: File[];
     video: File | null;
+    sourceAppointmentId?: number;
 }

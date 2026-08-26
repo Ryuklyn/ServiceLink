@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import {
   ArrowLeft,
   Clock,
@@ -10,6 +10,9 @@ import {
   ThumbsDown,
   CheckCircle2,
 } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import api from "@/utils/axios";
+import { toast } from "react-toastify";
 
 interface SubRatings {
   punctuality: number;
@@ -18,7 +21,18 @@ interface SubRatings {
   value: number;
 }
 
-export default function ReviewFeedbackPage() {
+function ReviewFeedbackPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const appointmentIdStr = searchParams.get("appointmentId");
+  const appointmentId = appointmentIdStr ? Number(appointmentIdStr) : null;
+  const providerIdStr = searchParams.get("providerId");
+  const providerId = providerIdStr ? Number(providerIdStr) : null;
+  const providerName = searchParams.get("providerName") || "CoolBreeze AC Service";
+  const serviceName = searchParams.get("serviceName") || "AC Service";
+  const appointmentDate = searchParams.get("date") || "May 18, 2026";
+
   // Interactive State hooks for dynamic star selection
   const [overallRating, setOverallRating] = useState<number>(3);
   const [subRatings, setSubRatings] = useState<SubRatings>({
@@ -29,6 +43,7 @@ export default function ReviewFeedbackPage() {
   });
   const [reviewText, setReviewText] = useState<string>("");
   const [rebookOption, setRebookOption] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Helper to handle sub-category rating clicks
   const handleSubRatingChange = (
@@ -36,6 +51,37 @@ export default function ReviewFeedbackPage() {
     rating: number,
   ) => {
     setSubRatings((prev) => ({ ...prev, [category]: rating }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!appointmentId || !providerId) {
+      toast.error("Missing appointment or provider details.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const payload = {
+        providerId,
+        appointmentId,
+        rating: overallRating,
+        comment: reviewText.trim() || null,
+        punctualityScore: subRatings.punctuality * 20,
+        qualityScore: subRatings.quality * 20,
+        communicationScore: subRatings.communication * 20,
+        valueScore: subRatings.value * 20,
+      };
+
+      await api.post("/providers/reviews", payload);
+      toast.success("Thank you for your feedback!");
+      router.push("/dashboard/user/bookings");
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.response?.data?.message || "Failed to submit review.";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const characterLimit = 500;
@@ -47,6 +93,7 @@ export default function ReviewFeedbackPage() {
         <div className="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
+              onClick={() => router.push("/dashboard/user/bookings")}
               className="p-1 hover:bg-blue-800 rounded-full transition"
               aria-label="Go back"
             >
@@ -61,7 +108,7 @@ export default function ReviewFeedbackPage() {
           </div>
           <div className="flex items-center gap-2 text-sm bg-blue-900/50 px-3 py-1.5 rounded-md border border-blue-700/50">
             <Clock className="w-4 h-4 text-[#e8683f]" />
-            <span className="font-medium text-gray-100">May 18, 2026</span>
+            <span className="font-medium text-gray-100">{appointmentDate}</span>
           </div>
         </div>
       </header>
@@ -71,14 +118,14 @@ export default function ReviewFeedbackPage() {
         {/* 2. Provider Info Card */}
         <section className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
           <div className="w-14 h-14 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center font-bold text-lg tracking-wider shrink-0 shadow-inner">
-            CA
+            {providerName.slice(0, 2).toUpperCase()}
           </div>
           <div>
             <h2 className="text-base font-bold text-gray-900">
-              CoolBreeze AC Service
+              {providerName}
             </h2>
             <p className="text-xs text-gray-400 font-medium">
-              Review for: AC Service
+              Review for: {serviceName}
             </p>
           </div>
         </section>
@@ -215,19 +262,34 @@ export default function ReviewFeedbackPage() {
         <div className="pt-2 space-y-3 text-center">
           <button
             type="submit"
-            className="w-full bg-[#e8683f] hover:bg-[#d5572f] text-white font-bold py-3.5 px-4 rounded-xl shadow-sm transition duration-200 active:scale-[0.99] flex items-center justify-center gap-2"
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="w-full bg-[#e8683f] hover:bg-[#d5572f] text-white font-bold py-3.5 px-4 rounded-xl shadow-sm transition duration-200 active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <CheckCircle2 className="w-5 h-5" /> Submit Review
+            {submitting ? "Submitting..." : (
+              <>
+                <CheckCircle2 className="w-5 h-5" /> Submit Review
+              </>
+            )}
           </button>
 
           <button
             type="button"
-            className="inline-block text-xs font-bold text-gray-400 hover:text-gray-600 py-2 transition"
+            onClick={() => router.push("/dashboard/user/bookings")}
+            className="inline-block text-xs font-bold text-gray-400 hover:text-gray-600 py-2 transition text-center w-full"
           >
             Skip for now
           </button>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ReviewFeedbackPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Loading review form...</div>}>
+      <ReviewFeedbackPageInner />
+    </Suspense>
   );
 }

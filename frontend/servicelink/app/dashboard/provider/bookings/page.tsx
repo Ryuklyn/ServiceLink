@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-    SlidersHorizontal, Calendar, Clock, MapPin, Mail, Phone, Copy, Play,
-    PhoneCall, CheckCircle, XCircle, Wrench, ArrowRight,
+    SlidersHorizontal, Calendar, Clock, MapPin, Mail, Phone, Copy, Play, Plus,
+    PhoneCall, CheckCircle, XCircle, Wrench, ArrowRight, Truck,
     ArrowLeft, Pause, ChevronDown, Loader2, Search as SearchIcon, RefreshCcw,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -13,6 +13,8 @@ import {
     updateBookingStatus,
     BackendAppointmentStatus,
 } from "@/store/slices/providerBookingsSlice";
+import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 
 /**
  * ─────────────────────────────────────────────────────────────────────────
@@ -195,6 +197,7 @@ const steps = [
 
 export default function BookingsPage() {
     const dispatch = useAppDispatch();
+    const router = useRouter();
     const { items, listStatus, detailsById, detailStatus, updatingId, error } = useAppSelector(
         (s) => s.providerBookings,
     );
@@ -204,6 +207,7 @@ export default function BookingsPage() {
     const [search, setSearch] = useState("");
     const [sortKey, setSortKey] = useState<SortKey>("newest");
     const [mobileView, setMobileView] = useState<"list" | "detail">("list");
+    const [measuredQty, setMeasuredQty] = useState<number | undefined>(undefined);
 
     const [lightbox, setLightbox] = useState<{ type: "image" | "video"; src?: string } | null>(null);
     const [playingAudio, setPlayingAudio] = useState(false);
@@ -213,6 +217,10 @@ export default function BookingsPage() {
     useEffect(() => {
         dispatch(fetchProviderBookings());
     }, [dispatch]);
+
+    useEffect(() => {
+        setMeasuredQty(undefined);
+    }, [selectedId]);
 
     // Auto-select first item once the list loads
     useEffect(() => {
@@ -230,6 +238,21 @@ export default function BookingsPage() {
         if (!audioRef.current) return;
         if (playingAudio) audioRef.current.pause(); else audioRef.current.play();
         setPlayingAudio(!playingAudio);
+    };
+
+    const handleAddToPortfolioClick = (booking: any) => {
+        const dateISO = booking.appointmentDate || "";
+        const completionMonth = dateISO.length >= 7 ? dateISO.substring(0, 7) : "";
+        const data = {
+            sourceAppointmentId: booking.id,
+            title: `${booking.subServiceName || "Service"} - ${booking.customerName}`,
+            serviceType: booking.subServiceName || "Service",
+            description: `Completed ${booking.subServiceName || "service"} for ${booking.customerName}.`,
+            completionDate: completionMonth,
+            location: booking.address || "",
+        };
+        sessionStorage.setItem("sl_add_to_portfolio_pending", JSON.stringify(data));
+        router.push("/dashboard/provider/profile?tab=portfolio");
     };
 
     useEffect(() => {
@@ -327,9 +350,9 @@ export default function BookingsPage() {
         return items.filter((b) => b.customerPhone === selectedSummary.customerPhone).length;
     }, [items, selectedSummary]);
 
-    const doTransition = (status: BackendAppointmentStatus, reason?: string) => {
+    const doTransition = (status: BackendAppointmentStatus, reason?: string, operationalStatus?: string) => {
         if (selectedId == null) return;
-        dispatch(updateBookingStatus({ id: selectedId, status, reason }));
+        dispatch(updateBookingStatus({ id: selectedId, status, reason, operationalStatus }));
     };
 
     const handleSelectBooking = (id: number) => {
@@ -899,12 +922,6 @@ export default function BookingsPage() {
                                     <div className="flex flex-wrap gap-3">
                                         {selectedSummary.status === "PENDING" && (
                                             <>
-                                                {/* Copy adapts when this PENDING is a reschedule request rather
-                                                    than a brand-new booking — same CONFIRMED/CANCELLED transition
-                                                    under the hood, since the backend doesn't yet support a
-                                                    distinct "reject reschedule, keep original slot" transition.
-                                                    Worth adding server-side if declining a reschedule shouldn't
-                                                    cancel the whole booking. */}
                                                 <button
                                                     onClick={() => doTransition("CONFIRMED")}
                                                     disabled={updatingId === selectedSummary.id}
@@ -924,44 +941,151 @@ export default function BookingsPage() {
                                         )}
 
                                         {selectedSummary.status === "CONFIRMED" && (
-                                            <>
+                                            <div className="w-full flex flex-col gap-4 mb-4">
+                                                {/* Operational Stepper */}
+                                                <div className="flex items-center justify-between w-full px-2 py-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                    <div className="flex flex-col items-center flex-1">
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                            selectedSummary.operationalStatus === "CONFIRMED" || !selectedSummary.operationalStatus
+                                                                ? "bg-blue-600 text-white"
+                                                                : "bg-green-100 text-green-700"
+                                                        }`}>
+                                                            1
+                                                        </div>
+                                                        <span className="text-[10px] mt-1 font-semibold text-slate-500">Accepted</span>
+                                                    </div>
+                                                    <div className="h-0.5 bg-slate-200 flex-1 -mt-4"></div>
+                                                    <div className="flex flex-col items-center flex-1">
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                            selectedSummary.operationalStatus === "ON_THE_WAY"
+                                                                ? "bg-blue-600 text-white"
+                                                                : selectedSummary.operationalStatus === "ARRIVED"
+                                                                    ? "bg-green-100 text-green-700"
+                                                                    : "bg-slate-200 text-slate-400"
+                                                        }`}>
+                                                            2
+                                                        </div>
+                                                        <span className="text-[10px] mt-1 font-semibold text-slate-500">On The Way</span>
+                                                    </div>
+                                                    <div className="h-0.5 bg-slate-200 flex-1 -mt-4"></div>
+                                                    <div className="flex flex-col items-center flex-1">
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                            selectedSummary.operationalStatus === "ARRIVED"
+                                                                ? "bg-blue-600 text-white"
+                                                                : "bg-slate-200 text-slate-400"
+                                                        }`}>
+                                                            3
+                                                        </div>
+                                                        <span className="text-[10px] mt-1 font-semibold text-slate-500">Arrived</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-2 w-full">
+                                                    {(!selectedSummary.operationalStatus || selectedSummary.operationalStatus === "CONFIRMED") && (
+                                                        <button
+                                                            onClick={() => doTransition("CONFIRMED", undefined, "ON_THE_WAY")}
+                                                            disabled={updatingId === selectedSummary.id}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                                                            style={{ backgroundColor: BRAND.navy }}
+                                                        >
+                                                            <Truck size={15} /> On My Way
+                                                        </button>
+                                                    )}
+
+                                                    {selectedSummary.operationalStatus === "ON_THE_WAY" && (
+                                                        <button
+                                                            onClick={() => doTransition("CONFIRMED", undefined, "ARRIVED")}
+                                                            disabled={updatingId === selectedSummary.id}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                                                            style={{ backgroundColor: BRAND.navy }}
+                                                        >
+                                                            <MapPin size={15} /> Arrived
+                                                        </button>
+                                                    )}
+
+                                                    {selectedSummary.operationalStatus === "ARRIVED" && (
+                                                        <button
+                                                            onClick={() => doTransition("IN_PROGRESS")}
+                                                            disabled={updatingId === selectedSummary.id}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                                                            style={{ backgroundColor: BRAND.navy }}
+                                                        >
+                                                            <Wrench size={15} /> Start Job
+                                                        </button>
+                                                    )}
+
+                                                    <button
+                                                        onClick={() => doTransition("CANCELLED", "Cancelled by provider")}
+                                                        disabled={updatingId === selectedSummary.id}
+                                                        className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-650 border border-red-200 bg-red-50 hover:bg-red-100 disabled:opacity-50"
+                                                    >
+                                                        <XCircle size={15} /> Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedSummary.status === "IN_PROGRESS" && (
+                                            <div className="w-full flex flex-col gap-3">
+                                                {selectedDetail && selectedDetail.pricingUnit !== "PER_JOB" && (
+                                                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 flex flex-col gap-2">
+                                                        <label className="text-xs font-semibold text-slate-600">
+                                                            Enter measured quantity ({selectedDetail.pricingUnit === "PER_SQ_FT" ? "sq. ft." : selectedDetail.pricingUnit === "PER_HOUR" ? "hours" : "items"}):
+                                                        </label>
+                                                        <div className="flex gap-2">
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                placeholder="e.g. 5"
+                                                                value={measuredQty ?? ""}
+                                                                onChange={(e) => setMeasuredQty(e.target.value ? Number(e.target.value) : undefined)}
+                                                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white"
+                                                            />
+                                                            {measuredQty !== undefined && selectedDetail.providerCustomPrice && (
+                                                                <span className="text-xs font-bold text-slate-500 self-center">
+                                                                    × Rs {selectedDetail.providerCustomPrice.toLocaleString()} = Rs {(measuredQty * selectedDetail.providerCustomPrice).toLocaleString()}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <button
-                                                    onClick={() => doTransition("IN_PROGRESS")}
+                                                    onClick={() => {
+                                                        if (selectedDetail && selectedDetail.pricingUnit !== "PER_JOB" && (measuredQty === undefined || measuredQty <= 0)) {
+                                                            toast.warning("Please enter a valid measured quantity to complete the job.");
+                                                            return;
+                                                        }
+                                                        dispatch(updateBookingStatus({
+                                                            id: selectedSummary.id,
+                                                            status: "COMPLETED",
+                                                            measuredQuantity: measuredQty
+                                                        }));
+                                                    }}
                                                     disabled={updatingId === selectedSummary.id}
                                                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                                                     style={{ backgroundColor: BRAND.navy }}
                                                 >
-                                                    <Wrench size={15} /> Start Job
+                                                    <CheckCircle size={15} /> Complete Job
                                                 </button>
-                                                <button
-                                                    onClick={() => doTransition("CANCELLED", "Cancelled by provider")}
-                                                    disabled={updatingId === selectedSummary.id}
-                                                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 disabled:opacity-50"
-                                                >
-                                                    <XCircle size={15} /> Cancel
-                                                </button>
-                                            </>
-                                        )}
-
-                                        {selectedSummary.status === "IN_PROGRESS" && (
-                                            <button
-                                                onClick={() => doTransition("COMPLETED")}
-                                                disabled={updatingId === selectedSummary.id}
-                                                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                                                style={{ backgroundColor: BRAND.navy }}
-                                            >
-                                                <CheckCircle size={15} /> Mark Complete
-                                            </button>
+                                            </div>
                                         )}
 
                                         {selectedSummary.status === "COMPLETED" && (
-                                            <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-green-700 bg-green-50 border border-green-200">
-                                                <CheckCircle size={15} /> Job Completed Successfully
+                                            <div className="flex flex-col sm:flex-row gap-3 w-full">
+                                                <div className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-green-700 bg-green-50 border border-green-200">
+                                                    <CheckCircle size={15} /> Job Completed Successfully
+                                                </div>
+                                                <button
+                                                    onClick={() => handleAddToPortfolioClick(selectedSummary)}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#e8683f] hover:bg-[#d95a2f] transition-colors"
+                                                >
+                                                    <Plus size={15} /> Add to Portfolio
+                                                </button>
                                             </div>
                                         )}
 
                                         {selectedSummary.status === "CANCELLED" && (
-                                            <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-600 bg-red-50 border border-red-200">
+                                            <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-650 border border-red-200 bg-red-50 hover:bg-red-100 disabled:opacity-50">
                                                 <XCircle size={15} /> Booking Cancelled
                                             </div>
                                         )}

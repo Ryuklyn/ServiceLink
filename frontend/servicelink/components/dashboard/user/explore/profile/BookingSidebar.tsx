@@ -29,6 +29,11 @@ interface BookingSidebarProps {
     selectedPeriod?: "morning" | "afternoon" | "evening" | null;
     voiceNoteBlob?: Blob | null;
     voiceNoteUrl?: string | null;
+    editBookingId?: number | null;
+    initialAddress?: string;
+    existingImgUrl?: string | null;
+    existingVideoUrl?: string | null;
+    existingAudioUrl?: string | null;
 }
 
 interface MediaFileWrapper {
@@ -128,16 +133,30 @@ export default function BookingSidebar({
                                            selectedPeriod: externalPeriod,
                                            voiceNoteBlob = null,
                                            voiceNoteUrl  = null,
+                                           editBookingId = null,
+                                           initialAddress = "",
+                                           existingImgUrl = null,
+                                           existingVideoUrl = null,
+                                           existingAudioUrl = null,
                                        }: BookingSidebarProps) {
     const [isModalOpen, setIsModalOpen]       = useState(false);
     const [taskSummary, setTaskSummary]       = useState(externalIssue ?? "");
     const [media, setMedia]                   = useState<MediaFileWrapper | null>(null);
     const [markerPos, setMarkerPos]           = useState<[number, number]>([DEFAULT_LAT, DEFAULT_LNG]);
-    const [address, setAddress]               = useState("");
+    const [address, setAddress]               = useState(initialAddress || "");
     const [isGeoLoading, setIsGeoLoading]     = useState(false);
     const [showMap, setShowMap]               = useState(false);
     const [isBooking, setIsBooking]           = useState(false);
     const [bookedAppointments, setBookedAppointments] = useState<AppointmentResponse[]>([]);
+
+    const [deletedExistingMedia, setDeletedExistingMedia] = useState(false);
+    const [deletedExistingAudio, setDeletedExistingAudio] = useState(false);
+
+    useEffect(() => {
+        if (initialAddress) {
+            setAddress(initialAddress);
+        }
+    }, [initialAddress]);
 
     const [localDate, setLocalDate]     = useState<Date | undefined>(externalDate);
     const [localPeriod, setLocalPeriod] = useState<"morning"|"afternoon"|"evening"|null>(externalPeriod ?? null);
@@ -307,11 +326,13 @@ export default function BookingSidebar({
         setIsBooking(true);
 
         try {
-            let attachedImgUrl: string | null = null;
-            let attachedVideoUrl: string | null = null;
-            let attachedAudioUrl: string | null = null;
+            let attachedImgUrl: string | null = deletedExistingMedia ? null : existingImgUrl;
+            let attachedVideoUrl: string | null = deletedExistingMedia ? null : existingVideoUrl;
+            let attachedAudioUrl: string | null = deletedExistingAudio ? null : existingAudioUrl;
 
             if (media) {
+                attachedImgUrl = null;
+                attachedVideoUrl = null;
                 const formData = new FormData();
                 formData.append("file", media.file);
 
@@ -328,8 +349,8 @@ export default function BookingSidebar({
                 }
             }
 
-            // BookingSidebar.tsx — inside handleBookNow, replace the voice note upload block
             if (voiceNoteBlob) {
+                attachedAudioUrl = null;
                 try {
                     const audioFormData = new FormData();
                     audioFormData.append("file", voiceNoteBlob, "voice-note.webm");
@@ -341,12 +362,10 @@ export default function BookingSidebar({
                     );
                     attachedAudioUrl = audioUploadData.url;
                 } catch (err) {
-                    // Voice note is optional — don't let its upload failure block booking.
                     console.warn("Voice note upload failed, continuing without it:", err);
                     toast.warning("Couldn't attach your voice note, but continuing with booking.", {
                         position: "top-right",
                     });
-                    attachedAudioUrl = null;
                 }
             }
 
@@ -369,10 +388,12 @@ export default function BookingSidebar({
                 ...quantityFields,
             };
 
-            const { data } = await api.post<AppointmentResponse>("/appointments", payload);
+            const { data } = editBookingId
+                ? await api.put<AppointmentResponse>(`/appointments/${editBookingId}`, payload)
+                : await api.post<AppointmentResponse>("/appointments", payload);
 
             setBookedAppointments([data]);
-            toast.success("Appointment booked successfully!", { position: "top-right" });
+            toast.success(editBookingId ? "Appointment updated successfully!" : "Appointment booked successfully!", { position: "top-right" });
             setIsModalOpen(true);
 
         } catch (err: unknown) {
@@ -480,7 +501,29 @@ export default function BookingSidebar({
                         Voice Note <span className="font-normal text-gray-400">(optional)</span>
                     </p>
 
-                    {!voiceNoteBlob && (
+                    {!voiceNoteBlob && existingAudioUrl && !deletedExistingAudio ? (
+                        <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl px-3 sm:px-4 py-2.5">
+                            <button
+                                onClick={toggleNotePlayback}
+                                type="button"
+                                className="w-7 h-7 flex items-center justify-center rounded-full bg-[#1e3a8a] text-white hover:bg-blue-800 active:scale-95 transition-all shrink-0"
+                            >
+                                <Mic size={13} />
+                            </button>
+                            <audio
+                                ref={notePlayerRef}
+                                src={existingAudioUrl}
+                                onEnded={() => setIsPlayingNote(false)}
+                                className="hidden"
+                            />
+                            <span className="text-xs font-semibold text-green-700 flex-1 truncate">
+                                Existing voice note
+                            </span>
+                            <button onClick={() => setDeletedExistingAudio(true)} type="button" className="w-5 h-5 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors shrink-0">
+                                <X size={10} />
+                            </button>
+                        </div>
+                    ) : !voiceNoteBlob && (
                         <div className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-3 text-xs text-gray-400 text-center px-3">
                             <Mic size={13} className="shrink-0" />
                             Record one in &ldquo;Describe Your Issue&rdquo; above
@@ -516,7 +559,26 @@ export default function BookingSidebar({
                         Photo or Video <span className="font-normal text-gray-400">(optional, max 1)</span>
                     </p>
                     <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleMediaUpload} />
-                    {!media ? (
+                    {!media && (existingImgUrl || existingVideoUrl) && !deletedExistingMedia ? (
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between gap-2 border border-green-200 bg-green-50 rounded-xl px-3 py-2.5">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <CheckCircle2 size={15} className="text-green-500 shrink-0" />
+                                    <span className="text-xs font-semibold text-green-700">Existing media attached</span>
+                                </div>
+                                <button onClick={() => setDeletedExistingMedia(true)} type="button" className="w-5 h-5 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors shrink-0">
+                                    <X size={10} />
+                                </button>
+                            </div>
+                            <div className="relative rounded-xl overflow-hidden border border-gray-100 bg-gray-50 h-24 flex items-center justify-center">
+                                {existingImgUrl ? (
+                                    <img src={existingImgUrl} alt="preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <video src={existingVideoUrl!} className="w-full h-full object-cover" muted playsInline />
+                                )}
+                            </div>
+                        </div>
+                    ) : !media ? (
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             type="button"
@@ -701,11 +763,13 @@ export default function BookingSidebar({
                         className="w-full bg-[#e8683f] hover:bg-[#d75930] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 sm:py-3.5 rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {isBooking ? (
-                            <><Loader2 size={16} className="animate-spin" /> Booking...</>
+                            editBookingId ? <><Loader2 size={16} className="animate-spin" /> Updating...</> : <><Loader2 size={16} className="animate-spin" /> Booking...</>
                         ) : !hasServices ? (
-                            "Select Services to Book"
+                            "Select Services"
                         ) : hasBlockingInput ? (
                             "Complete Service Details"
+                        ) : editBookingId ? (
+                            "Confirm Changes"
                         ) : (
                             "Book Now"
                         )}

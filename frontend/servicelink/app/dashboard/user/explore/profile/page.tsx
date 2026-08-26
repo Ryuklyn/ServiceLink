@@ -109,6 +109,9 @@ export default function ProviderPage() {
   const searchParams = useSearchParams();
   const providerId   = searchParams.get("id") ?? "1";
 
+  const editBookingIdStr = searchParams.get("editBookingId");
+  const editBookingId = editBookingIdStr ? Number(editBookingIdStr) : null;
+
   const [provider, setProvider]               = useState<ProviderData | null>(null);
   const [loading, setLoading]                 = useState(true);
   const [error, setError]                     = useState<string | null>(null);
@@ -117,6 +120,11 @@ export default function ProviderPage() {
 
   const [voiceNoteBlob, setVoiceNoteBlob] = useState<Blob | null>(null);
   const [voiceNoteUrl, setVoiceNoteUrl]   = useState<string | null>(null);
+
+  const [initialAddress, setInitialAddress] = useState("");
+  const [existingImgUrl, setExistingImgUrl] = useState<string | null>(null);
+  const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
+  const [existingAudioUrl, setExistingAudioUrl] = useState<string | null>(null);
 
   const handleVoiceNoteChange = (blob: Blob | null) => {
     if (voiceNoteUrl) URL.revokeObjectURL(voiceNoteUrl);
@@ -132,21 +140,68 @@ export default function ProviderPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<"morning" | "afternoon" | "evening" | null>(null);
 
   useEffect(() => {
-    const fetchProvider = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const { data } = await api.get(`/providers/${providerId}`);
-        setProvider(mapBackendToProviderData(data));
+        const { data: provData } = await api.get(`/providers/${providerId}`);
+        const mappedProvider = mapBackendToProviderData(provData);
+        setProvider(mappedProvider);
+
+        if (editBookingId) {
+          const { data: bookingData } = await api.get(`/appointments/${editBookingId}`);
+          
+          if (bookingData.appointmentDate) {
+            setSelectedDate(new Date(bookingData.appointmentDate));
+          }
+          if (bookingData.timeSlot) {
+            setSelectedPeriod(bookingData.timeSlot.toLowerCase() as any);
+          }
+          if (bookingData.address) {
+            setInitialAddress(bookingData.address);
+          }
+          if (bookingData.notes) {
+            setIssueDescription(bookingData.notes);
+          }
+          if (bookingData.attachedImgUrl) {
+            setExistingImgUrl(bookingData.attachedImgUrl);
+          }
+          if (bookingData.attachedVideoUrl) {
+            setExistingVideoUrl(bookingData.attachedVideoUrl);
+          }
+          if (bookingData.attachedAudioUrl) {
+            setExistingAudioUrl(bookingData.attachedAudioUrl);
+          }
+
+          const providerService = mappedProvider.services.find(
+            (s) => s.catalogId === bookingData.serviceCatalogId
+          );
+          if (providerService) {
+            const qty = bookingData.hours || bookingData.areaSqFt || bookingData.itemCount || bookingData.wallCount;
+            const selected = {
+              name: providerService.name,
+              catalogId: providerService.catalogId,
+              priceMin: providerService.priceMin,
+              priceMax: providerService.priceMax,
+              pricingUnit: providerService.pricingUnit,
+              rate: providerService.rate,
+              estimationMode: providerService.estimationMode,
+              quantity: qty,
+              estimateStatus: "ESTIMATED" as any,
+              estimatedAmount: bookingData.totalPrice,
+            };
+            setSelectedServices([selected]);
+          }
+        }
       } catch (err) {
-        console.error("Failed to fetch provider:", err);
-        setError("Failed to load provider profile.");
+        console.error("Failed to fetch details:", err);
+        setError("Failed to load profile details.");
       } finally {
         setLoading(false);
       }
     };
-    fetchProvider();
-  }, [providerId]);
+    fetchData();
+  }, [providerId, editBookingId]);
 
   // --- Smart Price Estimation selection handlers ---
   // ServicesPricing computes the EstimateResult per service (spec §5) and
@@ -240,6 +295,11 @@ export default function ProviderPage() {
               selectedPeriod={selectedPeriod}
               voiceNoteBlob={voiceNoteBlob}
               voiceNoteUrl={voiceNoteUrl}
+              editBookingId={editBookingId}
+              initialAddress={initialAddress}
+              existingImgUrl={existingImgUrl}
+              existingVideoUrl={existingVideoUrl}
+              existingAudioUrl={existingAudioUrl}
           />
         </div>
       </div>

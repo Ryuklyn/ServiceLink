@@ -11,6 +11,8 @@ import {
     updateProviderProfile,
     uploadProviderPicture,
 } from "@/store/slices/providerProfileSlice";
+import { setProviderTheme, setProviderLanguage } from "@/store/slices/providerPreferencesSlice";
+import { useProviderTranslation } from "@/hooks/useProviderTranslation";
 
 import dynamic from "next/dynamic";
 
@@ -47,8 +49,17 @@ export default function AccountTab() {
         (state) => state.providerProfile,
     );
 
-    const [theme, setTheme] = useState<Theme>("system");
-    const [language, setLanguage] = useState<Language>("en");
+    const { t } = useProviderTranslation();
+    const { theme, language } = useAppSelector((state) => state.providerPreferences);
+
+    const setThemeState = (themeVal: Theme) => {
+        dispatch(setProviderTheme(themeVal));
+    };
+
+    const setLanguageState = (langVal: Language) => {
+        dispatch(setProviderLanguage(langVal));
+    };
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const DEFAULT_COORDS: [number, number] = [27.6915, 85.342];
@@ -151,7 +162,7 @@ export default function AccountTab() {
                                 className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
                             >
                                 <Camera className="h-3.5 w-3.5 text-slate-500" />
-                                {uploadingPicture ? "Uploading…" : "Upload Photo"}
+                                {uploadingPicture ? t("Uploading…") : t("Upload Photo")}
                             </button>
                             <span className="text-[10px] text-slate-400">JPG, PNG. Max 2MB</span>
                         </div>
@@ -164,26 +175,26 @@ export default function AccountTab() {
                                 {profile?.isVerified && (
                                     <span className="inline-flex items-center gap-1 bg-green-500/10 text-[#10b981] text-[11px] font-semibold px-2 py-0.5 rounded-md border border-green-500/20">
                                         <ShieldCheck className="h-3.5 w-3.5 fill-[#10b981]/10" strokeWidth={2.5} />
-                                        KYC VERIFIED
+                                        {t("KYC VERIFIED")}
                                     </span>
                                 )}
                             </div>
 
                             <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-slate-500">
                                 <Zap className="h-3.5 w-3.5 text-slate-400 fill-slate-400/20" />
-                                {profile?.primaryService ?? "—"}
+                                {profile?.primaryCategoryName ?? "—"}
                             </p>
 
                             <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-400">
                                 <MapPin className="h-4 w-4 text-slate-400" />
-                                {profile?.serviceAreaText ?? profile?.baseDistrict ?? "Not set"}
+                                {profile?.serviceAreaText ?? profile?.baseDistrict ?? t("Not set")}
                             </p>
 
                             <p className="mt-1 flex items-center gap-1 text-sm font-medium text-slate-700">
                                 <Star className="h-4 w-4 text-amber-400 fill-amber-400 mr-0.5" />
                                 {profile?.averageRating?.toFixed(1) ?? "—"}
                                 <span className="text-slate-400 font-normal ml-0.5">
-                                    ({profile?.totalReviews ?? 0} reviews)
+                                    ({profile?.totalReviews ?? 0} {t("reviews")})
                                 </span>
                             </p>
                         </div>
@@ -195,12 +206,12 @@ export default function AccountTab() {
                                 <Phone className="h-5 w-5" />
                             </div>
                             <div className="space-y-0.5">
-                                <p className="text-xs font-medium text-slate-400">Phone Number</p>
+                                <p className="text-xs font-medium text-slate-400">{t("Phone Number")}</p>
                                 <p className="text-sm font-semibold text-slate-700">{profile?.phone ?? "—"}</p>
                                 {profile?.isVerified && (
                                     <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
                                         <ShieldCheck className="w-3.5 h-3.5 fill-[#10b981]/10" strokeWidth={2.5} />
-                                        Verified
+                                        {t("Verified")}
                                     </span>
                                 )}
                             </div>
@@ -211,12 +222,12 @@ export default function AccountTab() {
                                 <Mail className="h-5 w-5" />
                             </div>
                             <div className="space-y-0.5">
-                                <p className="text-xs font-medium text-slate-400">Email Address</p>
+                                <p className="text-xs font-medium text-slate-400">{t("Email Address")}</p>
                                 <p className="text-sm font-semibold text-slate-700">{profile?.email ?? "—"}</p>
                                 {profile?.isVerified && (
                                     <span className="inline-flex items-center gap-1 bg-green-500/20 text-[#10b981] text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-green-500/30">
                                         <ShieldCheck className="w-3.5 h-3.5 fill-[#10b981]/10" strokeWidth={2.5} />
-                                        Verified
+                                        {t("Verified")}
                                     </span>
                                 )}
                             </div>
@@ -227,7 +238,7 @@ export default function AccountTab() {
                                 <CalendarDays className="h-5 w-5" />
                             </div>
                             <div className="space-y-0.5">
-                                <p className="text-xs font-medium text-slate-400">Member Since</p>
+                                <p className="text-xs font-medium text-slate-400">{t("Member Since")}</p>
                                 <p className="text-sm font-bold text-slate-700 pt-0.5">
                                     {profile?.memberSince
                                         ? new Date(profile.memberSince).toLocaleDateString("en-US", {
@@ -248,7 +259,7 @@ export default function AccountTab() {
                     <div className="mb-4 flex items-center gap-2">
                         <ShieldCheck className="h-4 w-4 text-[#1e3a8a]" />
                         <h3 className="text-sm font-semibold text-slate-900">
-                            Verified Information
+                            {t("Verified Information")}
                         </h3>
                     </div>
 
@@ -268,16 +279,16 @@ export default function AccountTab() {
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium text-slate-800">
-                                        {item.label}
+                                        {t(item.label)}
                                     </p>
-                                    <p className="text-xs text-slate-400">{item.date}</p>
+                                    <p className="text-xs text-slate-400">{t(item.date)}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     <button className="mt-5 w-full rounded-lg border border-slate-200 py-2 text-sm font-medium text-[#1e3a8a] hover:bg-slate-50">
-                        View All Verification
+                        {t("View All Verification")}
                     </button>
                 </div>
 
@@ -286,18 +297,18 @@ export default function AccountTab() {
                         <div className="mb-3 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <ClipboardEdit className="h-4 w-4 text-slate-700" />
-                                <h3 className="text-sm font-semibold text-slate-900">Professional Bio</h3>
+                                <h3 className="text-sm font-semibold text-slate-900">{t("Professional Bio")}</h3>
                             </div>
                             <button
                                 onClick={openBioModal}
                                 className="flex items-center gap-1 text-xs font-medium text-[#e8683f] hover:text-[#d4562e] transition-colors"
                             >
                                 <Pencil className="h-3.5 w-3.5" />
-                                Edit
+                                {t("Edit")}
                             </button>
                         </div>
                         <p className="text-sm leading-relaxed text-slate-600 bg-slate-50/50 p-3.5 rounded-lg border border-slate-100">
-                            {profile?.bio || <span className="text-slate-400 italic">No professional bio summary provided yet.</span>}
+                            {profile?.bio || <span className="text-slate-400 italic">{t("No professional bio summary provided yet.")}</span>}
                         </p>
                     </div>
 
@@ -305,29 +316,29 @@ export default function AccountTab() {
                         <div className="mb-3 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <MapPin className="h-4 w-4 text-slate-700" />
-                                <h3 className="text-sm font-semibold text-slate-900">Service Area Coverage</h3>
+                                <h3 className="text-sm font-semibold text-slate-900">{t("Service Area Coverage")}</h3>
                             </div>
                             <button
                                 onClick={openMapModal}
                                 className="flex items-center gap-1 text-xs font-medium text-[#e8683f] hover:text-[#d4562e] transition-colors"
                             >
                                 <Pencil className="h-3.5 w-3.5" />
-                                Edit
+                                {t("Edit")}
                             </button>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                             <div className="space-y-3">
                                 <div>
-                                    <p className="text-xs font-medium text-slate-400">Primary Location Hub</p>
+                                    <p className="text-xs font-medium text-slate-400">{t("Primary Location Hub")}</p>
                                     <p className="text-sm font-semibold text-slate-800 mt-0.5">
-                                        {profile?.serviceAreaText ?? profile?.baseDistrict ?? "Not set"}
+                                        {profile?.serviceAreaText ?? profile?.baseDistrict ?? t("Not set")}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-medium text-slate-400">Operational Radius Limit</p>
+                                    <p className="text-xs font-medium text-slate-400">{t("Operational Radius Limit")}</p>
                                     <p className="text-sm font-semibold text-slate-800 mt-0.5">
-                                        {profile?.travelRadiusKm ?? "—"} km Coverage
+                                        {profile?.travelRadiusKm ?? "—"} {t("km Coverage")}
                                     </p>
                                 </div>
                             </div>
@@ -434,26 +445,26 @@ export default function AccountTab() {
                 </div>
 
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-slate-900">Preferences</h3>
-                    <p className="mb-2 text-xs font-medium text-slate-500">Theme</p>
+                    <h3 className="mb-4 text-sm font-semibold text-slate-900">{t("Preferences")}</h3>
+                    <p className="mb-2 text-xs font-medium text-slate-500">{t("Theme")}</p>
                     <div className="mb-5 grid grid-cols-3 gap-2">
-                        <button onClick={() => setTheme("system")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "system" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-                            <Monitor className="h-3.5 w-3.5" /> System
+                        <button onClick={() => setThemeState("system")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "system" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                            <Monitor className="h-3.5 w-3.5" /> {t("System")}
                         </button>
-                        <button onClick={() => setTheme("light")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "light" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-                            <Sun className="h-3.5 w-3.5" /> Light
+                        <button onClick={() => setThemeState("light")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "light" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                            <Sun className="h-3.5 w-3.5" /> {t("Light")}
                         </button>
-                        <button onClick={() => setTheme("dark")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "dark" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-                            <Moon className="h-3.5 w-3.5" /> Dark
+                        <button onClick={() => setThemeState("dark")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "dark" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                            <Moon className="h-3.5 w-3.5" /> {t("Dark")}
                         </button>
                     </div>
-                    <p className="mb-2 text-xs font-medium text-slate-500">Language</p>
+                    <p className="mb-2 text-xs font-medium text-slate-500">{t("Language")}</p>
                     <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => setLanguage("en")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "en" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                            English
+                        <button onClick={() => setLanguageState("en")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "en" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                            {t("English")}
                         </button>
-                        <button onClick={() => setLanguage("ne")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "ne" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                            नेपाली
+                        <button onClick={() => setLanguageState("ne")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "ne" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                            {t("Nepali")}
                         </button>
                     </div>
                 </div>

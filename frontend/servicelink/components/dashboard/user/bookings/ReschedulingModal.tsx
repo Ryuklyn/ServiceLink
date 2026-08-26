@@ -652,12 +652,28 @@ export default function ReschedulingModal({
                                 <div className="space-y-1">
                                   <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Payment Options Available</p>
                                   <div className="flex gap-2">
-                                    <div className="flex-1 flex items-center justify-center py-1.5 px-2 border border-gray-200 rounded-xl bg-gray-50 hover:bg-white hover:border-gray-300 transition-all duration-200 cursor-pointer">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedWallet("esewa")}
+                                      className={`flex-1 flex items-center justify-center py-1.5 px-2 border rounded-xl transition-all duration-200 ${
+                                        selectedWallet === "esewa"
+                                          ? "border-green-500 bg-green-50/50"
+                                          : "border-gray-200 bg-gray-50 hover:bg-white hover:border-gray-300"
+                                      }`}
+                                    >
                                       <img src="/images/esewa.png" alt="eSewa" className="h-10 w-auto object-contain" />
-                                    </div>
-                                    <div className="flex-1 flex items-center justify-center py-1.5 px-2 border border-gray-200 rounded-xl bg-gray-50 hover:bg-white hover:border-gray-300 transition-all duration-200 cursor-pointer">
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedWallet("khalti")}
+                                      className={`flex-1 flex items-center justify-center py-1.5 px-2 border rounded-xl transition-all duration-200 ${
+                                        selectedWallet === "khalti"
+                                          ? "border-purple-500 bg-purple-50/50"
+                                          : "border-gray-200 bg-gray-50 hover:bg-white hover:border-gray-300"
+                                      }`}
+                                    >
                                       <img src="/images/khalti.png" alt="Khalti" className="h-10 w-auto object-contain" />
-                                    </div>
+                                    </button>
                                   </div>
                                 </div>
                             )}
@@ -711,7 +727,11 @@ export default function ReschedulingModal({
                         } else if (paymentOption === "token") {
                           setStep("confirm");
                         } else if (paymentOption === "cash") {
-                          setStep("payment_gateways");
+                          if (selectedWallet) {
+                            setStep("confirm_payment");
+                          } else {
+                            setStep("payment_gateways");
+                          }
                         }
                       }}
                       className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 ${

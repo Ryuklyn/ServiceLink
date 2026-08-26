@@ -104,6 +104,25 @@ public class Appointment {
     @Column(name = "item_count")
     private Integer itemCount;
 
+    @Column(name = "hours")
+    private Integer hours;
+
+    @Column(name = "operational_status", length = 32)
+    private String operationalStatus;
+
+    @Column(name = "estimated_amount")
+    private Integer estimatedAmount;
+
+    @Column(name = "final_amount")
+    private Integer finalAmount;
+
+    @Column(name = "provider_rate")
+    private Integer providerRate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pricing_unit", length = 32)
+    private ServiceCatalog.PricingUnit pricingUnit;
+
     // ── Logistics ─────────────────────────────────────────────────────────────
 
     @Column(name = "address", nullable = false)
