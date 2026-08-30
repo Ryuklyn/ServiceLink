@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -52,6 +54,11 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
     Optional<Provider> findProfileWithPortfolioById(@Param("id") Long id);
 
     Optional<Provider> findByUser_Id(Long userId);
+    Optional<Provider> findByKycSubmission_Id(Long kycSubmissionId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Provider p WHERE p.id = :id")
+    Optional<Provider> findByIdForUpdate(@Param("id") Long id);
 
     @Query("""
             SELECT p FROM Provider p
@@ -123,6 +130,8 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>,
      * conditions those custom @Query methods bake in.
      */
     List<Provider> findAllByPrimaryCategory_Name(String categoryName);
+
+    long countByIsVerifiedTrueAndIsActiveTrue();
 
     /**
      * Backs ProviderPoolService's CSV import row-matching. Either param may

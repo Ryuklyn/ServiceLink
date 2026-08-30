@@ -26,4 +26,6 @@ public interface KycRepository extends JpaRepository<KycSubmission, Long> {
 
     // ✅ FIXED: Changed parameter type from String to KycStatus
     List<KycSubmission> findByStatus(KycStatus status);
+
+    List<KycSubmission> findByReferralCodeIgnoreCaseOrderBySubmittedAtDesc(String referralCode);
 }

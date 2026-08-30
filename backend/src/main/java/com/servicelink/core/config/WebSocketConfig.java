@@ -1,6 +1,7 @@
 package com.servicelink.core.config;
 
 import com.servicelink.core.model.user.User;
+import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +45,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     String token = header.substring(7);
                     String email = jwtService.extractUsername(token);
                     if (!jwtService.isTokenValid(token, email)) throw new AccessDeniedException("Invalid WebSocket token");
-                    User user = userRepository.findByEmail(email).orElseThrow(() -> new AccessDeniedException("User not found"));
+                    Role role = jwtService.extractRole(token);
+                    User user = userRepository.findByEmailAndRole(email, role).orElseThrow(() -> new AccessDeniedException("User not found"));
                     Principal principal = () -> String.valueOf(user.getId());
                     accessor.setUser(principal);
                 }

@@ -21,7 +21,7 @@ interface ReferralHistoryItem {
     name: string;
     category: string;
     joinedDate: string;
-    kycStatus: "APPROVED" | "PENDING" | "REJECTED";
+    kycStatus: "APPROVED" | "PENDING" | "UNDER_REVIEW" | "REJECTED";
     paymentStatus: "PAID" | "PENDING" | "UNPAID";
     counts: boolean;
 }

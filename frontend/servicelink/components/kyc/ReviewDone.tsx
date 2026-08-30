@@ -7,9 +7,11 @@ import {
   Edit3,
   Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { kycApi } from "@/lib/api/kycApi";
 import type { KycSubmitResponse, KycSubmitPayload  } from "@/lib/api/kycApi";
+import { getCategories, type CategoryDTO } from "@/lib/api/providersApi";
+
 // import { toBackendServiceCategory } from "@/lib/constants/serviceCategory";
 
 
@@ -192,11 +194,32 @@ export function ReviewDone({
   const professional = allData.professional ?? {};
   const kyc = allData.kyc ?? {};
 
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    getCategories()
+      .then((cats) => {
+        if (active) setCategories(cats);
+      })
+      .catch(console.error);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const getCategoryName = (idStr?: string) => {
+    if (!idStr) return "";
+    const cat = categories.find((c) => String(c.id) === idStr);
+    return cat ? cat.name : idStr;
+  };
+
   const [agreed, setAgreed] = useState<Record<string, boolean>>(
       Object.fromEntries(TERMS.map((t) => [t.id, false])),
   );
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
 
   const allAgreed = TERMS.every((t) => agreed[t.id]);
   const toggleTerm = (id: string) => setAgreed((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -251,10 +274,10 @@ export function ReviewDone({
           </Section>
 
           <Section title="Professional" onEdit={() => onGoToStep?.(2)}>
-            <Row label="Primary Service" value={professional.primaryService} />
+            <Row label="Primary Service" value={getCategoryName(professional.primaryService)} />
             <Row label="Experience" value={professional.experienceYears ? `${professional.experienceYears} years` : ""} />
             <Row label="District" value={professional.primaryDistrict} />
-            <Row label="Additional Services" value={professional.additionalServices?.join(", ")} />
+            <Row label="Additional Services" value={professional.additionalServices?.map(getCategoryName).join(", ")} />
             <Row label="Bio" value={professional.bio || "Not provided"} />
           </Section>
 

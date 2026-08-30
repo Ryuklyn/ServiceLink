@@ -41,9 +41,6 @@ function ProviderProfileContent() {
                         type="button"
                         className="flex w-fit items-center justify-center gap-2 rounded-lg border border-[#1e3a8a] px-4 py-2.5 text-sm font-semibold text-[#1e3a8a] transition hover:bg-[#1e3a8a]/5"
                     >
-                        <Eye className="h-4 w-4" />
-                        Preview as Customer
-                        <ArrowRight className="h-4 w-4" />
                     </button>
                 </div>
 

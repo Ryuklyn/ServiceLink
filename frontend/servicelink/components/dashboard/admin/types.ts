@@ -9,6 +9,7 @@ export interface UserRow {
     name: string;
     email: string;
     initials: string;
+    avatarUrl?: string | null;
     roleOrService: string;
     status: VerificationStatus;
     joinedDate: string;

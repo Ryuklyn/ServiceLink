@@ -237,7 +237,7 @@ public class ProviderPinService {
         Provider provider = providerRepo.findByUser_Email(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Provider not found"));
 
-        String refreshToken = jwtService.generateRefreshToken(provider.getUser().getEmail());
+        String refreshToken = jwtService.generateRefreshToken(provider.getUser().getEmail(), provider.getUser().getRole());
         String jti = jwtService.extractJti(refreshToken);
         String accessToken = jwtService.generateAccessToken(
                 provider.getUser().getEmail(), provider.getUser().getRole(), jti);

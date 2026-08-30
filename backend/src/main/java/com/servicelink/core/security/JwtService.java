@@ -47,9 +47,10 @@ public class JwtService {
 
     // ─── Refresh Token ──────────────────────────────────────────────────────
 
-    public String generateRefreshToken(String email) {
+    public String generateRefreshToken(String email, Role role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "REFRESH");
+        claims.put("role", role.name());
         claims.put("jti", UUID.randomUUID().toString());
         return buildToken(claims, email, refreshTokenExpiration);
     }
@@ -82,6 +83,14 @@ public class JwtService {
 
     public String extractJti(String token) {
         return extractClaim(token, claims -> claims.get("jti", String.class));
+    }
+
+    public Role extractRole(String token) {
+        String role = extractClaim(token, claims -> claims.get("role", String.class));
+        if (role == null) {
+            throw new IllegalArgumentException("Token does not contain an account role");
+        }
+        return Role.valueOf(role);
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

@@ -122,7 +122,9 @@ const providerAvailabilitySlice = createSlice({
                 }
             })
             .addCase(saveDayAvailability.rejected, (state, action) => { state.saveStatus = "failed"; state.error = action.payload as string; })
+            .addCase(fetchScheduleSettings.pending, (state) => { state.error = null; })
             .addCase(fetchScheduleSettings.fulfilled, (state, action) => { state.settings = action.payload; })
+            .addCase(fetchScheduleSettings.rejected, (state, action) => { state.error = action.payload as string; })
             .addCase(saveScheduleSettings.pending, (state) => { state.settingsSaveStatus = "saving"; })
             .addCase(saveScheduleSettings.fulfilled, (state, action) => { state.settingsSaveStatus = "succeeded"; state.settings = action.payload; })
             .addCase(saveScheduleSettings.rejected, (state, action) => { state.settingsSaveStatus = "failed"; state.error = action.payload as string; });

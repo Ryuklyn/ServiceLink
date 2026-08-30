@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar, Lock } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import type { AppDispatch, RootState } from "@/store";
-import { fetchScheduleSettings, saveScheduleSettings, ScheduleSettings } from "@/store/slices/providerAvailabilitySlice";
+import { fetchProviderProfile } from "@/store/slices/providerProfileSlice";
 import {
+    fetchScheduleSettings,
+    saveScheduleSettings,
+    ScheduleSettings,
     fetchMonthAvailability,
     saveDayAvailability,
     setCurrentMonth,
@@ -30,13 +33,8 @@ const ALL_PERIODS: TimeSlotKey[] = SLOT_DEFS.map((d) => d.key);
 
 const REASON_OPTIONS = ["Personal Work", "Family Commitment", "Holiday", "Other"];
 
-// Dropped "unknown" — a day with no saved rows is treated as fully available,
-// not "not set", matching the backend's "missing row = available" convention.
 type DayStatus = "all" | "partial" | "unavailable";
 
-// Local, timezone-safe ISO formatter — d.toISOString() converts to UTC first,
-// which can shift the date backward for UTC+ zones like Nepal (UTC+5:45)
-// around local midnight. Always derive yyyy-MM-dd from local getters instead.
 function isoDate(d: Date): string {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -74,8 +72,6 @@ function buildMonthGrid(monthStartIso: string): GridCell[] {
     return cells;
 }
 
-// A slot with no saved row defaults to available — same rule the backend
-// applies (getMyAvailability only returns exceptions to "available by default").
 function isSlotAvailable(slots: AvailabilitySlot[] | undefined, period: TimeSlotKey): boolean {
     const found = slots?.find((s) => s.period === period);
     return found ? found.isAvailable : true;
@@ -94,7 +90,6 @@ const STATUS_LABEL: Record<DayStatus, { text: string; className: string }> = {
     unavailable: { text: "Unavailable", className: "bg-red-50 text-red-600" },
 };
 
-/** Shared toggle switch — consistent across the whole settings module */
 function ToggleSwitch({
                           checked,
                           onChange,
@@ -129,10 +124,6 @@ interface DraftSlot {
     reason: string;
 }
 
-// Ordered so the most fundamental blocker is surfaced first — mirrors the
-// order ProviderPoolService.checkProOrdersEligibility checks on the backend.
-// Keeping these in sync avoids a UI that looks unlocked when the save will
-// actually be rejected server-side (or the reverse: locked when it wouldn't be).
 type UnlockBlocker =
     | "PROVIDER_INACTIVE"
     | "VERIFICATION_REQUIRED"
@@ -169,35 +160,15 @@ export default function AvailabilityTab() {
         (s: RootState) => s.providerAvailability,
     );
 
-    // ── Subscription gate for Business & Pro Orders ──────────────────────
-    // Already fetched once by ProviderDashboardLayout on mount and stored in
-    // Redux, so this tab just reads it — no prop drilling through the layout
-    // needed. Pro orders require a PAID, currently-active plan; the free
-    // trial deliberately does not unlock this (matches the backend rule
-    // enforced in ProviderScheduleSettingsService / ProviderPoolService —
-    // this is a UX convenience, not the real enforcement).
-    //
-    // Backend DTO (SubscriptionStatusDTO) explicitly pins the boolean field
-    // to `isActive` via @JsonProperty, overriding Jackson's default getIsX()
-    // -> "active" stripping. So `isActive` is the correct, stable wire name.
     const { data: subscription } = useSelector((s: RootState) => s.providerSubscription);
     const isPaidPlan = Boolean(subscription?.planType && subscription.planType !== "FREE_TRIAL");
     const hasActivePaidPlan = Boolean(subscription?.isActive && isPaidPlan);
 
-    // ── Account-level gates ────────────────────────────────────────────
-    // NOTE: adjust this selector to match your actual slice — this assumes
-    // a `providerProfile` slice mirroring the isVerified /
-    // hasCompletedOnboarding / isActive fields the backend's Provider
-    // entity exposes (same fields ProviderPoolService.checkProOrdersEligibility
-    // checks). These likely already exist somewhere in your store since the
-    // Directory card's "KYC Verified" / "KYC Pending" badge reads isVerified
-    // from a Provider-shaped payload.
     const providerProfile = useSelector((s: RootState) => s.providerProfile?.data);
     const isAccountActive = Boolean(providerProfile?.isActive);
     const isVerified = Boolean(providerProfile?.isVerified);
     const hasCompletedOnboarding = Boolean(providerProfile?.hasCompletedOnboarding);
 
-    // First failing gate, in the same priority order the backend checks them.
     const unlockBlocker: UnlockBlocker = !isAccountActive
         ? "PROVIDER_INACTIVE"
         : !isVerified
@@ -212,8 +183,6 @@ export default function AvailabilityTab() {
 
     const [selectedDay, setSelectedDay] = useState(() => isoDate(new Date()));
     const [draftSlots, setDraftSlots] = useState<DraftSlot[]>([]);
-    const dateInputRef = useRef<HTMLInputElement>(null);
-    const todayIso = useMemo(() => isoDate(new Date()), []);
 
     const grid = useMemo(() => buildMonthGrid(currentMonth), [currentMonth]);
 
@@ -237,31 +206,53 @@ export default function AvailabilityTab() {
         [selectedDay],
     );
     const { settings, settingsSaveStatus } = useSelector((s: RootState) => s.providerAvailability);
-    const [draftSettings, setDraftSettings] = useState<ScheduleSettings>(settings);
+    const [draftSettings, setDraftSettings] = useState<ScheduleSettings>({
+        workingDays: [0, 1, 2, 3, 4, 5, 6],
+        defaultSlots: ["MORNING", "AFTERNOON", "EVENING"],
+        acceptsProOrders: false,
+    });
 
-    useEffect(() => { dispatch(fetchScheduleSettings()); }, [dispatch]);
-    useEffect(() => { setDraftSettings(settings); }, [settings]);
+    useEffect(() => {
+        dispatch(fetchScheduleSettings());
+        dispatch(fetchProviderProfile());
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (settings) {
+            setDraftSettings({
+                workingDays: settings.workingDays || [],
+                defaultSlots: settings.defaultSlots || [],
+                acceptsProOrders: !!settings.acceptsProOrders,
+            });
+        }
+    }, [settings]);
 
     const toggleDay = (dow: number) => {
-        setDraftSettings((prev) => ({
-            ...prev,
-            workingDays: prev.workingDays.includes(dow)
-                ? prev.workingDays.filter((d) => d !== dow)
-                : [...prev.workingDays, dow],
-        }));
+        setDraftSettings((prev) => {
+            const workingDays = prev?.workingDays || [];
+            return {
+                ...prev,
+                workingDays: workingDays.includes(dow)
+                    ? workingDays.filter((d) => d !== dow)
+                    : [...workingDays, dow],
+            };
+        });
     };
 
     const toggleDefaultSlot = (key: TimeSlotKey) => {
-        setDraftSettings((prev) => ({
-            ...prev,
-            defaultSlots: prev.defaultSlots.includes(key)
-                ? prev.defaultSlots.filter((s) => s !== key)
-                : [...prev.defaultSlots, key],
-        }));
+        setDraftSettings((prev) => {
+            const defaultSlots = prev?.defaultSlots || [];
+            return {
+                ...prev,
+                defaultSlots: defaultSlots.includes(key)
+                    ? defaultSlots.filter((s) => s !== key)
+                    : [...defaultSlots, key],
+            };
+        });
     };
 
     const toggleAcceptsProOrders = async () => {
-        if (!proOrdersUnlocked) return; // guarded again below at the switch itself; belt & suspenders
+        if (!proOrdersUnlocked) return;
         const newAccepts = !draftSettings.acceptsProOrders;
         const nextSettings = { ...draftSettings, acceptsProOrders: newAccepts };
         setDraftSettings(nextSettings);
@@ -277,24 +268,24 @@ export default function AvailabilityTab() {
     };
 
     const handleSaveSettings = async () => {
-        const result = await dispatch(saveScheduleSettings(draftSettings));
+        const settingsToSave = {
+            ...draftSettings,
+            acceptsProOrders: proOrdersUnlocked && draftSettings.acceptsProOrders,
+        };
+        const result = await dispatch(saveScheduleSettings(settingsToSave));
         if (saveScheduleSettings.fulfilled.match(result)) {
             toast.success("Weekly schedule updated.");
-            dispatch(fetchMonthAvailability(currentMonth)); // refresh the calendar's computed defaults
+            dispatch(fetchMonthAvailability(currentMonth));
         } else {
-            toast.error(result.payload as string);
-            setDraftSettings(settings); // revert UI to last known-persisted state
+            toast.error((result.payload as string) ?? "Failed to save weekly pattern.");
+            setDraftSettings(settings);
         }
     };
 
-    // Fetch this month's grid whenever the visible month changes.
     useEffect(() => {
         dispatch(fetchMonthAvailability(currentMonth));
     }, [dispatch, currentMonth]);
 
-    // Rebuild the editable draft whenever the selected day changes, or once
-    // fresh data for it arrives from the store. Local edits (toggle/reason)
-    // live only in draftSlots until Save Changes is pressed.
     useEffect(() => {
         const existing = slotsByDate[selectedDay] ?? [];
         setDraftSlots(
@@ -302,14 +293,11 @@ export default function AvailabilityTab() {
                 const found = existing.find((s) => s.period === def.key);
                 return {
                     key: def.key,
-                    // No data yet for this slot => assume available by default,
-                    // matching a freshly onboarded provider's expected default.
                     enabled: found?.isAvailable ?? true,
                     reason: found?.reason ?? REASON_OPTIONS[0],
                 };
             }),
         );
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedDay, slotsByDate[selectedDay]]);
 
     const toggleDraftSlot = (key: TimeSlotKey) => {
@@ -338,24 +326,7 @@ export default function AvailabilityTab() {
         }
     };
 
-    const handleSelectDateClick = () => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click();
-
-    const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const iso = e.target.value;
-        if (!iso) return;
-        const monthStart = `${iso.slice(0, 7)}-01`;
-        dispatch(setCurrentMonth(monthStart));
-        setSelectedDay(iso);
-    };
-
     const selectedStatus = dayStatus(slotsByDate[selectedDay]);
-
-    // Visual-only: while locked, always render the switch as OFF regardless
-    // of whatever value is saved underneath (e.g. a paid plan that lapsed
-    // last week, or a KYC status that was later revoked, shouldn't still
-    // look "on" to the provider). Saving is blocked entirely while locked
-    // (see the disabled Save button below), so this never silently
-    // overwrites their stored preference.
     const displayAcceptsProOrders = proOrdersUnlocked && draftSettings.acceptsProOrders;
 
     return (
@@ -414,24 +385,7 @@ export default function AvailabilityTab() {
                                 </button>
                             </div>
                             <p className="text-sm font-semibold text-slate-800">{monthLabel}</p>
-                            <div className="relative">
-                                <button
-                                    onClick={handleSelectDateClick}
-                                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                                >
-                                    <Calendar className="h-4 w-4" />
-                                    Select Date
-                                </button>
-                                <input
-                                    ref={dateInputRef}
-                                    type="date"
-                                    min={todayIso}
-                                    onChange={handleDateInputChange}
-                                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                                    aria-hidden
-                                    tabIndex={-1}
-                                />
-                            </div>
+                            <div className="w-[100px]" />
                         </div>
 
                         <div className="relative grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-slate-100">
@@ -449,9 +403,6 @@ export default function AvailabilityTab() {
                                 const isClickable = cell.inMonth && !cell.isPast;
                                 const cellSlots = slotsByDate[cell.iso];
 
-                                // Dot count == number of available slots for this day, not
-                                // a fixed 3 always. A fully unavailable day gets a single
-                                // red dot instead of three gray ones.
                                 const availableDefs = SLOT_DEFS.filter((def) =>
                                     isSlotAvailable(cellSlots, def.key),
                                 );
@@ -522,7 +473,7 @@ export default function AvailabilityTab() {
 
                         <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
                             <span className="flex items-center gap-1.5">
-                                <Calendar className="h-3.5 w-3.5" />
+                                <Lock className="h-3.5 w-3.5" />
                                 Each day has 3 time slots:
                             </span>
                             {SLOT_DEFS.map((def) => (
@@ -595,10 +546,7 @@ export default function AvailabilityTab() {
                     </div>
                 </div>
 
-                {/* Weekly working pattern — full width row below the calendar/sidebar grid,
-                    so it stretches all the way to the right edge without touching the
-                    day-detail ("Overall Status") sidebar above. Day toggles and slot
-                    toggles are independent, not a 21-cell grid. */}
+                {/* Weekly working pattern */}
                 <div className="mt-6 rounded-xl border border-slate-200 p-4 sm:p-5">
                     <p className="mb-1 text-sm font-semibold text-slate-800">Weekly Working Pattern</p>
                     <p className="mb-4 text-xs text-slate-400">
@@ -609,48 +557,50 @@ export default function AvailabilityTab() {
                         <div>
                             <p className="mb-1.5 text-xs font-medium text-slate-500">Working days</p>
                             <div className="flex flex-wrap gap-1.5">
-                                {WEEKDAYS.map((label, dow) => (
-                                    <button
-                                        key={label}
-                                        onClick={() => toggleDay(dow)}
-                                        className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                                            draftSettings.workingDays.includes(dow)
-                                                ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
-                                                : "border-slate-200 bg-white text-slate-500"
-                                        }`}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
+                                {WEEKDAYS.map((label, dow) => {
+                                    const workingDays = draftSettings?.workingDays || [];
+                                    const isActive = workingDays.includes(dow);
+                                    return (
+                                        <button
+                                            key={label}
+                                            onClick={() => toggleDay(dow)}
+                                            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                                                isActive
+                                                    ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
+                                                    : "border-slate-200 bg-white text-slate-500"
+                                            }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
                         <div>
                             <p className="mb-1.5 text-xs font-medium text-slate-500">Default slots</p>
                             <div className="flex flex-wrap gap-1.5">
-                                {SLOT_DEFS.map((def) => (
-                                    <button
-                                        key={def.key}
-                                        onClick={() => toggleDefaultSlot(def.key)}
-                                        className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
-                                            draftSettings.defaultSlots.includes(def.key)
-                                                ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
-                                                : "border-slate-200 bg-white text-slate-500"
-                                        }`}
-                                    >
-                                        <span className={`h-1.5 w-1.5 rounded-full ${def.dot}`} />
-                                        {def.label}
-                                    </button>
-                                ))}
+                                {SLOT_DEFS.map((def) => {
+                                    const defaultSlots = draftSettings?.defaultSlots || [];
+                                    const isActive = defaultSlots.includes(def.key);
+                                    return (
+                                        <button
+                                            key={def.key}
+                                            onClick={() => toggleDefaultSlot(def.key)}
+                                            className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
+                                                isActive
+                                                    ? "border-[#1e3a8a] bg-[#1e3a8a] text-white"
+                                                    : "border-slate-200 bg-white text-slate-500"
+                                            }`}
+                                        >
+                                            <span className={`h-1.5 w-1.5 rounded-full ${def.dot}`} />
+                                            {def.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        {/* Accept Business & Pro Orders — gated behind account status,
-                            KYC verification, onboarding completion, AND an active PAID
-                            plan (mirrors ProviderPoolService.checkProOrdersEligibility
-                            on the backend, checked in the same priority order). Any
-                            failing gate forces this off and disabled with an inline
-                            CTA specific to that blocker. */}
                         <div className="rounded-lg border border-slate-100 p-3 sm:col-span-2 lg:col-span-1">
                             <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-1.5">

@@ -8,7 +8,6 @@ interface TopHeaderProps {
     userName?: string;
     userEmail?: string;
     userInitials?: string;
-    hasNotifications?: boolean;
     /** Opens the mobile sidebar drawer */
     onMenuClick?: () => void;
 }
@@ -17,11 +16,10 @@ export default function TopHeader({
                                       userName = "Super Admin",
                                       userEmail = "admin@servicelink.com",
                                       userInitials = "SA",
-                                      hasNotifications,
                                       onMenuClick,
                                   }: TopHeaderProps) {
     const unreadCount = useAppSelector((state) => state.notifications.unreadCount);
-    const showBadge = hasNotifications ?? unreadCount > 0;
+    const showBadge = unreadCount > 0;
     return (
         <header className="h-16 bg-white border-b border-gray-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-10 gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -51,10 +49,10 @@ export default function TopHeader({
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                 <Link href="/dashboard/admin/notifications"
                     className="relative p-2 text-gray-500 hover:text-[#1e3a8a]"
-                    aria-label="Notifications"
+                    aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
                 >
                     <Bell size={20} />
-                    {showBadge && <span className="absolute top-0 right-0 min-w-4 h-4 px-1 bg-[#e8683f] text-white text-[9px] rounded-full flex items-center justify-center">{unreadCount > 9 ? "9+" : unreadCount}</span>}
+                    {showBadge && <span className="absolute top-0 right-0 min-w-4 h-4 px-1 bg-[#e8683f] text-white text-[9px] rounded-full flex items-center justify-center">{unreadCount}</span>}
                 </Link>
 
                 <div className="flex items-center gap-3 sm:border-l pl-0 sm:pl-4 border-gray-200">

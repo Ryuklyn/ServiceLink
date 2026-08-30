@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, Phone, ShieldCheck, Loader2 } from "lucide-react";
 import { sendPhoneOtp, verifyPhoneOtpForMe } from "@/lib/api/authApi";
+import { normalizeError } from "@/utils/axios";
 
 interface AddPhoneModalProps {
     onClose: () => void;
@@ -39,8 +40,8 @@ export default function AddPhoneModal({
             setLoading(true);
             await sendPhoneOtp(phone);
             setStep("otp");
-        } catch (err: any) {
-            setError(err?.response?.data?.message || "Failed to send OTP");
+        } catch (err: unknown) {
+            setError(normalizeError(err).message || "Failed to send OTP");
         } finally {
             setLoading(false);
         }
@@ -57,8 +58,8 @@ export default function AddPhoneModal({
             await verifyPhoneOtpForMe(phone, otp);
             onVerified(phone);
             onClose();
-        } catch (err: any) {
-            setError(err?.response?.data?.message || "Invalid or expired OTP");
+        } catch (err: unknown) {
+            setError(normalizeError(err).message || "Invalid or expired OTP");
         } finally {
             setLoading(false);
         }
@@ -84,7 +85,7 @@ export default function AddPhoneModal({
                             {isUpdate ? "Update Phone Number" : "Add Phone Number"}
                         </h3>
                         <p className="text-xs text-gray-500 mb-5">
-                            We'll send a 6-digit code to this number via WhatsApp.
+                            We&apos;ll send a 6-digit code to this number via WhatsApp.
                         </p>
 
                         {isUpdate && (

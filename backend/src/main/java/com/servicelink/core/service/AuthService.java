@@ -47,12 +47,13 @@ public class AuthService {
     private final TeamMemberRepository teamMemberRepository;
 
     public AuthResponseDTO register(RegisterRequestDTO request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Email already in use.");
+        String email = request.getEmail().trim().toLowerCase();
+        if (userRepository.existsByEmailAndRole(email, Role.CUSTOMER)) {
+            throw new IllegalArgumentException("Email already in use for a customer account.");
         }
 
         User user = new User();
-        user.setEmail(request.getEmail().trim());
+        user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setProvider(AuthProvider.LOCAL);
         user.setRole(Role.CUSTOMER);
@@ -72,7 +73,8 @@ public class AuthService {
 
     public AuthResponseDTO login(LoginRequestDTO request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
+        Role requestedRole = request.getRole() == null ? Role.CUSTOMER : request.getRole();
+        User user = userRepository.findByEmailAndRole(request.getEmail().trim().toLowerCase(), requestedRole)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -183,7 +185,11 @@ public class AuthService {
     }
 
     public void resetPassword(String email, String newPassword) {
-        User user = userRepository.findByEmail(email)
+        resetPassword(email, Role.CUSTOMER, newPassword);
+    }
+
+    public void resetPassword(String email, Role role, String newPassword) {
+        User user = userRepository.findByEmailAndRole(email.trim().toLowerCase(), role)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setPassword(passwordEncoder.encode(newPassword));
@@ -205,7 +211,7 @@ public class AuthService {
 
     private String issuePreAuthToken(User user) {
         return jwtService.generatePurposeToken(
-                Map.of("type", "PRE_AUTH_2FA"),
+                Map.of("type", "PRE_AUTH_2FA", "role", user.getRole().name()),
                 user.getEmail(),
                 PRE_AUTH_2FA_EXPIRY_MILLIS
         );
@@ -221,7 +227,8 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid or expired 2FA session");
         }
 
-        User user = userRepository.findByEmail(email)
+        Role role = jwtService.extractRole(preAuthToken);
+        User user = userRepository.findByEmailAndRole(email, role)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
         if (!user.is2FAEnabled() || user.getTwoFactorMethod() == null) {
@@ -233,7 +240,7 @@ public class AuthService {
 
     private AuthResponseDTO issueFullLoginSession(User user) {
         String accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
-        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail(), user.getRole());
 
         String jti = jwtService.extractJti(refreshToken);
         refreshTokenService.store(

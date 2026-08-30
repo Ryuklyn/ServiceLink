@@ -226,7 +226,7 @@ public class TeamMemberService {
             throw new ResponseStatusException(HttpStatus.GONE, "This invitation link has expired");
         }
 
-        User user = userRepository.findByEmail(member.getEmail())
+        User user = userRepository.findByEmailAndRole(member.getEmail(), Role.PRO)
                 .orElseGet(() -> {
                     User u = new User();
                     u.setFullName(member.getFullName());
@@ -246,7 +246,7 @@ public class TeamMemberService {
         teamMemberRepository.save(member);
 
         String accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
-        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail(), user.getRole());
         String jti = jwtService.extractJti(refreshToken);
         refreshTokenService.store(user.getEmail(), jti, refreshToken, jwtService.getRefreshTokenExpirationMillis());
 

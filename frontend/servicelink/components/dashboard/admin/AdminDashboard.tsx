@@ -1,65 +1,130 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import api from "@/utils/axios";
+import { kycAdminApi } from "@/store/slices/features/kyc/kycAdminApi";
+import { toBadgeStatus } from "@/store/slices/features/kyc/kycTypes";
 import KpiCards from "./KpiCards";
 import UserTable from "./UserTable";
-import type { UserRow } from "./types";
+import type { UserRow, KpiCard } from "./types";
+
+interface DashboardStats {
+    totalRevenue: number;
+    activeProSubscriptions: number;
+    verifiedProviders: number;
+    pendingKycCount: number;
+}
 
 export default function AdminDashboard() {
-    const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
-    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const router = useRouter();
+    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [rows, setRows] = useState<UserRow[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleAddProvider = useCallback(() => {
-        setIsInviteModalOpen(true);
+    useEffect(() => {
+        let active = true;
+        
+        async function loadData() {
+            try {
+                // Fetch dashboard statistics
+                const statsRes = await api.get<DashboardStats>("/admin/dashboard/stats");
+                
+                // Fetch KYC submissions
+                const kycList = await kycAdminApi.list();
+
+                if (!active) return;
+
+                setStats(statsRes.data);
+
+                // Map KYC submissions to UserRow format
+                const mapped: UserRow[] = kycList.map((item) => {
+                    const initials = item.fullName 
+                        ? item.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) 
+                        : "?";
+                    const status = toBadgeStatus(item.status);
+                    return {
+                        id: String(item.id),
+                        name: item.fullName,
+                        email: item.email || item.applicantIdentifier,
+                        initials: initials,
+                        avatarUrl: item.photoUrl ?? null,
+                        roleOrService: `Technician (${item.primaryService || "—"})`,
+                        status: status,
+                        joinedDate: new Date(item.submittedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "2-digit",
+                            year: "numeric",
+                        }),
+                        avatarTone: status === "manual_audit" || status === "pending_kyc" ? "amber" : "slate",
+                    };
+                });
+
+                setRows(mapped);
+            } catch (err) {
+                console.error("Failed to load dashboard data:", err);
+            } finally {
+                if (active) setLoading(false);
+            }
+        }
+
+        loadData();
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     const handleRowAction = useCallback((row: UserRow) => {
-        setSelectedUser(row);
-        console.log("Row action clicked for", row.name);
-    }, []);
+        router.push(`/dashboard/admin/kyc?id=${row.id}`);
+    }, [router]);
+
+    const kpis: KpiCard[] = [
+        {
+            id: "revenue",
+            label: "Total Revenue (Gross)",
+            value: stats ? `NPR ${stats.totalRevenue.toLocaleString()}` : "NPR 0",
+            deltaTone: "positive",
+        },
+        {
+            id: "pro-subscription",
+            label: "Active Pro Subscriptions",
+            value: stats ? `${stats.activeProSubscriptions} Active` : "0 Active",
+            sublabel: "Starter & Growth",
+            deltaTone: "neutral",
+        },
+        {
+            id: "providers",
+            label: "Verified Providers",
+            value: stats ? `${stats.verifiedProviders} Techs` : "0 Techs",
+            sublabel: "Active on Platform",
+            deltaTone: "neutral",
+        },
+        {
+            id: "action",
+            label: "Action Needed (KYC/Disputes)",
+            value: stats ? `${stats.pendingKycCount} Pending` : "0 Pending",
+            sublabel: "Requires Review",
+            deltaTone: "warning",
+        },
+    ];
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto">
             {/* PAGE CONTENT */}
-            <KpiCards />
+            <KpiCards kpis={kpis} />
             <UserTable
-                onAddProvider={handleAddProvider}
+                rows={rows}
                 onRowAction={handleRowAction}
             />
-
-            {/* INVITE PROVIDER MODAL */}
-            {isInviteModalOpen && (
-                <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-200">
-                        <h3 className="text-lg font-bold text-slate-900">Invite New Service Provider</h3>
-                        <p className="text-xs text-slate-500">
-                            Send an onboarding invitation link directly to the technician or enterprise contractor.
-                        </p>
-                        <input
-                            type="email"
-                            placeholder="provider@example.com"
-                            className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button
-                                onClick={() => setIsInviteModalOpen(false)}
-                                className="px-4 py-2 text-xs font-semibold rounded-lg border border-slate-200 hover:bg-slate-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    alert("Invitation sent!");
-                                    setIsInviteModalOpen(false);
-                                }}
-                                className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-                            >
-                                Send Invite
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

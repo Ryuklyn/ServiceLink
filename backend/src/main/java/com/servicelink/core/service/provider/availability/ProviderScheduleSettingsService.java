@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.HashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -24,13 +25,22 @@ public class ProviderScheduleSettingsService {
     @Transactional
     public ProviderScheduleSettings getOrCreate(Long providerId) {
         return repo.findById(providerId).orElseGet(() -> {
-            Provider provider = providerRepo.getReferenceById(providerId);
-            return repo.save(ProviderScheduleSettings.builder()
-                    .provider(provider).providerId(providerId).build());
+            // The settings and availability requests are fired together on
+            // page load. Locking the owning Provider makes first-time default
+            // creation safe when those requests arrive concurrently.
+            Provider provider = providerRepo.findByIdForUpdate(providerId)
+                    .orElseThrow(() -> new IllegalStateException("Provider profile not found."));
+            return repo.findById(providerId).orElseGet(() ->
+                    repo.saveAndFlush(ProviderScheduleSettings.builder()
+                            .provider(provider)
+                            .providerId(providerId)
+                            .build()));
         });
     }
 
-    @Transactional(readOnly = true)
+    // This GET may create default settings for a newly-approved provider, so
+    // it must not run in a read-only transaction.
+    @Transactional
     public ScheduleSettingsDTO getMySettings(Long userId) {
         Provider provider = requireProvider(userId);
         var s = getOrCreate(provider.getId());
@@ -60,14 +70,26 @@ public class ProviderScheduleSettingsService {
             }
         }
 
-        if (dto.workingDays() != null) s.setWorkingDays(dto.workingDays());
-        if (dto.defaultSlots() != null) s.setDefaultSlots(dto.defaultSlots());
+        if (dto.workingDays() != null) {
+            if (dto.workingDays().stream().anyMatch(day -> day == null || day < 0 || day > 6)) {
+                throw new IllegalArgumentException("Working days must be between Sunday (0) and Saturday (6)");
+            }
+            s.getWorkingDays().clear();
+            s.getWorkingDays().addAll(new HashSet<>(dto.workingDays()));
+        }
+        if (dto.defaultSlots() != null) {
+            if (dto.defaultSlots().stream().anyMatch(slot -> slot == null)) {
+                throw new IllegalArgumentException("Default time slots cannot contain an empty value");
+            }
+            s.getDefaultSlots().clear();
+            s.getDefaultSlots().addAll(new HashSet<>(dto.defaultSlots()));
+        }
         if (dto.acceptsProOrders() != null) s.setAcceptsProOrders(dto.acceptsProOrders());
         repo.save(s);
     }
 
     private Provider requireProvider(Long userId) {
         return providerRepo.findByUser_Id(userId)
-                .orElseThrow(() -> new IllegalStateException("No provider profile for this account."));
+                .orElseThrow(() -> new com.servicelink.core.exception.ResourceNotFoundException("Provider profile not found for this account."));
     }
 }

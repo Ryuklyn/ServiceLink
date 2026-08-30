@@ -85,7 +85,7 @@ public class KycService {
     ) {
         Category primaryCategory = resolveActiveCategory(dto.getPrimaryCategoryId());
 
-        Optional<User> userOpt = userRepository.findByEmail(applicantIdentifier);
+        Optional<User> userOpt = userRepository.findByEmailAndRole(applicantIdentifier, Role.PROVIDER);
 
         if (userOpt.isPresent() && kycRepository.existsByUser(userOpt.get())) {
             throw new IllegalStateException("KYC already submitted for this account.");
@@ -171,10 +171,16 @@ public class KycService {
         KycSubmission submission = findSubmissionByIdentifierOrId(identifier);
 
         if (submission.getStatus() == KycStatus.APPROVED) {
-            log.info("KYC for [{}] is already APPROVED — skipping re-approval to avoid duplicate Provider rows.",
+            if (providerRepository.findByKycSubmission_Id(submission.getId()).isPresent()) {
+                log.info("KYC for [{}] is already APPROVED and provisioned — skipping duplicate approval.",
+                        mask(submission.getApplicantIdentifier()));
+                return;
+            }
+            log.warn("KYC [{}] is APPROVED but has no Provider row; repairing provisioning.",
                     mask(submission.getApplicantIdentifier()));
-            return;
         }
+
+        validateProviderProvisioningData(submission);
 
         submission.setStatus(KycStatus.APPROVED);
         submission.setReviewedAt(Instant.now());
@@ -187,10 +193,13 @@ public class KycService {
         kycRepository.save(submission);
 
         User user = resolveOrCreateProviderUser(submission, submission.getApplicantIdentifier());
+        submission.setUser(user);
+        kycRepository.save(submission);
 
         Category primaryCategory = resolveActiveCategory(submission.getPrimaryCategoryId());
 
-        Provider provider = Provider.builder().user(user).build();
+        Provider provider = providerRepository.findByUser_Id(user.getId())
+                .orElseGet(() -> Provider.builder().user(user).build());
         provider.syncFromKyc(submission, primaryCategory);
 
         provider.setEmail(user.getEmail());
@@ -300,14 +309,19 @@ public class KycService {
     private User resolveOrCreateProviderUser(KycSubmission submission, String applicantIdentifier) {
         User user = submission.getUser();
 
+        // Legacy submissions may point at the CUSTOMER account that initiated
+        // KYC. Roles are separate identities now, so never reuse/convert it.
+        if (user != null && user.getRole() != Role.PROVIDER) {
+            user = null;
+        }
+
         if (user == null && submission.getEmail() != null) {
-            user = userRepository.findByEmail(submission.getEmail()).orElse(null);
+            user = userRepository.findByEmailAndRole(
+                    submission.getEmail().trim().toLowerCase(), Role.PROVIDER).orElse(null);
         }
 
         if (user != null) {
-            user.setRole(Role.PROVIDER);
-            userRepository.save(user);
-            log.info("User [{}] role elevated to PROVIDER following KYC approval.", mask(applicantIdentifier));
+            log.info("Existing PROVIDER account [{}] linked following KYC approval.", mask(applicantIdentifier));
             return user;
         }
 
@@ -322,7 +336,7 @@ public class KycService {
 
         User newUser = User.builder()
                 .fullName(submission.getFullName())
-                .email(email)
+                .email(email.trim().toLowerCase())
                 .provider(AuthProvider.LOCAL)
                 .role(Role.PROVIDER)
                 .verified(true)
@@ -332,6 +346,21 @@ public class KycService {
         User saved = userRepository.save(newUser);
         log.info("Created new PROVIDER account for [{}] following KYC approval.", mask(applicantIdentifier));
         return saved;
+    }
+
+    private void validateProviderProvisioningData(KycSubmission submission) {
+        if (submission.getEmail() == null || submission.getEmail().isBlank()) {
+            throw new IllegalStateException("Provider KYC cannot be approved because email is missing.");
+        }
+        if (submission.getPhone() == null || submission.getPhone().isBlank()) {
+            throw new IllegalStateException("Provider KYC cannot be approved because phone number is missing.");
+        }
+        if (submission.getFullName() == null || submission.getFullName().isBlank()) {
+            throw new IllegalStateException("Provider KYC cannot be approved because full name is missing.");
+        }
+        if (submission.getPrimaryCategoryId() == null) {
+            throw new IllegalStateException("Provider KYC cannot be approved because primary service is missing.");
+        }
     }
 
     private Integer parseTravelRadiusKm(String travelRadius) {
@@ -393,7 +422,7 @@ public class KycService {
         // A provider may have submitted KYC using phone OTP, meaning
         // applicantIdentifier holds their phone while their active JWT subject
         // is their email. The Provider -> KYC relationship is authoritative.
-        KycSubmission submission = userRepository.findByEmail(authenticatedEmail)
+        KycSubmission submission = userRepository.findByEmailAndRole(authenticatedEmail, Role.PROVIDER)
                 .flatMap(user -> providerRepository.findByUser_Id(user.getId())
                         .map(Provider::getKycSubmission))
                 .or(() -> kycRepository.findByEmail(authenticatedEmail))

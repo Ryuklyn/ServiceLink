@@ -35,11 +35,17 @@ public class AvailabilityExceptionService {
                     "You have an active booking in this slot! Complete or reschedule it before turning this off.");
         }
 
-        AvailabilityException ex = AvailabilityException.builder()
-                .provider(provider).dateStart(date).dateEnd(date).period(period)
-                .reason((reason == null || reason.isBlank()) ? "Not available" : reason)
-                .createdAt(Instant.now())
-                .build();
+        AvailabilityException ex = exceptionRepo
+                .findFirstByProvider_IdAndDateStartAndDateEndAndPeriod(
+                        provider.getId(), date, date, period)
+                .orElseGet(() -> AvailabilityException.builder()
+                        .provider(provider)
+                        .dateStart(date)
+                        .dateEnd(date)
+                        .period(period)
+                        .createdAt(Instant.now())
+                        .build());
+        ex.setReason((reason == null || reason.isBlank()) ? "Not available" : reason);
         exceptionRepo.save(ex);
 
         notificationService.sendPrivateNotification(

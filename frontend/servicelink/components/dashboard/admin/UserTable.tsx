@@ -1,6 +1,7 @@
 "use client";
 
-import { MoreVertical, Filter, Plus } from "lucide-react";
+import Image from "next/image";
+import { MoreVertical, Filter } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import type { UserRow } from "./types";
 
@@ -34,13 +35,11 @@ const AVATAR_TONE_CLASSES: Record<UserRow["avatarTone"], string> = {
 
 interface UserTableProps {
     rows?: UserRow[];
-    onAddProvider?: () => void;
     onRowAction?: (row: UserRow) => void;
 }
 
 export default function UserTable({
                                       rows = DEFAULT_ROWS,
-                                      onAddProvider,
                                       onRowAction,
                                   }: UserTableProps) {
     return (
@@ -58,13 +57,6 @@ export default function UserTable({
                     <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg hover:bg-gray-50">
                         <Filter size={14} />
                         Filter
-                    </button>
-                    <button
-                        onClick={onAddProvider}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                        <Plus size={14} />
-                        Add New Provider
                     </button>
                 </div>
             </div>
@@ -85,11 +77,19 @@ export default function UserTable({
                         <tr key={row.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 flex items-center gap-3">
                                 <div
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                                    className={`relative w-8 h-8 overflow-hidden rounded-full flex items-center justify-center font-bold text-xs ${
                                         AVATAR_TONE_CLASSES[row.avatarTone]
                                     }`}
                                 >
-                                    {row.initials}
+                                    {row.avatarUrl ? (
+                                        <Image
+                                            src={row.avatarUrl}
+                                            alt={`${row.name} profile photo`}
+                                            fill
+                                            sizes="32px"
+                                            className="object-cover"
+                                        />
+                                    ) : row.initials}
                                 </div>
                                 <div>
                                     <p className="font-semibold text-gray-900">{row.name}</p>

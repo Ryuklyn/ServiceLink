@@ -26,6 +26,9 @@ public class OrganizationService {
         if (oRepo.existsByWorkEmail(request.getWorkEmail())) {
             throw new IllegalArgumentException("An organization with this email already exists.");
         }
+        if (oRepo.existsByContactNumber(request.getContactNumber())) {
+            throw new IllegalArgumentException("This contact number is already registered as a business account");
+        }
 //        Organization saved = oRepo.save(oMapper.toEntity(request));
         Organization saved = oRepo.save(oMapper.toEntity(request));
         sessionService.updateStep(saved.getId(), "ORGANIZATION", null, null, null);

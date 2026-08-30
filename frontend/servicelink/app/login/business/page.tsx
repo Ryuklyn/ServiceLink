@@ -60,7 +60,7 @@ export default function BusinessSignInPage() {
     try {
       setLoading(true);
 
-      const response = await api.post("/auth/login", { email, password });
+      const response = await api.post("/auth/login", { email, password, role: "PRO" });
       
       if (response.data.requiresTwoFactor && response.data.preAuthToken) {
         setPreAuthToken(response.data.preAuthToken);

@@ -177,13 +177,24 @@ public class UserService {
         requirePassword(user);
         verifyCurrentPassword(user, currentPassword);
 
+        if (user.is2FAEnabled()) {
+            throw new IllegalStateException("Two-factor authentication is already enabled for this account");
+        }
+
+        if (method == null) {
+            throw new IllegalArgumentException("A two-factor authentication method is required");
+        }
+
         if (method == TwoFactorMethod.TOTP) {
             String secret = twoFactorAuthService.generateSecret();
+            String qr = twoFactorAuthService.generateQrCodeBase64(secret, user.getEmail());
+
+            // Persist only after QR generation succeeds, so a failed response cannot
+            // leave the account pointing at a secret the user never received.
             user.setTwoFactorSecret(secret);
             user.setTwoFactorMethod(TwoFactorMethod.TOTP);
             repo.save(user);
 
-            String qr = twoFactorAuthService.generateQrCodeBase64(secret, user.getEmail());
             return TwoFactorSetupInitResponseDTO.builder()
                     .qrCodeImageBase64(qr)
                     .manualSetupKey(secret)

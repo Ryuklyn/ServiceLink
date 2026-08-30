@@ -21,6 +21,22 @@ public class KycAdminMapper {
         return categoryRepository.findById(categoryId).map(Category::getName).orElse(null);
     }
 
+    private java.util.List<String> resolveCategoryNames(java.util.List<String> categoryIdsOrNames) {
+        if (categoryIdsOrNames == null || categoryIdsOrNames.isEmpty()) {
+            return java.util.List.of();
+        }
+        return categoryIdsOrNames.stream()
+                .map(idStr -> {
+                    try {
+                        Long id = java.lang.Long.parseLong(idStr);
+                        return categoryRepository.findById(id).map(Category::getName).orElse(idStr);
+                    } catch (NumberFormatException e) {
+                        return idStr;
+                    }
+                })
+                .toList();
+    }
+
     public KycAdminListItemDTO toListItem(KycSubmission s) {
         return KycAdminListItemDTO.builder()
                 .id(s.getId())
@@ -54,7 +70,8 @@ public class KycAdminMapper {
                 .tole(s.getTole())
                 .primaryService(resolvePrimaryServiceName(s.getPrimaryCategoryId()))
                 .otherService(s.getOtherService())
-                .additionalServices(kycMapper.fromJson(s.getAdditionalServices()))
+                .additionalServices(resolveCategoryNames(kycMapper.fromJson(s.getAdditionalServices())))
+
                 .experienceYears(s.getExperienceYears())
                 .primaryDistrict(s.getPrimaryDistrict())
                 .secondaryDistricts(kycMapper.fromJson(s.getSecondaryDistricts()))

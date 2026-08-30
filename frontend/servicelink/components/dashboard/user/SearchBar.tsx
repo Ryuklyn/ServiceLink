@@ -79,11 +79,12 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
           <Link
               href="/dashboard/user/notification"
               className="relative p-2 hover:bg-white/10 rounded-full transition-colors"
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
           >
             <Bell className="w-5 h-5 text-navbar-text" />
             {unreadCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-primary rounded-full text-[9px] font-bold text-primary-foreground flex items-center justify-center">
-              {unreadCount > 9 ? "9+" : unreadCount}
+              {unreadCount}
             </span>
             )}
           </Link>

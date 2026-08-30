@@ -73,7 +73,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // (e.g. KycController.resolveIdentifier) read the raw
                     // X-Provider-Token header themselves instead of relying on
                     // Spring Security's Authentication object.
-                    Optional<User> maybeUser = userRepository.findByEmail(email);
+                    Role tokenRole = jwtService.extractRole(token);
+                    Optional<User> maybeUser = userRepository.findByEmailAndRole(email, tokenRole);
 
                     if (maybeUser.isPresent()) {
                         User user = maybeUser.get();

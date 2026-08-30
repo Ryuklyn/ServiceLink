@@ -61,7 +61,7 @@ export async function login(
 ): Promise<LoginResponse> {
   const { data } = await api.post<LoginResponse>(
       "/auth/login",
-      { email, password },
+      { email, password, role: "CUSTOMER" },
       { _skipAuth: true }
   );
 

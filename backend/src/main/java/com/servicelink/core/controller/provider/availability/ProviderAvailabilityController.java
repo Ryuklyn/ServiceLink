@@ -57,7 +57,7 @@ public class ProviderAvailabilityController {
 
     private Long requireProviderId(Long userId) {
         Provider provider = providerRepo.findByUser_Id(userId)
-                .orElseThrow(() -> new IllegalStateException("No provider profile for this account."));
+                .orElseThrow(() -> new com.servicelink.core.exception.ResourceNotFoundException("No provider profile for this account."));
         return provider.getId();
     }
 }

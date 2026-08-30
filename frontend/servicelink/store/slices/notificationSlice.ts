@@ -17,8 +17,11 @@ interface NotificationState { items: NotificationItem[]; unreadCount: number; lo
 const initialState: NotificationState = { items: [], unreadCount: 0, loading: false, totalPages: 0 };
 const notificationSlice = createSlice({ name: 'notifications', initialState, reducers: {
   receiveRealtimeNotification: (state, action: PayloadAction<NotificationItem>) => {
-    if (!state.items.some((item) => item.id === action.payload.id)) state.items.unshift(action.payload);
-    if (!action.payload.isRead) state.unreadCount += 1;
+    const isNewNotification = !state.items.some((item) => item.id === action.payload.id);
+    if (isNewNotification) {
+      state.items.unshift(action.payload);
+      if (!action.payload.isRead) state.unreadCount += 1;
+    }
   },
 }, extraReducers: (builder) => builder
   .addCase(fetchNotifications.pending, (state) => { state.loading = true; })

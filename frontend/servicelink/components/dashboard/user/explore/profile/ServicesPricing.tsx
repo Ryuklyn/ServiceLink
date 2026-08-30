@@ -91,6 +91,26 @@ const FALLBACK_META: CategoryMeta = {
   border: "#e5e7eb",
 };
 
+function getCategoryMeta(category: string): CategoryMeta {
+  const normalized = category.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  const knownKey = Object.keys(CATEGORY_META).find((key) => {
+    if (normalized === key) return true;
+    if (key === "ELECTRICIAN") return normalized.includes("ELECTR");
+    if (key === "PLUMBER") return normalized.includes("PLUMB");
+    if (key === "CARPENTER") return normalized.includes("CARPENT");
+    if (key === "PAINTER") return normalized.includes("PAINT");
+    if (key === "CLEANER") return normalized.includes("CLEAN");
+    if (key === "AC_REPAIR") return normalized.includes("AC") && normalized.includes("REPAIR");
+    return false;
+  });
+  const visual = knownKey ? CATEGORY_META[knownKey] : FALLBACK_META;
+
+  // The API category is the source of truth for the tab title. Visual metadata
+  // only supplies its icon/colors; it must never turn an unknown category into
+  // a generic repeated "Other" label.
+  return { ...visual, label: category.trim() || FALLBACK_META.label };
+}
+
 // Display label shown next to the price/quantity for each pricing unit.
 // Must cover every member of PricingUnit or this fails to typecheck.
 const UNIT_LABEL: Record<PricingUnit, string> = {
@@ -373,7 +393,15 @@ export default function ServicesPricing({
                                           onUpdateService,
                                         }: ServicesPricingProps) {
   const grouped = useMemo(() => groupByCategory(provider.services), [provider.services]);
-  const categories = Object.keys(grouped);
+  const categories = useMemo(() => {
+    const primaryCategory = provider.category?.trim().toLocaleLowerCase();
+    return Object.keys(grouped).sort((left, right) => {
+      const leftIsPrimary = left.trim().toLocaleLowerCase() === primaryCategory;
+      const rightIsPrimary = right.trim().toLocaleLowerCase() === primaryCategory;
+      if (leftIsPrimary !== rightIsPrimary) return leftIsPrimary ? -1 : 1;
+      return left.localeCompare(right);
+    });
+  }, [grouped, provider.category]);
   const [active, setActive] = useState("All");
 
   const visibleCategories =
@@ -422,7 +450,7 @@ export default function ServicesPricing({
             </button>
 
             {categories.map((cat) => {
-              const meta = CATEGORY_META[cat] ?? FALLBACK_META;
+              const meta = getCategoryMeta(cat);
               const isActiveTab = active === cat;
               return (
                   <button
@@ -456,13 +484,13 @@ export default function ServicesPricing({
             <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
               <p className="text-sm font-medium text-slate-500">No services listed yet</p>
               <p className="text-xs text-slate-400 mt-1">
-                This provider hasn't published any pricing.
+                This provider hasn&apos;t published any pricing.
               </p>
             </div>
         ) : (
             <div className="flex flex-col gap-6 sm:gap-7">
               {visibleCategories.map((cat) => {
-                const meta = CATEGORY_META[cat] ?? FALLBACK_META;
+                const meta = getCategoryMeta(cat);
                 return (
                     <div key={cat}>
                       <div className="flex items-center gap-2 mb-3">

@@ -74,9 +74,11 @@ public class AuthController {
 
         String email;
         String jti;
+        Role role;
         try {
             email = jwtService.extractUsername(refreshToken);
             jti = jwtService.extractJti(refreshToken);
+            role = jwtService.extractRole(refreshToken);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -90,7 +92,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndRole(email, role)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getRole() == Role.PROVIDER && !sessionService.isSessionActive(user.getId(), jti)) {
@@ -100,7 +102,7 @@ public class AuthController {
         // Rotate: revoke old, issue new
         refreshTokenService.revoke(email, jti);
 
-        String newRefreshToken = jwtService.generateRefreshToken(user.getEmail());
+        String newRefreshToken = jwtService.generateRefreshToken(user.getEmail(), user.getRole());
         String newJti = jwtService.extractJti(newRefreshToken);
         String newAccessToken;
 
@@ -204,7 +206,7 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        String phone = body.get("phone");
+        String phone = normalizePhone(body.get("phone"));
         String otp = body.get("otp");
 
         if (phone == null || otp == null) {
@@ -213,10 +215,17 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
 
         boolean valid = otpService.verifyOtp(phone, otp);
         if (!valid) {
-            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).build();
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "Invalid or expired OTP. Request a new code and use the latest one.");
         }
 
         User user = (User) auth.getPrincipal();
+        if (userRepository.existsByPhoneAndRoleExcludingUser(phone, user.getRole(), user.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This phone number is already registered as a " + accountRoleLabel(user.getRole()) + " account.");
+        }
         UserProfile profile = user.getProfile();
         if (profile == null) {
             profile = new UserProfile();
@@ -257,11 +266,25 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
 
     @PostMapping("/send-phone-otp")
     public ResponseEntity<OtpSendResponseDTO> sendPhoneOtp(
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
 
-        String phone = body.get("phone");
+        String phone = normalizePhone(body.get("phone"));
         if (phone == null || phone.isBlank()) {
             throw new IllegalArgumentException("Phone number is required");
+        }
+
+        // The same phone may belong to one CUSTOMER and one PROVIDER/PRO,
+        // but never to two accounts of the same role. Authenticated settings
+        // requests are checked before generating/sending an OTP. Public KYC
+        // requests have no User principal and continue through normally.
+        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof User currentUser
+                && userRepository.existsByPhoneAndRoleExcludingUser(
+                        phone, currentUser.getRole(), currentUser.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This phone number is already registered as a "
+                            + accountRoleLabel(currentUser.getRole()) + " account.");
         }
 
         String otp = otpService.generateOtp(phone);
@@ -274,6 +297,14 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
                 .deliveryMethod(result.method().name())
                 .whatsappLink(result.whatsappLink())
                 .build());
+    }
+
+    private String normalizePhone(String phone) {
+        return phone == null ? null : phone.trim();
+    }
+
+    private String accountRoleLabel(Role role) {
+        return role == Role.CUSTOMER ? "user" : role.name().toLowerCase();
     }
 
     @PostMapping("/verify-phone-otp")
@@ -534,7 +565,7 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
     }
 
     private AuthResponseDTO issueSessionTokens(User user) {
-        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail(), user.getRole());
         String jti = jwtService.extractJti(refreshToken);
         String accessToken;
 

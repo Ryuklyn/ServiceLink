@@ -19,7 +19,7 @@ public class AdminInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         // Prevent duplicate seeding if admin already exists
-        if (userRepository.existsByEmail("admin@servicelink.com")) {
+        if (userRepository.existsByEmailAndRole("admin@servicelink.com", Role.ADMIN)) {
             return;
         }
 

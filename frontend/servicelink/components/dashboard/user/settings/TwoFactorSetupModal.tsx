@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { X, Lock, ShieldCheck, CheckCircle2, Smartphone, Mail, ArrowLeft } from "lucide-react";
+import { X, Lock, CheckCircle2, Smartphone, Mail, ArrowLeft } from "lucide-react";
 import { toast } from "react-toastify";
-import api from "@/utils/axios";
+import api, { normalizeError } from "@/utils/axios";
 import { useAppSelector } from "@/store/hooks";
 
 type Step = "password" | "chooseMethod" | "totpScan" | "totpVerify" | "emailVerify" | "done";
@@ -25,6 +25,19 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
     const [otp, setOtp] = useState("");
     const [loading, setLoading] = useState(false);
 
+    const showRequestError = (error: unknown, fallback: string) => {
+        const apiError = normalizeError(error);
+        toast.error(apiError.message || fallback);
+    };
+
+    const requireUserId = (): number | null => {
+        if (!user?.id) {
+            toast.error("Your account could not be loaded. Please refresh and try again.");
+            return null;
+        }
+        return user.id;
+    };
+
     // ── Step 1: password re-verify, then show method choice ──
     const handlePasswordSubmit = async () => {
         if (!password) {
@@ -36,9 +49,12 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
 
     // ── Step 2a: Authenticator app chosen — request secret + QR ──
     const handleChooseTotp = async () => {
+        const userId = requireUserId();
+        if (userId === null) return;
+
         try {
             setLoading(true);
-            const { data } = await api.post(`/users/${user?.id}/2fa/init`, {
+            const { data } = await api.post(`/users/${userId}/2fa/init`, {
                 currentPassword: password,
                 method: "TOTP",
             });
@@ -46,8 +62,8 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
             setManualKey(data.manualSetupKey);
             setMethod("TOTP");
             setStep("totpScan");
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Failed to start 2FA setup");
+        } catch (error: unknown) {
+            showRequestError(error, "Failed to start 2FA setup");
         } finally {
             setLoading(false);
         }
@@ -55,17 +71,20 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
 
     // ── Step 2b: Email OTP chosen — send a code to their registered email ──
     const handleChooseEmail = async () => {
+        const userId = requireUserId();
+        if (userId === null) return;
+
         try {
             setLoading(true);
-            await api.post(`/users/${user?.id}/2fa/init`, {
+            await api.post(`/users/${userId}/2fa/init`, {
                 currentPassword: password,
                 method: "EMAIL",
             });
             toast.success(`Code sent to ${user?.email}`);
             setMethod("EMAIL");
             setStep("emailVerify");
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Failed to send code");
+        } catch (error: unknown) {
+            showRequestError(error, "Failed to send code");
         } finally {
             setLoading(false);
         }
@@ -77,27 +96,33 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
             toast.error("Enter the complete 6-digit code");
             return;
         }
+        const userId = requireUserId();
+        if (userId === null) return;
+
         try {
             setLoading(true);
-            await api.post(`/users/${user?.id}/2fa/verify`, { otp });
+            await api.post(`/users/${userId}/2fa/verify`, { otp });
             setStep("done");
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Invalid or expired code");
+        } catch (error: unknown) {
+            showRequestError(error, "Invalid or expired code");
         } finally {
             setLoading(false);
         }
     };
 
     const handleResendEmail = async () => {
+        const userId = requireUserId();
+        if (userId === null) return;
+
         try {
             setLoading(true);
-            await api.post(`/users/${user?.id}/2fa/init`, {
+            await api.post(`/users/${userId}/2fa/init`, {
                 currentPassword: password,
                 method: "EMAIL",
             });
             toast.success("Code resent");
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Failed to resend code");
+        } catch (error: unknown) {
+            showRequestError(error, "Failed to resend code");
         } finally {
             setLoading(false);
         }
@@ -139,7 +164,7 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
                     <>
                         <h3 className="text-lg font-bold text-gray-900 mb-1">Choose a Verification Method</h3>
                         <p className="text-sm text-gray-500 mb-5">
-                            Pick how you'd like to receive codes when signing in.
+                            Pick how you&apos;d like to receive codes when signing in.
                         </p>
 
                         <button
@@ -166,7 +191,7 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
                             </div>
                             <div>
                                 <p className="text-sm font-bold text-gray-900">Email Code</p>
-                                <p className="text-xs text-gray-500">We'll send a code to {user?.email}</p>
+                                <p className="text-xs text-gray-500">We&apos;ll send a code to {user?.email}</p>
                             </div>
                         </button>
                     </>
@@ -187,18 +212,18 @@ export default function TwoFactorSetupModal({ onClose, onEnabled }: Props) {
                         <div className="flex justify-center mb-4">
                             <img src={qrCode} alt="2FA QR Code" className="w-48 h-48 border border-gray-100 rounded-xl" />
                         </div>
-                        <p className="text-xs text-gray-500 mb-1">Can't scan? Enter manually:</p>
+                        <p className="text-xs text-gray-500 mb-1">Can&apos;t scan? Enter manually:</p>
                         <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 mb-3 text-center font-mono text-sm tracking-wider">
                             {manualKey}
                         </div>
                         <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-5">
-                            Don't close this window until you've verified — closing and reopening generates a new code and invalidates this scan.
+                            Don&apos;t close this window until you&apos;ve verified — closing and reopening generates a new code and invalidates this scan.
                         </p>
                         <button
                             onClick={() => setStep("totpVerify")}
                             className="w-full py-3 rounded-xl bg-[#1e3a8a] text-white font-bold"
                         >
-                            I've Scanned It
+                            I&apos;ve Scanned It
                         </button>
                     </>
                 )}

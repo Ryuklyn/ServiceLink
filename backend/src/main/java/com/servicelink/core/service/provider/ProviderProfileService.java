@@ -26,6 +26,7 @@ import com.servicelink.core.mapper.provider.portfolio.PortfolioMapper;
 import com.servicelink.core.model.appointment.Appointment;
 import com.servicelink.core.model.appointment.AppointmentStatus;
 import com.servicelink.core.model.common.ServiceCategory;
+import com.servicelink.core.model.common.KycSubmission;
 import com.servicelink.core.model.provider.*;
 import com.servicelink.core.model.provider.portfolio.Portfolio;
 import com.servicelink.core.model.provider.portfolio.PortfolioMedia;
@@ -36,6 +37,7 @@ import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
 import com.servicelink.core.repository.provider.service.CategoryRepository;
+import com.servicelink.core.repository.KycRepository;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.appointment.ProviderServiceRepository;
 import com.servicelink.core.repository.appointment.ServiceCatalogRepository;
@@ -54,7 +56,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -77,6 +82,7 @@ public class ProviderProfileService {
     private final ProviderMapper             mapper;
     private final ProviderSubscriptionService subscriptionService;
     private final NotificationService notificationService;
+    private final KycRepository kycRepository;
 
     // ══════════════════════════════════════════════════════════════════════════
     // PUBLIC PROFILE (no auth required)
@@ -791,29 +797,63 @@ public class ProviderProfileService {
                 ? me.getReferralFreeMonthsEarned()
                 : 0;
 
-        List<Provider> referred = providerRepo.findByReferredById(me.getId());
+        List<ReferralHistoryDTO> history = new ArrayList<>();
+        Set<Long> includedKycIds = new HashSet<>();
 
-        List<ReferralHistoryDTO> history = referred.stream()
-                .map(p -> {
-                    String kycStatus = p.getKycSubmission() != null
-                            ? p.getKycSubmission().getStatus().name()
-                            : "PENDING";
-                    // TODO: replace with a real subscription/payment status check
-                    // once that entity exists — placeholder below assumes any
-                    // active provider has paid.
-                    String paymentStatus = Boolean.TRUE.equals(p.getIsActive()) ? "PAID" : "UNPAID";
-                    boolean counts = "APPROVED".equals(kycStatus) && "PAID".equals(paymentStatus);
+        // Referral codes are captured at KYC submission time. Pending/manual
+        // audit applicants do not have a Provider row yet, so querying only
+        // Provider.referredBy hides them from referral history.
+        List<KycSubmission> referredSubmissions = kycRepository
+                .findByReferralCodeIgnoreCaseOrderBySubmittedAtDesc(me.getReferralCode());
 
-                    return ReferralHistoryDTO.builder()
-                            .name(p.getFullName())
-                            .category(p.getPrimaryCategory() != null ? p.getPrimaryCategory().getName() : "UNKNOWN")
-                            .joinedDate(p.getMemberSince())
-                            .kycStatus(kycStatus)
-                            .paymentStatus(paymentStatus)
-                            .counts(counts)
-                            .build();
-                })
-                .toList();
+        for (KycSubmission submission : referredSubmissions) {
+            includedKycIds.add(submission.getId());
+            Provider provisioned = providerRepo.findByKycSubmission_Id(submission.getId()).orElse(null);
+            String paymentStatus = provisioned == null
+                    ? "PENDING"
+                    : Boolean.TRUE.equals(provisioned.getIsActive()) ? "PAID" : "UNPAID";
+            String kycStatus = submission.getStatus() != null
+                    ? submission.getStatus().name()
+                    : "PENDING";
+            boolean counts = "APPROVED".equals(kycStatus) && "PAID".equals(paymentStatus);
+
+            String category = submission.getPrimaryCategoryId() == null
+                    ? "UNKNOWN"
+                    : categoryRepo.findById(submission.getPrimaryCategoryId())
+                            .map(Category::getName)
+                            .orElse("UNKNOWN");
+
+            history.add(ReferralHistoryDTO.builder()
+                    .name(submission.getFullName())
+                    .category(category)
+                    .joinedDate(submission.getSubmittedAt())
+                    .kycStatus(kycStatus)
+                    .paymentStatus(paymentStatus)
+                    .counts(counts)
+                    .build());
+        }
+
+        // Retain legacy referrals whose Provider.referredBy was populated but
+        // whose older KYC row did not store the referral code.
+        for (Provider provider : providerRepo.findByReferredById(me.getId())) {
+            KycSubmission submission = provider.getKycSubmission();
+            if (submission != null && includedKycIds.contains(submission.getId())) {
+                continue;
+            }
+            String kycStatus = submission != null && submission.getStatus() != null
+                    ? submission.getStatus().name()
+                    : "PENDING";
+            String paymentStatus = Boolean.TRUE.equals(provider.getIsActive()) ? "PAID" : "UNPAID";
+            history.add(ReferralHistoryDTO.builder()
+                    .name(provider.getFullName())
+                    .category(provider.getPrimaryCategory() != null
+                            ? provider.getPrimaryCategory().getName() : "UNKNOWN")
+                    .joinedDate(provider.getMemberSince())
+                    .kycStatus(kycStatus)
+                    .paymentStatus(paymentStatus)
+                    .counts("APPROVED".equals(kycStatus) && "PAID".equals(paymentStatus))
+                    .build());
+        }
 
         int countedTotal = (int) history.stream().filter(ReferralHistoryDTO::isCounts).count();
         int progress = countedTotal - (freeMonthsEarned * REFERRALS_PER_FREE_MONTH);

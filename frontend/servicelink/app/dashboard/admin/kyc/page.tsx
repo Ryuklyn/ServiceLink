@@ -8,6 +8,7 @@ import KycDecisionModal from "@/components/dashboard/admin/KycDecisionModal";
 import { kycAdminApi, ListKycParams } from "@/store/slices/features/kyc/kycAdminApi";
 import type { KycDetail, KycListItem, KycStatusRaw } from "@/store/slices/features/kyc/kycTypes";
 import { toBadgeStatus } from "@/store/slices/features/kyc/kycTypes";
+import { useSearchParams } from "next/navigation";
 
 type StatusTab = "all" | KycStatusRaw;
 type ModalTab = "overview" | "video";
@@ -23,6 +24,9 @@ const TAB_LABELS: Record<StatusTab, string> = {
 };
 
 export default function KYCManagementPage() {
+    const searchParams = useSearchParams();
+    const idParam = searchParams.get("id");
+
     const [items, setItems] = useState<KycListItem[]>([]);
     const [selected, setSelected] = useState<KycDetail | null>(null);
     const [listLoading, setListLoading] = useState(true);
@@ -57,7 +61,7 @@ export default function KYCManagementPage() {
 
     useEffect(() => { refresh(); }, [refresh]);
 
-    const openDetail = async (id: number, tab: ModalTab = "overview") => {
+    const openDetail = useCallback(async (id: number, tab: ModalTab = "overview") => {
         setInitialTab(tab);
         setModalOpen(true);
         setDetailLoading(true);
@@ -69,7 +73,14 @@ export default function KYCManagementPage() {
         } finally {
             setDetailLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        if (idParam) {
+            openDetail(Number(idParam));
+        }
+    }, [idParam, openDetail]);
+
 
     const closeModal = () => {
         setModalOpen(false);

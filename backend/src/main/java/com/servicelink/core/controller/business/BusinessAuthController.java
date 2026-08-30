@@ -118,7 +118,7 @@ public class BusinessAuthController {
                         HttpStatus.FORBIDDEN, "This account is not registered as a business account"));
 
         String accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
-        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail(), user.getRole());
         String jti = jwtService.extractJti(refreshToken);
 
         refreshTokenService.store(user.getEmail(), jti, refreshToken, jwtService.getRefreshTokenExpirationMillis());
@@ -145,7 +145,7 @@ public class BusinessAuthController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "No business account found for this email"));
 
-        authService.resetPassword(user.getEmail(), dto.getNewPassword());
+        authService.resetPassword(user.getEmail(), Role.PRO, dto.getNewPassword());
 
         return ResponseEntity.ok(Map.of("message", "Password reset successful"));
     }

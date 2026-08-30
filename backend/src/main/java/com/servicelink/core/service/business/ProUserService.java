@@ -46,10 +46,10 @@ public class ProUserService {
         // The org's workEmail (captured at signup Step 1) becomes this admin's login email.
         String email = workspace.getOrganization().getWorkEmail();
 
-        if (userRepository.existsByEmail(email)) {
+        email = email.trim().toLowerCase();
+        if (userRepository.existsByEmailAndRole(email, Role.PRO)) {
             throw new IllegalArgumentException(
-                    "This email is already registered with a different account type. " +
-                            "Please use a different email address to register your business.");
+                    "This email is already registered as a business account.");
         }
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());

@@ -269,7 +269,14 @@ export default function KycDetailModal({
                             <div className="space-y-4">
                                 <div>
                                     <AttributeRow label="Primary Specialty" value={provider.primaryService} icon={<Briefcase size={12} />} />
-                                    <AttributeRow label="Secondary Specialty" value={provider.otherService} />
+                                    <AttributeRow
+                                        label="Secondary Specialty"
+                                        value={
+                                            provider.additionalServices && provider.additionalServices.length > 0
+                                                ? provider.additionalServices.join(", ")
+                                                : (provider.otherService || null)
+                                        }
+                                    />
                                     <AttributeRow label="Experience" value={provider.experienceYears ? `${provider.experienceYears} Years` : null} />
                                     <AttributeRow label="Coverage Radius" value={provider.travelRadius} />
                                     <AttributeRow label="Primary Operational District" value={provider.primaryDistrict} />

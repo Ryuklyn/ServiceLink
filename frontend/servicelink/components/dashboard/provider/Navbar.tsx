@@ -78,11 +78,11 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                 </div>
 
                 {/* Notification Bell */}
-                <Link href="/dashboard/provider/notifications" className="relative inline-block">
-                    <button className="w-9 h-9 flex items-center justify-center rounded-full bg-surface border border-border text-text-primary hover:bg-surface-hover transition">
+                <Link href="/dashboard/provider/notifications" className="relative inline-block" aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}>
+                    <span className="w-9 h-9 flex items-center justify-center rounded-full bg-surface border border-border text-text-primary hover:bg-surface-hover transition">
                         <Bell size={17} />
-                    </button>
-                    {unreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center leading-none">{unreadCount > 9 ? "9+" : unreadCount}</span>}
+                    </span>
+                    {unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center leading-none">{unreadCount}</span>}
                 </Link>
 
                 {/* Avatar */}

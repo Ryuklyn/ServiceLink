@@ -13,4 +13,7 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
     // Added — needed for PaymentService.getTransactionsForProvider() to build
     // the Billing History table on the Subscription page.
     List<PaymentTransaction> findBySubscription_Id(Long subscriptionId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(t.amountNpr), 0) FROM PaymentTransaction t WHERE t.paymentStatus = 'SUCCESS'")
+    long sumSuccessfulAmountNpr();
 }

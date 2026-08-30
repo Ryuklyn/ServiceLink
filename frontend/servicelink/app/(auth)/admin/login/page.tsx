@@ -29,6 +29,7 @@ export default function AdminLoginPage() {
             const { data } = await api.post("/auth/login", {
                 email: email.trim().toLowerCase(),
                 password,
+                role: "ADMIN",
             });
 
             if (data.role !== "ADMIN") {

@@ -46,7 +46,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String name = oAuth2User.getAttribute("name");
         String picture = oAuth2User.getAttribute("picture");
 
-        User user = userRepository.findByEmail(email).orElse(null);
+        email = email.trim().toLowerCase();
+        User user = userRepository.findByEmailAndRole(email, Role.CUSTOMER).orElse(null);
 
         if (user == null) {
 
@@ -95,7 +96,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 jwtService.generatePurposeToken(claims, user.getEmail());
 
         String refreshToken =
-                jwtService.generateRefreshToken(user.getEmail());
+                jwtService.generateRefreshToken(user.getEmail(), user.getRole());
 
         String jti = jwtService.extractJti(refreshToken);
 

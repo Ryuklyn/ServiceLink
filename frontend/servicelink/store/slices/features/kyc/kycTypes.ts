@@ -15,13 +15,14 @@ export type VerificationStatus =
 export interface KycListItem {
     id: number;
     referenceNumber: string;
+    applicantIdentifier?: string;
     fullName: string;
     email: string;
     phone: string;
     primaryService: string;
     status: KycStatusRaw | string;
     submittedAt: string;
-    photoUrl?: string;
+    photoUrl?: string | null;
 }
 
 export interface KycDetail extends KycListItem {

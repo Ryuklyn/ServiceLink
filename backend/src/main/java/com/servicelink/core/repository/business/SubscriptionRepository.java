@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
     Optional<Subscription> findByWorkspaceId(Long workspaceId);
     Optional<Subscription> findByReferenceId(String referenceId);
+
+    long countBySubscriptionStatus(com.servicelink.core.model.business.SubscriptionStatus status);
 }
