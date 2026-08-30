@@ -29,10 +29,10 @@ interface OtpStepProps {
   whatsappLink?: string;
   /**
    * Called after successful verification.
-   * - KYC: providerToken is the short-lived KYC-submission JWT; refreshToken is undefined.
-   * - LOGIN: providerToken is the real access token; refreshToken is also present.
+   * - KYC: providerToken is the short-lived KYC-submission JWT; pinExists is undefined.
+   * - LOGIN: providerToken is the short-lived login purpose-token; pinExists is also present.
    */
-  onVerified: (providerToken: string, refreshToken?: string) => void;
+  onVerified: (providerToken: string, pinExists?: boolean) => void;
   onChangeContact: () => void;
   /** "KYC" (default) for registration, "LOGIN" for the login page. */
   purpose?: OtpPurpose;
@@ -94,7 +94,7 @@ export default function OtpStep({
         setOtp("");
         return;
       }
-      onVerified(res.providerToken, res.refreshToken ?? undefined);
+      onVerified(res.providerToken, res.pinExists);
     } catch (err: any) {
       // LOGIN purpose throws (403/422) on bad OTP or non-provider — surface
       // the backend's message here so the user sees the real reason.

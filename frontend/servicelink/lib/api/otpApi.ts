@@ -21,14 +21,13 @@ export interface OtpVerifyResponse {
   /**
    * On success:
    *  - KYC purpose   → short-lived JWT to authenticate KYC submission
-   *  - LOGIN purpose → real session access token (backend's AuthResponseDTO.token,
-   *                    normalized to this same field so PhoneStep/OtpStep don't
-   *                    need to know which flow they're in)
+   *  - LOGIN purpose → short-lived JWT providerToken
    */
   providerToken: string | null;
   /** LOGIN purpose only — present alongside providerToken on success. */
   refreshToken?: string | null;
   email?: string | null;
+  pinExists?: boolean;
 }
 
 // ─── Endpoint map ─────────────────────────────────────────────────────────────
@@ -96,17 +95,17 @@ export const otpApi = {
     }
 
     const { data } = await publicApi.post<{
-      token: string;
-      refreshToken: string;
-      email: string;
+      verified: boolean;
+      message: string;
+      providerToken: string;
+      pinExists: boolean;
     }>(ENDPOINTS.LOGIN.verifyPhone, { phone, otp });
 
     return {
-      verified: true,
-      message: "Login successful",
-      providerToken: data.token,
-      refreshToken: data.refreshToken,
-      email: data.email,
+      verified: data.verified,
+      message: data.message,
+      providerToken: data.providerToken,
+      pinExists: data.pinExists,
     };
   },
 
@@ -125,17 +124,17 @@ export const otpApi = {
     }
 
     const { data } = await publicApi.post<{
-      token: string;
-      refreshToken: string;
-      email: string;
+      verified: boolean;
+      message: string;
+      providerToken: string;
+      pinExists: boolean;
     }>(ENDPOINTS.LOGIN.verifyEmail, { email, otp });
 
     return {
-      verified: true,
-      message: "Login successful",
-      providerToken: data.token,
-      refreshToken: data.refreshToken,
-      email: data.email,
+      verified: data.verified,
+      message: data.message,
+      providerToken: data.providerToken,
+      pinExists: data.pinExists,
     };
   },
 };

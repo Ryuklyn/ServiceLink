@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface ProPaymentTransactionRepository extends JpaRepository<ProPaymentTransaction, Long> {
     Optional<ProPaymentTransaction> findByReferenceId(String referenceId);
+    java.util.List<ProPaymentTransaction> findBySubscriptionId(Long subscriptionId);
 }

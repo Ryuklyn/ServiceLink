@@ -8,16 +8,25 @@ export interface ProJobTicketResponse {
   category: string;
   service: string;
   workersRequired: number;
-  scheduledDate: string;
+  startDate: string;
+  endDate: string;
   startTime: string;
   endTime: string;
   location: string;
   instructions: string;
-  pricingModel: "PER_DAY" | "PER_JOB";
+  pricingModel: "PER_DAY" | "PER_JOB" | "PER_HOUR" | "PER_SQ_FT";
   businessPrice: number;
   providerEarning: number;
   status: "REQUESTED" | "ASSIGNING" | "PARTIALLY_ASSIGNED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "UNFULFILLED";
   createdAt: string;
+  assignments: {
+    providerId: number;
+    fullName: string;
+    businessName: string;
+    profilePictureUrl: string | null;
+    requiredSkill: string;
+    status: string;
+  }[];
 }
 
 export interface ProJobDetailResponse extends ProJobTicketResponse {
@@ -28,6 +37,8 @@ export interface ProJobDetailResponse extends ProJobTicketResponse {
     fullName: string;
     businessName: string;
     profilePictureUrl: string | null;
+    requiredSkill: string;
+    status: string;
   }[];
   billing: {
     id: number;

@@ -17,7 +17,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
         SELECT a FROM Attendance a
         JOIN a.jobTicket jt
         WHERE jt.organizationId = :organizationId
-          AND jt.scheduledDate = :date
+          AND jt.startDate = :date
     """)
     List<Attendance> findByOrganizationIdAndDate(
         @Param("organizationId") Long organizationId,
@@ -32,4 +32,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findByOrganizationId(@Param("organizationId") Long organizationId);
 
     List<Attendance> findByProviderId(Long providerId);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM Attendance a WHERE a.jobTicket.id = :jobId")
+    void deleteByJobTicketId(@org.springframework.data.repository.query.Param("jobId") Long jobId);
 }

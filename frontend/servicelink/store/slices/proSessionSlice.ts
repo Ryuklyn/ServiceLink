@@ -10,6 +10,7 @@ interface ProSessionState {
     workspaceName: string | null;
     organizationId: number | null;
     organizationName: string | null;
+    logoUrl: string | null;
     businessType: string | null;
     planType: string | null;
     subscriptionStatus: string | null;
@@ -25,6 +26,7 @@ const initialState: ProSessionState = {
     workspaceName: null,
     organizationId: null,
     organizationName: null,
+    logoUrl: null,
     businessType: null,
     planType: null,
     subscriptionStatus: null,
@@ -36,50 +38,25 @@ const initialState: ProSessionState = {
 export const fetchProSession = createAsyncThunk(
     "proSession/fetch",
     async (_, { rejectWithValue }) => {
-        let me: { fullName: string; role: WorkspaceRole; workspaceId: number };
         try {
-            const meRes = await api.get("/business/pro-user/me");
-            me = meRes.data;
+            const res = await api.get("/business/pro-user/me");
+            const data = res.data;
+            return {
+                fullName: data.fullName,
+                role: data.role,
+                workspaceId: data.workspaceId,
+                workspaceName: data.workspaceName,
+                organizationId: data.organizationId,
+                organizationName: data.organizationName,
+                logoUrl: data.logoUrl,
+                businessType: data.businessType,
+                planType: data.planType,
+                subscriptionStatus: data.subscriptionStatus,
+                trialEndsAt: data.trialEndsAt,
+            };
         } catch {
             return rejectWithValue("Could not load your profile. Please try logging in again.");
         }
-
-        let workspace: any, org: any;
-        try {
-            const workspaceRes = await api.get(`/business/workspace/${me.workspaceId}`);
-            workspace = workspaceRes.data;
-            const orgRes = await api.get(`/business/organization/${workspace.organizationId}`);
-            org = orgRes.data;
-        } catch {
-            return rejectWithValue("Could not load workspace details.");
-        }
-
-        let planType: string | null = null;
-        let subscriptionStatus: string | null = null;
-        let trialEndsAt: string | null = null;
-        try {
-            const subRes = await api.get(
-                `/business/payment/subscription/workspace/${me.workspaceId}`,
-            );
-            planType = subRes.data.planType ?? null;
-            subscriptionStatus = subRes.data.status ?? null;
-            trialEndsAt = subRes.data.trialEndsAt ?? null;
-        } catch {
-            // No subscription yet — badge falls back to a neutral state
-        }
-
-        return {
-            fullName: me.fullName,
-            role: me.role,
-            workspaceId: workspace.id,
-            workspaceName: workspace.name,
-            organizationId: org.id,
-            organizationName: org.companyName,
-            businessType: org.businessType,
-            planType,
-            subscriptionStatus,
-            trialEndsAt,
-        };
     },
 );
 

@@ -13,7 +13,7 @@ interface SetPinStepProps {
     deviceId: string;
     /** Called with the final access/refresh tokens once PIN is set (or skipped). */
     onComplete: (accessToken: string, refreshToken?: string) => void;
-    /** Whether "Skip for now" is allowed. Default true. */
+    /** Whether "Skip for now" is allowed. Provider login keeps this disabled. */
     allowSkip?: boolean;
 }
 
@@ -29,7 +29,7 @@ export default function SetPinStep({
                                        providerToken,
                                        deviceId,
                                        onComplete,
-                                       allowSkip = true,
+                                       allowSkip = false,
                                    }: SetPinStepProps) {
     const [pin, setPin] = useState("");
     const [confirmPin, setConfirmPin] = useState("");
@@ -141,8 +141,7 @@ export default function SetPinStep({
                                 Set Your Login PIN
                             </h2>
                             <p className="text-gray-400 text-xs">
-                                This PIN is only for this device — you can set a different one
-                                on other devices
+                                Use this PIN to securely sign in to your provider account
                             </p>
                         </div>
                     </div>
@@ -221,8 +220,8 @@ export default function SetPinStep({
                                 aria-hidden
                             />
                             <p className="text-[#1e3a8a]/70 text-xs leading-relaxed">
-                                You'll still get a login code by SMS or email if you ever forget
-                                this PIN, or when you log in on a new device.
+                                If you forget your PIN, verify with a one-time SMS or email code
+                                to replace it securely.
                             </p>
                         </div>
 

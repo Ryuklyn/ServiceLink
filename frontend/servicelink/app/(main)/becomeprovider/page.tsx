@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import {
     ArrowRight,
@@ -58,7 +58,7 @@ const STEPS = [
         num: "02",
         icon: ShieldCheck,
         title: "Submit for Verification",
-        desc: "Upload your citizenship ID and relevant certifications (CTEVT, NSTB, or equivalent). We review and approve within 1-2 business days.",
+        desc: "Upload your citizenship ID and relevant certifications (CTEVT, NSTB, or equivalent). Once KYC is approved, your one-month free trial is activated.",
     },
     {
         num: "03",
@@ -154,7 +154,7 @@ const PREPARE_ITEMS = [
 const FAQS = [
     {
         q: "Is there a free trial?",
-        a: "Yes — all new providers get 30 days free with full access to all features before choosing a plan.",
+        a: "Yes — after successful KYC verification, eligible providers receive a one-month free trial with full access before choosing a plan.",
     },
     {
         q: "When do I receive payment after completing a job?",
@@ -201,6 +201,7 @@ function FaqItem({ faq }: { faq: { q: string; a: string } }) {
 }
 
 export default function BecomeAProviderPage() {
+    const pricingRef = useRef<HTMLElement>(null);
     const [hoursPerDay, setHoursPerDay] = useState(6);
     const [daysPerWeek, setDaysPerWeek] = useState(5);
     const [serviceType, setServiceType] = useState("Plumbing");
@@ -214,6 +215,8 @@ export default function BecomeAProviderPage() {
 
     const estimatedMonthly =
         (baseRates[serviceType] || 500) * hoursPerDay * daysPerWeek * 4;
+
+    const scrollToPricing = () => pricingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
     return (
         <div className="bg-white">
@@ -236,11 +239,11 @@ export default function BecomeAProviderPage() {
                         </p>
 
                         <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                            <button className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-7 py-4 rounded-xl shadow-lg transition-all group">
+                            <Link href="/register/provider" className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-7 py-4 rounded-xl shadow-lg transition-all group">
                                 Register as a Provider
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                            <button className="text-[#1e3a8a] bg-white font-semibold flex items-center justify-center px-7 py-4 rounded-xl hover:bg-gray-50 transition-all shadow-md">
+                            </Link>
+                            <button onClick={scrollToPricing} className="text-[#1e3a8a] bg-white font-semibold flex items-center justify-center px-7 py-4 rounded-xl hover:bg-gray-50 transition-all shadow-md">
                                 See Pricing Plans
                             </button>
                         </div>
@@ -254,6 +257,10 @@ export default function BecomeAProviderPage() {
                             <span className="flex items-center gap-1.5 text-white">
                     <CalendarClock className="w-4 h-4 text-[#e8683f] font-semibold" />
                     Flexible Schedule
+                </span>
+                            <span className="flex items-center gap-1.5 text-white">
+                    <Check className="w-4 h-4 text-[#e8683f] font-semibold" />
+                    1 Month Free After KYC
                 </span>
                             <span className="flex items-center gap-1.5 text-white">
                     <FaLeaf size="14" color="#e8683f" />
@@ -319,7 +326,7 @@ export default function BecomeAProviderPage() {
             </section>
 
             {/* Why Join Section */}
-            <section className="py-20">
+            <section id="provider-plans" className="py-20 scroll-mt-24">
                 <div className="max-w-7xl mx-auto px-4 lg:px-8 text-center">
           <span className="text-sm font-bold uppercase tracking-wider text-[#e8683f]">
             Why Join ServiceLink
@@ -396,7 +403,7 @@ export default function BecomeAProviderPage() {
             </section>
 
             {/* Pricing Section */}
-            <section className="py-20">
+            <section ref={pricingRef} className="py-20">
                 <div className="bg-[#1e3a8a] rounded-2xl mx-4 lg:mx-8 px-4 lg:px-8 py-16">
                     <div className="max-w-7xl mx-auto text-center">
                       <span className="text-sm font-bold uppercase tracking-wider text-[#e8683f]">
@@ -406,7 +413,7 @@ export default function BecomeAProviderPage() {
                             Simple, Transparent Pricing
                         </h2>
                         <p className="mt-3 text-white/70 max-w-2xl mx-auto text-sm">
-                            Start with a 30-day free trial. No hidden fees. Cancel anytime.
+                            Successful KYC verification activates your one-month free trial. No hidden fees. Cancel anytime.
                             All plans include unlimited booking requests, earnings dashboard,
                             customer messaging, and priority search listing.
                         </p>
@@ -457,15 +464,16 @@ export default function BecomeAProviderPage() {
                                         ))}
                                     </ul>
 
-                                    <button
-                                        className={`mt-6 w-full py-3 rounded-xl font-semibold transition-all ${
+                                    <Link
+                                        href="/register/provider"
+                                        className={`block text-center mt-6 w-full py-3 rounded-xl font-semibold transition-all ${
                                             plan.highlighted
                                                 ? "bg-[#e8683f] hover:bg-[#d95a2f] text-white shadow-lg"
                                                 : "border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-blue-50"
                                         }`}
                                     >
                                         {plan.cta}
-                                    </button>
+                                    </Link>
                                 </div>
                             ))}
                         </div>
@@ -649,13 +657,13 @@ export default function BecomeAProviderPage() {
 
                     <div className="mt-7 flex flex-col sm:flex-row justify-center gap-3">
                         <Link
-                            href="/register"
+                            href="/register/provider"
                             className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group"
                         >
                             Create Provider Account
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <button className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-6 py-3.5 rounded-xl shadow-lg transition-all">
+                        <button onClick={scrollToPricing} className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-6 py-3.5 rounded-xl shadow-lg transition-all">
                             View Pricing Plans
                         </button>
                     </div>

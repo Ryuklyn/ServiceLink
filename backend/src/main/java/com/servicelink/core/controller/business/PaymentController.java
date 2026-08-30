@@ -6,6 +6,7 @@ import com.servicelink.core.dto.request.business.SubscriptionRequest;
 import com.servicelink.core.dto.response.business.PaymentInitiateResponse;
 import com.servicelink.core.dto.response.business.PaymentTransactionResponse;
 import com.servicelink.core.dto.response.business.SubscriptionResponse;
+import com.servicelink.core.dto.response.admin.subscription.ProSubscriptionHistoryDTO;
 import com.servicelink.core.model.business.PaymentStatus;
 import com.servicelink.core.payment.service.PaymentService;
 import com.servicelink.core.service.business.SubscriptionPaymentService;
@@ -47,6 +48,11 @@ public class PaymentController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+    }
+
+    @GetMapping("/subscription/workspace/{workspaceId}/history")
+    public ResponseEntity<ProSubscriptionHistoryDTO> getSubscriptionHistory(@PathVariable Long workspaceId) {
+        return ResponseEntity.ok(subscriptionService.getProSubscriptionHistory(workspaceId));
     }
 
     @PostMapping("/initiate")

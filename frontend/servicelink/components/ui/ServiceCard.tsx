@@ -1,4 +1,5 @@
 import StarRating from "./StarRating";
+import Link from "next/link";
 
 export default function ServiceCard({ service }: any) {
   return (
@@ -44,9 +45,9 @@ export default function ServiceCard({ service }: any) {
         </div>
 
         {/* Action Button */}
-        <button className="w-full bg-[#1e3a8a] hover:bg-[#1e3a8a] text-white font-medium py-3 rounded-xl transition-colors">
+        <Link href="/login" className="block w-full text-center bg-[#1e3a8a] hover:bg-[#1e3a8a] text-white font-medium py-3 rounded-xl transition-colors">
           Book Now
-        </button>
+        </Link>
       </div>
     </div>
   );

@@ -23,6 +23,10 @@ import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.appointment.ProviderServiceRepository;
 import com.servicelink.core.repository.appointment.ServiceCatalogRepository;
 import com.servicelink.core.service.notification.NotificationService;
+import com.servicelink.core.repository.business.job.JobAssignmentRepository;
+import com.servicelink.core.model.business.job.JobAssignmentStatus;
+import com.servicelink.core.model.business.job.ProJobStatus;
+import com.servicelink.core.model.business.job.ProJobTicket;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -49,6 +53,7 @@ public class AppointmentService {
     private final AppointmentPricingService pricingService;
     private final UserRepository userRepo;
     private final NotificationService notificationService;
+    private final JobAssignmentRepository jobAssignmentRepository;
 
     // ─────────────────────────────────────────────────────────────────────────
     // CUSTOMER-FACING
@@ -76,6 +81,23 @@ public class AppointmentService {
                     "The " + req.getTimeSlot().getDisplayLabel() + " slot on "
                             + req.getAppointmentDate() + " is already booked for this provider",
                     "APPOINTMENT_SLOT_TAKEN");
+        }
+
+        // Check overlap with Pro jobs
+        boolean hasProJobOverlap = jobAssignmentRepository.findByProviderId(req.getProviderId()).stream()
+                .filter(a -> a.getStatus() == JobAssignmentStatus.ACCEPTED)
+                .anyMatch(a -> {
+                    ProJobTicket jt = a.getJobTicket();
+                    if (jt.getStatus() == ProJobStatus.CANCELLED || jt.getStatus() == ProJobStatus.UNFULFILLED) return false;
+                    boolean dateOverlap = !req.getAppointmentDate().isBefore(jt.getStartDate()) 
+                            && !req.getAppointmentDate().isAfter(jt.getEndDate() != null ? jt.getEndDate() : jt.getStartDate());
+                    if (!dateOverlap) return false;
+                    java.time.LocalTime slotStart = req.getTimeSlot().getStartTime();
+                    java.time.LocalTime slotEnd = req.getTimeSlot().getEndTime();
+                    return slotStart.isBefore(jt.getEndTime()) && slotEnd.isAfter(jt.getStartTime());
+                });
+        if (hasProJobOverlap) {
+            throw new ConflictException("The provider is booked for a ServiceLink Pro job during this time slot.", "PRO_JOB_CONFLICT");
         }
 
         int calculatedPrice = pricingService.calculateTotalPrice(providerService, req);
@@ -114,7 +136,7 @@ public class AppointmentService {
                 "New Appointment Request",
                 "New booking request: " + catalog.getCategory() + " – " + catalog.getSubServiceName()
                         + " on " + req.getAppointmentDate(),
-                "/provider/appointments/" + saved.getId()
+                "/dashboard/provider/appointments/" + saved.getId()
         );
 
         User customer = userRepo.findById(customerId).orElse(null);
@@ -356,7 +378,7 @@ public class AppointmentService {
                         "Appointment Confirmed!",
                         "Your appointment on " + appointment.getAppointmentDate()
                                 + " has been accepted by the provider.",
-                        "/user/appointments/" + appointment.getId()
+                        "/dashboard/user/bookings"
                 );
             }
             case IN_PROGRESS -> appointment.setStartedAt(LocalDateTime.now());
@@ -392,7 +414,7 @@ public class AppointmentService {
                         NotificationCategory.BOOKING,
                         "Service Completed",
                         "Your appointment has been marked as completed.",
-                        "/user/appointments/" + appointment.getId()
+                        "/dashboard/user/bookings"
                 );
             }
             case CANCELLED -> {

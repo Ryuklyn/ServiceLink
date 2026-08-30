@@ -23,6 +23,14 @@ public class JobAssignment {
     @JoinColumn(name = "provider_id", nullable = false)
     private Provider provider;
 
+    @Column(name = "required_skill", nullable = true)
+    private String requiredSkill;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = true)
+    @Builder.Default
+    private JobAssignmentStatus status = JobAssignmentStatus.PENDING;
+
     @Column(name = "assigned_at", nullable = false)
     private Instant assignedAt;
 

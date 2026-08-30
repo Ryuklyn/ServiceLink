@@ -12,4 +12,7 @@ public class VerifyPinRequestDTO {
     @NotBlank
     @Pattern(regexp = "^\\d{4}$", message = "PIN must be exactly 4 digits")
     private String pin;
+
+    private String email;
+    private String phone;
 }

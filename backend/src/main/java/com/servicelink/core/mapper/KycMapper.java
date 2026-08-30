@@ -28,6 +28,7 @@ public class KycMapper {
                 .user(user)
                 .applicantIdentifier(applicantIdentifier)
                 .referenceNumber(generateReferenceNumber())
+                .referralCode(dto.getReferralCode() == null ? null : dto.getReferralCode().trim().toUpperCase())
                 .fullName(dto.getFullName())
                 .dob(dto.getDob())
                 .gender(dto.getGender())

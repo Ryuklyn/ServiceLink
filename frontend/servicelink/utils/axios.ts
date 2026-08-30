@@ -135,6 +135,19 @@ api.interceptors.response.use(
     async (error: AxiosError): Promise<AxiosResponse> => {
         const original = error.config as InternalAxiosRequestConfig;
 
+        const data = error.response?.data as any;
+        if (error.response?.status === 401 && data?.error === "SESSION_REVOKED") {
+            const admin = isAdminContext(original.url);
+            const session = admin ? adminStorage : storage;
+            session.clearSession();
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("servicelink:session-revoked", {
+                    detail: { message: data.message }
+                }));
+            }
+            return Promise.reject(normalizeError(error));
+        }
+
         if (error.response?.status !== 401 || original._retry) {
             return Promise.reject(normalizeError(error));
         }

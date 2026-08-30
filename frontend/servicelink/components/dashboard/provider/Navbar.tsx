@@ -9,7 +9,7 @@ import { fetchProviderProfile } from "@/store/slices/providerProfileSlice";
 import { getActiveNavLabel } from "@/lib/navigation/providerNavItems";
 import { getPlanBadgeLabel } from "@/utils/subscriptionDisplay";
 import { fetchProviderSubscription } from "@/store/slices/providerSubscriptionSlice";
-import { useProviderTranslation } from "@/hooks/useProviderTranslation";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface NavbarProps {
     onMenuClick?: () => void; // Trigger callback to open Mobile Sidebar
@@ -20,7 +20,8 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     const dispatch = useAppDispatch();
     const { data: provider } = useAppSelector((state) => state.providerProfile);
     const { data: subscription } = useAppSelector((state) => state.providerSubscription);
-    const { t } = useProviderTranslation();
+    const unreadCount = useAppSelector((state) => state.notifications.unreadCount);
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (!provider) {
@@ -81,9 +82,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                     <button className="w-9 h-9 flex items-center justify-center rounded-full bg-surface border border-border text-text-primary hover:bg-surface-hover transition">
                         <Bell size={17} />
                     </button>
-                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
-                        2
-                    </span>
+                    {unreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center leading-none">{unreadCount > 9 ? "9+" : unreadCount}</span>}
                 </Link>
 
                 {/* Avatar */}

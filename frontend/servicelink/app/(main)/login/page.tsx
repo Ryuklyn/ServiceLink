@@ -122,14 +122,14 @@ export default function SignInPage() {
         <div className="flex items-center gap-5 mt-12 text-sm text-gray-400">
           <span>Need help?</span>
           <Link
-            href="/support"
+            href="/#home-faqs"
             className="flex items-center gap-1.5 hover:text-gray-600 transition"
           >
             <HelpCircle size={14} />
             SUPPORT
           </Link>
           <Link
-            href="/faq"
+            href="/#home-faqs"
             className="flex items-center gap-1.5 hover:text-gray-600 transition"
           >
             <BookOpen size={14} />

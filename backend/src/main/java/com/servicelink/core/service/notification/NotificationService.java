@@ -1,12 +1,16 @@
 package com.servicelink.core.service.notification;
 
 import com.servicelink.core.dto.request.notification.NotificationRequestDto;
+import com.servicelink.core.dto.response.notification.NotificationPreferenceResponseDto;
 import com.servicelink.core.dto.response.notification.NotificationResponseDto;
 import com.servicelink.core.mapper.notification.NotificationMapper;
 import com.servicelink.core.model.notification.Notification;
 import com.servicelink.core.model.notification.NotificationCategory;
+import com.servicelink.core.model.notification.NotificationPreference;
 import com.servicelink.core.model.user.Role;
-
+import com.servicelink.core.model.user.User;
+import com.servicelink.core.repository.NotificationPreferenceRepository;
+import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.repository.notification.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,108 +20,89 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
-
     private final NotificationRepository notificationRepository;
+    private final NotificationPreferenceRepository preferenceRepository;
+    private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationMapper notificationMapper;
 
-    /**
-     * Primary method to trigger targeted private notifications.
-     * Saves to MySQL first, then pushes real-time event via WebSockets.
-     */
     @Transactional
-    public NotificationResponseDto sendPrivateNotification(NotificationRequestDto requestDto) {
-        Notification notification = Notification.builder()
-                .recipientId(requestDto.getRecipientId())
-                .recipientRole(requestDto.getRecipientRole())
-                .category(requestDto.getCategory())
-                .title(requestDto.getTitle())
-                .message(requestDto.getMessage())
-                .actionUrl(requestDto.getActionUrl())
-                .isRead(false)
-                .build();
-
-        Notification savedNotification = notificationRepository.save(notification);
-        NotificationResponseDto responseDto = notificationMapper.toDto(savedNotification);
-
-        // Real-time STOMP Push to /user/{recipientId}/queue/notifications
-        messagingTemplate.convertAndSendToUser(
-                String.valueOf(requestDto.getRecipientId()),
-                "/queue/notifications",
-                responseDto
-        );
-
-        return responseDto;
+    public NotificationResponseDto sendPrivateNotification(NotificationRequestDto request) {
+        if (!isEnabled(request.getRecipientId(), request.getCategory())) return null;
+        Notification saved = notificationRepository.save(Notification.builder()
+                .recipientId(request.getRecipientId()).recipientRole(request.getRecipientRole())
+                .category(request.getCategory()).title(request.getTitle()).message(request.getMessage())
+                .actionUrl(request.getActionUrl()).isRead(false).build());
+        NotificationResponseDto response = notificationMapper.toDto(saved);
+        messagingTemplate.convertAndSendToUser(String.valueOf(saved.getRecipientId()), "/queue/notifications", response);
+        return response;
     }
 
-    /**
-     * Convenience helper method for internal cross-service calls (e.g., AppointmentService, SubscriptionService).
-     */
     @Transactional
-    public NotificationResponseDto sendPrivateNotification(Long recipientId, Role role, NotificationCategory category, String title, String message, String actionUrl) {
-        NotificationRequestDto requestDto = NotificationRequestDto.builder()
-                .recipientId(recipientId)
-                .recipientRole(role)
-                .category(category)
-                .title(title)
-                .message(message)
-                .actionUrl(actionUrl)
-                .build();
-
-        return sendPrivateNotification(requestDto);
+    public NotificationResponseDto sendPrivateNotification(Long recipientId, Role role, NotificationCategory category,
+                                                           String title, String message, String actionUrl) {
+        return sendPrivateNotification(NotificationRequestDto.builder().recipientId(recipientId).recipientRole(role)
+                .category(category).title(title).message(message).actionUrl(actionUrl).build());
     }
 
-    /**
-     * Broadcasts global real-time notifications to ServiceLink Pro Admins.
-     */
+    /** Platform updates are individual, persisted inbox events rather than an unaudited public topic. */
+    @Transactional
+    public void sendPlatformNotificationToRoles(Collection<Role> roles, String title, String message, String actionUrl) {
+        for (User user : userRepository.findByRoleIn(roles)) {
+            sendPrivateNotification(user.getId(), user.getRole(), NotificationCategory.PLATFORM, title, message, actionUrl);
+        }
+    }
+
     public void sendAdminBroadcast(String title, String message, String actionUrl) {
-        NotificationResponseDto responseDto = NotificationResponseDto.builder()
-                .recipientRole(Role.ADMIN)
-                .category(NotificationCategory.PLATFORM)
-                .title(title)
-                .message(message)
-                .actionUrl(actionUrl)
-                .build();
-
-        // Broadcast to channel: /topic/admin-alerts
-        messagingTemplate.convertAndSend("/topic/admin-alerts", responseDto);
+        sendPlatformNotificationToRoles(List.of(Role.ADMIN), title, message, actionUrl);
     }
 
-    /**
-     * Fetches paginated notification history for the specified user/provider dashboard.
-     */
     @Transactional(readOnly = true)
-    public Page<NotificationResponseDto> getUserNotifications(Long recipientId, Role role, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return notificationRepository
-                .findByRecipientIdAndRecipientRoleOrderByCreatedAtDesc(recipientId, role, pageable)
+    public Page<NotificationResponseDto> getUserNotifications(User user, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
+        return notificationRepository.findByRecipientIdAndRecipientRoleOrderByCreatedAtDesc(user.getId(), user.getRole(), pageable)
                 .map(notificationMapper::toDto);
     }
 
-    /**
-     * Returns total unread notification count for badge counters.
-     */
     @Transactional(readOnly = true)
-    public long getUnreadCount(Long recipientId, Role role) {
-        return notificationRepository.countByRecipientIdAndRecipientRoleAndIsReadFalse(recipientId, role);
+    public long getUnreadCount(User user) {
+        return notificationRepository.countByRecipientIdAndRecipientRoleAndIsReadFalse(user.getId(), user.getRole());
     }
 
-    /**
-     * Marks a single notification item as read.
-     */
     @Transactional
-    public void markAsRead(Long notificationId, Long recipientId) {
-        notificationRepository.markAsRead(notificationId, recipientId);
+    public void markAsRead(Long notificationId, User user) { notificationRepository.markAsRead(notificationId, user.getId()); }
+
+    @Transactional
+    public void markAllAsRead(User user) { notificationRepository.markAllAsRead(user.getId(), user.getRole()); }
+
+    @Transactional(readOnly = true)
+    public List<NotificationPreferenceResponseDto> getPreferences(User user) {
+        Map<NotificationCategory, Boolean> saved = preferenceRepository.findByUserId(user.getId()).stream()
+                .collect(Collectors.toMap(NotificationPreference::getCategory, NotificationPreference::isEnabled));
+        return Arrays.stream(NotificationCategory.values())
+                .map(category -> new NotificationPreferenceResponseDto(category, saved.getOrDefault(category, true))).toList();
     }
 
-    /**
-     * Marks all notifications as read for the recipient.
-     */
     @Transactional
-    public void markAllAsRead(Long recipientId, Role role) {
-        notificationRepository.markAllAsRead(recipientId, role);
+    public NotificationPreferenceResponseDto updatePreference(User user, NotificationCategory category, boolean enabled) {
+        NotificationPreference preference = preferenceRepository.findByUserIdAndCategory(user.getId(), category)
+                .orElseGet(() -> NotificationPreference.builder().userId(user.getId()).category(category).build());
+        preference.setEnabled(enabled);
+        preferenceRepository.save(preference);
+        return new NotificationPreferenceResponseDto(category, enabled);
+    }
+
+    private boolean isEnabled(Long userId, NotificationCategory category) {
+        return preferenceRepository.findByUserIdAndCategory(userId, category)
+                .map(NotificationPreference::isEnabled).orElse(true);
     }
 }

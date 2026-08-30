@@ -4,15 +4,14 @@ import com.servicelink.core.dto.availability.ScheduleSettingsDTO;
 import com.servicelink.core.exception.BusinessException;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.availability.ProviderScheduleSettings;
-import com.servicelink.core.model.provider.subscription.ProviderSubscription;
-import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
-import com.servicelink.core.model.provider.subscription.SubscriptionStatus;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.repository.provider.availability.ProviderScheduleSettingsRepository;
-import com.servicelink.core.service.provider.subscription.ProOrdersEligibilityChecker;
+import com.servicelink.core.service.business.pool.ProviderPoolService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +19,7 @@ public class ProviderScheduleSettingsService {
 
     private final ProviderScheduleSettingsRepository repo;
     private final ProviderRepository providerRepo;
-    private final ProOrdersEligibilityChecker eligibilityChecker;
+    private final ProviderPoolService providerPoolService;
 
     @Transactional
     public ProviderScheduleSettings getOrCreate(Long providerId) {
@@ -43,12 +42,22 @@ public class ProviderScheduleSettingsService {
         Provider provider = requireProvider(userId);
         var s = getOrCreate(provider.getId());
 
-        // ── Pro-orders enforcement — trial or lapsed/cancelled subscriptions
-        // can never turn this on, regardless of what the client sends. ──────
-        if (Boolean.TRUE.equals(dto.acceptsProOrders()) && !eligibilityChecker.isEligible(provider.getId())) {
-            throw new BusinessException(
-                    "Activate a paid subscription to accept Business & Pro orders.",
-                    "SUBSCRIPTION_REQUIRED");
+        // ── Pro-orders enforcement ──────────────────────────────────────
+        // Delegates to ProviderPoolService.checkProOrdersEligibility, the
+        // single source of truth also used by the directory listing and by
+        // addToPool. This check intentionally ignores the *current* value
+        // of s.getAcceptsProOrders() (which is about to be overwritten by
+        // dto.acceptsProOrders() below) — PRO_ORDERS_DISABLED as a reason
+        // from that method would be misleading here, so we only care about
+        // the account/verification/subscription gates when someone is
+        // trying to turn the toggle ON.
+        if (Boolean.TRUE.equals(dto.acceptsProOrders())) {
+            Optional<ProviderPoolService.EligibilityFailure> failure =
+                    providerPoolService.checkProOrdersEligibility(provider)
+                            .filter(f -> f != ProviderPoolService.EligibilityFailure.PRO_ORDERS_DISABLED);
+            if (failure.isPresent()) {
+                throw new BusinessException(failure.get().message, failure.get().name());
+            }
         }
 
         if (dto.workingDays() != null) s.setWorkingDays(dto.workingDays());

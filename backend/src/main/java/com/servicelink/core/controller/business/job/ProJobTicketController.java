@@ -64,6 +64,34 @@ public class ProJobTicketController {
         return ResponseEntity.ok(jobService.getDetails(organizationId, id));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ProJobTicketResponse> update(
+            @CurrentOrganization Long organizationId,
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @Valid @RequestBody CreateProJobTicketRequest request
+    ) {
+        authorizationService.requireRole(user, organizationId, java.util.Set.of(
+                com.servicelink.core.model.business.TeamRole.ADMIN,
+                com.servicelink.core.model.business.TeamRole.MANAGER
+        ));
+        return ResponseEntity.ok(jobService.update(organizationId, id, user, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(
+            @CurrentOrganization Long organizationId,
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id
+    ) {
+        authorizationService.requireRole(user, organizationId, java.util.Set.of(
+                com.servicelink.core.model.business.TeamRole.ADMIN,
+                com.servicelink.core.model.business.TeamRole.MANAGER
+        ));
+        jobService.deleteJob(organizationId, id, user);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/{id}/eligible-providers")
     public ResponseEntity<List<ProEligibleProviderResponse>> getEligibleProviders(
             @CurrentOrganization Long organizationId,
@@ -79,13 +107,14 @@ public class ProJobTicketController {
             @CurrentOrganization Long organizationId,
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @RequestParam Long providerId
+            @RequestParam Long providerId,
+            @RequestParam String requiredSkill
     ) {
         authorizationService.requireRole(user, organizationId, java.util.Set.of(
                 com.servicelink.core.model.business.TeamRole.ADMIN,
                 com.servicelink.core.model.business.TeamRole.MANAGER
         ));
-        jobService.assignProvider(organizationId, id, providerId, user);
+        jobService.assignProvider(organizationId, id, providerId, requiredSkill, user);
         return ResponseEntity.ok().build();
     }
 
@@ -159,7 +188,8 @@ public class ProJobTicketController {
         authorizationService.requireRole(user, organizationId, java.util.Set.of(
                 com.servicelink.core.model.business.TeamRole.ADMIN,
                 com.servicelink.core.model.business.TeamRole.MANAGER,
-                com.servicelink.core.model.business.TeamRole.STAFF
+                com.servicelink.core.model.business.TeamRole.STAFF,
+                com.servicelink.core.model.business.TeamRole.FINANCE
         ));
         return ResponseEntity.ok(jobService.getSlaDashboard(organizationId));
     }
@@ -171,6 +201,7 @@ public class ProJobTicketController {
     ) {
         authorizationService.requireRole(user, organizationId, java.util.Set.of(
                 com.servicelink.core.model.business.TeamRole.ADMIN,
+                com.servicelink.core.model.business.TeamRole.MANAGER,
                 com.servicelink.core.model.business.TeamRole.FINANCE
         ));
         return ResponseEntity.ok(jobService.getBillingDashboard(organizationId));
@@ -184,13 +215,36 @@ public class ProJobTicketController {
         authorizationService.requireRole(user, organizationId, java.util.Set.of(
                 com.servicelink.core.model.business.TeamRole.ADMIN,
                 com.servicelink.core.model.business.TeamRole.MANAGER,
+                com.servicelink.core.model.business.TeamRole.STAFF,
                 com.servicelink.core.model.business.TeamRole.FINANCE
         ));
         return ResponseEntity.ok(jobService.getComplianceDashboard(organizationId));
     }
 
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<Void> acceptJob(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user
+    ) {
+        Provider provider = providerRepository.findByUser_Id(user.getId())
+                .orElseThrow(() -> new BusinessException("Only registered providers can respond to Pro jobs", "PROVIDER_PROFILE_REQUIRED"));
+        jobService.respondToAssignment(id, provider.getId(), com.servicelink.core.model.business.job.JobAssignmentStatus.ACCEPTED);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<Void> rejectJob(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user
+    ) {
+        Provider provider = providerRepository.findByUser_Id(user.getId())
+                .orElseThrow(() -> new BusinessException("Only registered providers can respond to Pro jobs", "PROVIDER_PROFILE_REQUIRED"));
+        jobService.respondToAssignment(id, provider.getId(), com.servicelink.core.model.business.job.JobAssignmentStatus.REJECTED);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/provider/assigned")
-    public ResponseEntity<List<ProJobTicketResponse>> getProviderJobs(
+    public ResponseEntity<List<ProviderProJobResponse>> getProviderJobs(
             @AuthenticationPrincipal User user
     ) {
         Provider provider = providerRepository.findByUser_Id(user.getId())

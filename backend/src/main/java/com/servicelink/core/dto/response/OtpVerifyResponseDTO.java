@@ -10,4 +10,5 @@ public class OtpVerifyResponseDTO {
     private String  message;
     /** Short-lived JWT issued after successful verification. Used to authenticate KYC submission. */
     private String  providerToken;
+    private Boolean pinExists;
 }

@@ -5,39 +5,32 @@ import SockJS from "sockjs-client";
 import { useAppDispatch } from "@/store/hooks";
 import { receiveRealtimeNotification } from "@/store/slices/notificationSlice";
 
-export function useNotificationSocket(recipientId?: number, role?: string) {
-    const dispatch = useAppDispatch();
-
-    useEffect(() => {
-        if (!recipientId || !role) return;
-
-        const socket = new SockJS("http://localhost:8080/ws");
-        const stompClient = new Client({
-            webSocketFactory: () => socket,
-            reconnectDelay: 5000,
-            onConnect: () => {
-                stompClient.subscribe(`/user/${recipientId}/queue/notifications`, (message) => {
-                    if (message.body) {
-                        dispatch(receiveRealtimeNotification(JSON.parse(message.body)));
-                    }
-                });
-
-                if (role === "ADMIN" || role === "PRO") {
-                    stompClient.subscribe("/topic/admin-alerts", (message) => {
-                        if (message.body) {
-                            dispatch(receiveRealtimeNotification(JSON.parse(message.body)));
-                        }
-                    });
-                }
-            },
-            onStompError: (frame) => {
-                console.error("[STOMP Error]:", frame.headers["message"]);
-            },
-        });
-
-        stompClient.activate();
-        return () => {
-            if (stompClient.active) stompClient.deactivate();
-        };
-    }, [recipientId, role, dispatch]);
+export function useNotificationSocket() {
+  const dispatch = useAppDispatch();
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken") || localStorage.getItem("adminAccessToken");
+    if (!token) return;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") || "http://localhost:8080";
+    const client = new Client({ webSocketFactory: () => new SockJS(`${baseUrl}/ws`), reconnectDelay: 5000,
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      onConnect: () => client.subscribe("/user/queue/notifications", (message) => {
+        if (message.body) {
+          try {
+            const payload = JSON.parse(message.body);
+            if (payload && payload.type === "SESSION_REVOKED") {
+              window.dispatchEvent(new CustomEvent("servicelink:session-revoked", {
+                detail: { message: payload.message }
+              }));
+              return;
+            }
+            dispatch(receiveRealtimeNotification(payload));
+          } catch (e) {
+            console.error("Failed to parse WebSocket message body", e);
+          }
+        }
+      }),
+    });
+    client.activate();
+    return () => { if (client.active) void client.deactivate(); };
+  }, [dispatch]);
 }

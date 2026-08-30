@@ -7,7 +7,8 @@ import java.time.*;
 
 public record CreateProJobTicketRequest(
         @NotNull Long serviceCatalogId, @NotBlank @Size(max = 160) String title,
-        @NotNull @Min(1) Integer workersRequired, @NotNull @FutureOrPresent LocalDate scheduledDate,
+        @NotNull @Min(1) Integer workersRequired, @NotNull @FutureOrPresent LocalDate startDate,
+        @NotNull LocalDate endDate,
         @NotNull LocalTime startTime, @NotNull LocalTime endTime, @NotBlank @Size(max = 512) String location,
         Double latitude, Double longitude, @Size(max = 4000) String instructions,
         @NotNull ProPricingModel pricingModel, @NotNull @DecimalMin("0.00") BigDecimal businessPrice,

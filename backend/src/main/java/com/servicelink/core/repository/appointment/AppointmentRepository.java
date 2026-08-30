@@ -119,6 +119,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("providerId") Long providerId,
             @Param("date") LocalDate date);
 
+    @Query("SELECT a FROM Appointment a " +
+           "JOIN FETCH a.serviceCatalog sc " +
+           "WHERE a.provider.id = :providerId " +
+           "AND a.appointmentDate >= :startDate " +
+           "AND a.appointmentDate <= :endDate")
+    List<Appointment> findByProviderIdAndDateRange(
+            @Param("providerId") Long providerId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
+
     @Query("""
             SELECT a FROM Appointment a
             WHERE a.provider.id = :providerId
@@ -206,6 +216,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     boolean existsActiveBooking(Long providerId, LocalDate date, TimeSlot period);
 
     @Query("select a from Appointment a where a.provider.id = :providerId " +
-            "and a.appointmentDate between :start and :end and a.status in ('CONFIRMED','IN_PROGRESS')")
+            "and a.appointmentDate between :start and :end and a.status <> 'CANCELLED'")
     List<Appointment> findActiveBetween(Long providerId, LocalDate start, LocalDate end);
 }

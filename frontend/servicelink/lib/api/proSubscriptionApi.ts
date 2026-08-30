@@ -4,6 +4,9 @@ import type { SubscriptionResponse, PaymentInitiateResponse, PaymentGateway } fr
 export const getSubscriptionByWorkspace = (workspaceId: number) =>
     api.get<SubscriptionResponse>(`/business/payment/subscription/workspace/${workspaceId}`).then((r) => r.data);
 
+export const getProSubscriptionHistory = (workspaceId: number) =>
+    api.get<any>(`/business/payment/subscription/workspace/${workspaceId}/history`).then((r) => r.data);
+
 export const initiatePayment = (body: {
     subscriptionId: number;
     paymentGateway: PaymentGateway;

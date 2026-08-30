@@ -14,4 +14,10 @@ public interface ProviderDevicePinRepository extends JpaRepository<ProviderDevic
     Optional<ProviderDevicePin> findByProvider_IdAndDeviceId(Long providerId, String deviceId);
 
     void deleteByProvider_IdAndDeviceId(Long providerId, String deviceId);
+
+    boolean existsByProvider_Id(Long providerId);
+
+    Optional<ProviderDevicePin> findFirstByProvider_Id(Long providerId);
+
+    java.util.List<ProviderDevicePin> findByProvider_Id(Long providerId);
 }

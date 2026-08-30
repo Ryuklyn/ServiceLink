@@ -388,6 +388,31 @@ public class EmailService {
         send(to, subject, body, "Phone changed alert");
     }
 
+    // ─── 2FA enabled alert ───────────────────────────────────────────────────
+
+    @Async
+    public void send2FAEnabledAlert(String to) {
+        String subject = "Two-Factor Authentication was turned on";
+
+        String body = wrapTemplate(
+                "Security Update",
+                "2-Step Verification was enabled",
+                "This is a confirmation that Two-Factor Authentication was successfully turned on for your ServiceLink account.",
+                """
+                <p style="font-size:14px; line-height:1.6; color:#44403c; margin:0;">
+                  Your account is now protected by an additional verification code from an authenticator app when signing in.
+                </p>
+                <p style="font-size:13px; color:#78716c; margin:16px 0 0;">
+                  If you did <strong>not</strong> make this change, please contact us immediately at
+                  <a href="mailto:support@servicelink.np" style="color:%s;">support@servicelink.np</a>.
+                </p>
+                """.formatted(ORANGE),
+                null, null
+        );
+
+        send(to, subject, body, "2FA enabled alert");
+    }
+
     // ─── 2FA disabled alert ──────────────────────────────────────────────────
 
     @Async

@@ -68,6 +68,7 @@ export default function ProSidebar() {
         fullName,
         role,
         organizationName,
+        logoUrl,
         businessType,
         planType,
         subscriptionStatus,
@@ -88,6 +89,15 @@ export default function ProSidebar() {
     useEffect(() => {
         dispatch(closeSidebar());
     }, [pathname, dispatch]);
+
+    const resolveImageUrl = (url: string | null): string | null => {
+        if (!url) return null;
+        if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+            return url;
+        }
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+        return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+    };
 
     const initials = getInitials(fullName);
     const icon = businessType ? BUSINESS_TYPE_ICON[businessType] ?? "🏢" : "🏢";
@@ -153,31 +163,52 @@ export default function ProSidebar() {
 
                 <div className="mx-4 my-3">
                     <div className="flex items-center gap-2 bg-white/10 rounded-md px-3 py-2">
-                        <span className="text-orange-300 text-sm">{icon}</span>
+                        {logoUrl ? (
+                            <div className="relative w-6 h-6 rounded overflow-hidden shrink-0 border border-white/15">
+                                <Image
+                                    src={resolveImageUrl(logoUrl) ?? "/images/SL.png"}
+                                    alt="Organization Logo"
+                                    fill
+                                    className="object-cover"
+                                    unoptimized
+                                />
+                            </div>
+                        ) : (
+                            <span className="text-orange-300 text-sm">{icon}</span>
+                        )}
                         <span className="text-white text-sm font-medium truncate">
-              {organizationName ?? "Loading..."}
-            </span>
+                            {organizationName ?? "Loading..."}
+                        </span>
                     </div>
                 </div>
 
                 <nav className="flex-1 px-2 space-y-0.5 mt-2 overflow-y-auto">
-                    {navItems.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.label}
-                                href={item.href}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                                    isActive
-                                        ? "bg-blue-600 text-white"
-                                        : "text-gray-300 hover:bg-white/10 hover:text-white"
-                                }`}
-                            >
-                                <item.icon size={17} className="shrink-0" />
-                                <span className="truncate">{item.label}</span>
-                            </Link>
-                        );
-                    })}
+                    {navItems
+                        .filter((item) => {
+                            if (!role) return true;
+                            const r = role.toUpperCase();
+                            if (r === "STAFF") {
+                                if (item.href === "/dashboard/business/billing") return false;
+                            }
+                            return true;
+                        })
+                        .map((item) => {
+                            const isActive = pathname === item.href;
+                            return (
+                                <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                                        isActive
+                                            ? "bg-blue-600 text-white"
+                                            : "text-gray-300 hover:bg-white/10 hover:text-white"
+                                    }`}
+                                >
+                                    <item.icon size={17} className="shrink-0" />
+                                    <span className="truncate">{item.label}</span>
+                                </Link>
+                            );
+                        })}
                 </nav>
 
                 <div className="px-4 py-4 border-t border-white/10 flex items-center gap-3">

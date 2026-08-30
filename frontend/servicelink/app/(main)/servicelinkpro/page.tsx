@@ -26,30 +26,30 @@ import {
     XCircle, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { FaUsers } from "react-icons/fa";
-import {useState} from "react";
+import { useRef, useState } from "react";
 
 const FEATURES = [
     {
         icon: ClipboardList,
-        title: "Bulk Booking",
-        desc: "Request multiple providers across departments in one go.",
-        items: ["10 cleaners", "5 electricians", "3 plumbers"],
-        footer: "from one dashboard.",
+        title: "Job Tickets & Scheduling",
+        desc: "Create detailed service jobs, define dates, locations, skills, and workforce requirements.",
+        items: ["Recurring maintenance", "Multi-provider jobs", "Clear instructions"],
+        footer: "from one operational workspace.",
     },
     {
         icon: BarChart3,
         title: "Central Dashboard",
-        desc: "Manage everything from a single, easy-to-use dashboard.",
-        items: ["Jobs", "Payments", "Teams", "Schedules", "Providers", "Reports"],
+        desc: "Manage provider pools, jobs, billing, compliance, and team access from one workspace.",
+        items: ["Job tickets", "Billing", "SLA", "Compliance", "Provider pool", "Teams"],
         footer: "all from one place.",
         twoCol: true,
     },
     {
         icon: ShieldCheck,
         title: "Verified Providers",
-        desc: "Every provider on ServiceLink Pro is thoroughly verified.",
-        items: ["Identity verified", "Background checked", "Skill reviewed"],
-        footer: "before acceptance.",
+        desc: "Build your own preferred provider pool from eligible, verified ServiceLink professionals.",
+        items: ["KYC verified", "Service matched", "Availability aware"],
+        footer: "before they receive Pro assignments.",
     },
 ];
 
@@ -150,23 +150,23 @@ const TRUSTED_ACROSS = [
 const PRO_FAQS = [
     {
         q: "Is there a free trial?",
-        a: "Yes — all new providers get 30 days free with full access to all features before choosing a plan.",
+        a: "Yes. New organizations can start a 14-day ServiceLink Pro trial with no credit card required, then choose a plan that matches their service operations.",
     },
     {
-        q: "When do I receive payment after completing a job?",
-        a: "Payment is released to your eSewa or Khalti account automatically once the job is marked complete by the customer.",
+        q: "What can we manage during the trial?",
+        a: "You can set up your workspace, invite a team, build a provider pool, create job tickets, and review SLA, billing, and compliance workflows.",
     },
     {
-        q: "Can I pause my subscription?",
-        a: "Yes, you can pause or cancel your plan anytime from your provider dashboard under Subscription settings.",
+        q: "Can our team collaborate in the same workspace?",
+        a: "Yes. ServiceLink Pro supports role-based team access so operations, managers, and finance users can work with the information relevant to them.",
     },
     {
-        q: "Do I need a certification to join?",
-        a: "Certifications are encouraged but not mandatory for all service types. Basic services require ID verification only. Specialized services (electrical, plumbing) require relevant credentials.",
+        q: "How are providers selected?",
+        a: "Your organization can browse eligible providers by service category and add suitable professionals to its pool. Providers control whether they accept Pro orders.",
     },
     {
-        q: "What if a customer cancels a booking?",
-        a: "You'll be notified immediately and the time slot reopens for new bookings. Cancellation policies protect your time.",
+        q: "How do billing and SLA tracking work?",
+        a: "Each Pro job keeps its related provider assignments, attendance, SLA events, and billing records together so your team can monitor delivery and spend.",
     },
 ];
 
@@ -204,15 +204,17 @@ const STATS = [
 ];
 
 const MANAGE_FEATURES = [
-    "Real-time provider tracking",
-    "Job scheduling & automation",
-    "Service history & reports",
-    "Multi-location management",
-    "Spending analytics & insights",
-    "Team permissions & controls",
+    "Provider directory and private provider pool",
+    "Job tickets, assignments, and attendance",
+    "SLA monitoring and operational compliance",
+    "Billing records and spend visibility",
+    "Organization, workspace, and team controls",
+    "Service catalog aligned to your operational needs",
 ];
 
 export default function ServiceLinkProPage() {
+    const pricingRef = useRef<HTMLElement>(null);
+    const scrollToPricing = () => pricingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     return (
         <div className="bg-white">
             {/* Hero Section with dotted pattern */}
@@ -244,12 +246,12 @@ export default function ServiceLinkProPage() {
                         </p>
 
                         <div className="mt-7 flex flex-col sm:flex-row gap-3">
-                            <button className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group">
+                            <Link href="/register/business" className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group">
                                 Get Enterprise Access
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                            <button className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-6 py-3.5 rounded-xl shadow-lg transition-all">
-                                Contact Sales
+                            </Link>
+                            <button onClick={scrollToPricing} className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-6 py-3.5 rounded-xl shadow-lg transition-all">
+                                Pricing Plans
                             </button>
                         </div>
 
@@ -291,7 +293,7 @@ export default function ServiceLinkProPage() {
             </section>
 
             {/* Why Organizations Choose Section */}
-            <section className="py-20">
+            <section id="pro-pricing" className="py-20 scroll-mt-24">
                 <div className="max-w-7xl mx-auto px-4 lg:px-8 text-center">
                     <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1e3a8a]">
                         Why Organizations Choose ServiceLink{" "}
@@ -342,14 +344,14 @@ export default function ServiceLinkProPage() {
             </section>
 
             {/* Pricing Section */}
-            <section className="py-20">
+            <section ref={pricingRef} className="py-20">
                 <div className="bg-gradient-to-br from-[#1e3a8a] to-[#1e40af] rounded-2xl mx-4 lg:mx-8 px-4 lg:px-8 py-16">
                     <div className="max-w-7xl mx-auto text-center">
                         <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
                             Simple, Transparent Pricing
                         </h2>
                         <p className="mt-2 text-white/70 text-sm">
-                            No hidden fees. Cancel anytime.
+                            Start with a 14-day trial to set up your workspace, provider pool, and first jobs. No hidden fees. Cancel anytime.
                         </p>
 
                         <div className="mt-12 grid sm:grid-cols-3 gap-6 text-left items-stretch">
@@ -394,15 +396,15 @@ export default function ServiceLinkProPage() {
                                         ))}
                                     </ul>
 
-                                    <button
-                                        className={`mt-6 w-full py-3 rounded-xl font-semibold transition-all ${
+                                    <Link href="/register/business"
+                                        className={`block text-center mt-6 w-full py-3 rounded-xl font-semibold transition-all ${
                                             plan.highlighted
                                                 ? "bg-[#e8683f] hover:bg-[#d95a2f] text-white shadow-lg"
                                                 : "border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-[#1e3a8a]/5"
                                         }`}
                                     >
                                         {plan.cta}
-                                    </button>
+                                    </Link>
                                 </div>
                             ))}
                         </div>
@@ -630,15 +632,12 @@ export default function ServiceLinkProPage() {
 
                     <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
                         <Link
-                            href="/register"
+                            href="/register/business"
                             className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group whitespace-nowrap"
                         >
                             Start Free Trial
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <button className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-6 py-3.5 rounded-xl shadow-lg transition-all whitespace-nowrap">
-                            Talk to Our Team
-                        </button>
                     </div>
                 </div>
             </section>

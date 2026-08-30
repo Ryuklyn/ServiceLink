@@ -33,6 +33,7 @@ import com.servicelink.core.model.provider.review.Review;
 import com.servicelink.core.model.provider.service.Category;
 import com.servicelink.core.model.provider.subscription.ProviderSubscription;
 import com.servicelink.core.model.user.User;
+import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
 import com.servicelink.core.repository.provider.service.CategoryRepository;
 import com.servicelink.core.repository.provider.ProviderRepository;
@@ -41,6 +42,7 @@ import com.servicelink.core.repository.appointment.ServiceCatalogRepository;
 import com.servicelink.core.repository.appointment.ReviewRepository;
 import com.servicelink.core.repository.provider.portfolio.PortfolioRepository;
 import com.servicelink.core.service.provider.subscription.ProviderSubscriptionService;
+import com.servicelink.core.service.notification.NotificationService;
 import com.servicelink.core.storage.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -74,6 +76,7 @@ public class ProviderProfileService {
     private final SupabaseStorageService     storageService;
     private final ProviderMapper             mapper;
     private final ProviderSubscriptionService subscriptionService;
+    private final NotificationService notificationService;
 
     // ══════════════════════════════════════════════════════════════════════════
     // PUBLIC PROFILE (no auth required)
@@ -460,6 +463,7 @@ public class ProviderProfileService {
                 .build();
 
         Category saved = categoryRepo.save(category);
+        notifyCatalogChange("New service category", saved.getName() + " is now available in the ServiceLink service catalog.");
         log.info("Admin created category {} ({})", saved.getId(), saved.getName());
         return mapper.toCategoryDTO(saved, 0);
     }
@@ -499,6 +503,7 @@ public class ProviderProfileService {
         }
 
         log.info("Admin created category {} with {} sub-service(s)", category.getName(), created);
+        notifyCatalogChange("New service category", category.getName() + " and its services are now available in the catalog.");
         return mapper.toCategoryDTO(category, created);
     }
 
@@ -580,6 +585,7 @@ public class ProviderProfileService {
         }
 
         Category saved = categoryRepo.save(category);
+        notifyCatalogChange("Service category updated", saved.getName() + " has been updated in the service catalog.");
         return mapper.toCategoryDTO(saved, (int) catalogRepo.countByCategory_Id(categoryId));
     }
 
@@ -590,6 +596,7 @@ public class ProviderProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId));
         category.setIsActive(!category.getIsActive());
         Category saved = categoryRepo.save(category);
+        notifyCatalogChange("Service category availability changed", saved.getName() + " is " + (Boolean.TRUE.equals(saved.getIsActive()) ? "now available" : "no longer available") + ".");
         return mapper.toCategoryDTO(saved, (int) catalogRepo.countByCategory_Id(categoryId));
     }
 
@@ -651,7 +658,9 @@ public class ProviderProfileService {
                 .isActive(true)
                 .build();
 
-        return mapper.toCatalogDTO(catalogRepo.save(sc));
+        ServiceCatalog saved = catalogRepo.save(sc);
+        notifyCatalogChange("New service added", saved.getSubServiceName() + " is now available under " + saved.getCategory().getName() + ".");
+        return mapper.toCatalogDTO(saved);
     }
 
     /** Admin edits a catalog item's category/name/duration/pricing unit/base price. */
@@ -670,7 +679,9 @@ public class ProviderProfileService {
         if (req.getPricingUnit()    != null) sc.setPricingUnit(req.getPricingUnit());
         if (req.getBasePrice()      != null) sc.setBasePrice(req.getBasePrice());
 
-        return mapper.toCatalogDTO(catalogRepo.save(sc));
+        ServiceCatalog saved = catalogRepo.save(sc);
+        notifyCatalogChange("Service updated", saved.getSubServiceName() + " has been updated in the service catalog.");
+        return mapper.toCatalogDTO(saved);
     }
 
     /** Admin toggles a catalog item active/inactive (soft delete). */
@@ -679,7 +690,9 @@ public class ProviderProfileService {
         ServiceCatalog sc = catalogRepo.findById(catalogId)
                 .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", catalogId));
         sc.setIsActive(!sc.getIsActive());
-        return mapper.toCatalogDTO(catalogRepo.save(sc));
+        ServiceCatalog saved = catalogRepo.save(sc);
+        notifyCatalogChange("Service availability changed", saved.getSubServiceName() + " is " + (Boolean.TRUE.equals(saved.getIsActive()) ? "now available" : "no longer available") + ".");
+        return mapper.toCatalogDTO(saved);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -691,6 +704,10 @@ public class ProviderProfileService {
                 .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Active provider profile not found for user id: " + userId));
+    }
+
+    private void notifyCatalogChange(String title, String message) {
+        notificationService.sendPlatformNotificationToRoles(List.of(Role.CUSTOMER, Role.PROVIDER, Role.PRO), title, message, "/dashboard/user/explore");
     }
 
     @Transactional
@@ -810,6 +827,15 @@ public class ProviderProfileService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public ReferralCodeValidationDTO validateReferralCode(String code) {
+        if (code == null || code.isBlank()) return new ReferralCodeValidationDTO(false, null, null, null);
+        return providerRepo.findByReferralCode(code.trim().toUpperCase())
+                .filter(provider -> Boolean.TRUE.equals(provider.getIsActive()) && Boolean.TRUE.equals(provider.getIsVerified()))
+                .map(provider -> new ReferralCodeValidationDTO(true, provider.getFullName(), provider.getProfilePictureUrl(), provider.getPrimaryCategoryName()))
+                .orElse(new ReferralCodeValidationDTO(false, null, null, null));
+    }
+
     /**
      * Admin hard-deletes a category. Blocked if it still has sub-services —
      * those must be deleted or moved first, so a category is never removed
@@ -828,6 +854,7 @@ public class ProviderProfileService {
         }
 
         categoryRepo.delete(category);
+        notifyCatalogChange("Service category removed", category.getName() + " has been removed from the service catalog.");
     }
 
     /**
@@ -848,5 +875,6 @@ public class ProviderProfileService {
         }
 
         catalogRepo.delete(sc);
+        notifyCatalogChange("Service removed", sc.getSubServiceName() + " has been removed from the service catalog.");
     }
 }

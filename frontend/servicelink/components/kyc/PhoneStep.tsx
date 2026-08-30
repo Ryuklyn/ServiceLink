@@ -24,6 +24,10 @@ interface PhoneStepProps {
       mode: ContactMode,
       whatsappLink?: string,
   ) => void;
+  onSubmitContact?: (
+      contact: string,
+      mode: ContactMode,
+  ) => Promise<boolean>;
   /** "KYC" (default) for registration, "LOGIN" for the login page. */
   purpose?: OtpPurpose;
   heading?: string;
@@ -56,6 +60,7 @@ function isReady(value: string, mode: ContactMode): boolean {
 
 export default function PhoneStep({
                                     onOtpSent,
+                                    onSubmitContact,
                                     purpose = "KYC",
                                     footerPrompt,
                                     footerLinkLabel,
@@ -105,6 +110,13 @@ export default function PhoneStep({
     setLoading(true);
 
     try {
+      if (onSubmitContact) {
+        const handled = await onSubmitContact(contact, mode);
+        if (handled) {
+          return;
+        }
+      }
+
       let res: OtpSendResponse;
       if (mode === "phone") {
         res = await otpApi.sendPhoneOtp(contact, purpose);

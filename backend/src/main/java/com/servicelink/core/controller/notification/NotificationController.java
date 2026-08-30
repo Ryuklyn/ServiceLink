@@ -1,85 +1,67 @@
 package com.servicelink.core.controller.notification;
 
 import com.servicelink.core.dto.request.notification.NotificationRequestDto;
+import com.servicelink.core.dto.response.notification.NotificationPreferenceResponseDto;
 import com.servicelink.core.dto.response.notification.NotificationResponseDto;
 import com.servicelink.core.dto.response.notification.UnreadCountDto;
-import com.servicelink.core.model.user.Role;
+import com.servicelink.core.model.notification.NotificationCategory;
+import com.servicelink.core.model.user.User;
 import com.servicelink.core.service.notification.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
 public class NotificationController {
-
     private final NotificationService notificationService;
 
-    /**
-     * Manual endpoint (typically for Admins/ServiceLink Pro) to dispatch custom notifications.
-     * POST /api/v1/notifications
-     */
     @PostMapping
-    public ResponseEntity<NotificationResponseDto> createNotification(@Valid @RequestBody NotificationRequestDto requestDto) {
-        NotificationResponseDto response = notificationService.sendPrivateNotification(requestDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<NotificationResponseDto> createNotification(@Valid @RequestBody NotificationRequestDto request) {
+        NotificationResponseDto response = notificationService.sendPrivateNotification(request);
+        return response == null ? ResponseEntity.noContent().build() : ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * Get paginated notifications history for dashboard view.
-     * GET /api/v1/notifications?recipientId=10&role=CUSTOMER&page=0&size=10
-     */
     @GetMapping
-    public ResponseEntity<Page<NotificationResponseDto>> getNotifications(
-            @RequestParam Long recipientId,
-            @RequestParam Role role,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
-        Page<NotificationResponseDto> notifications = notificationService.getUserNotifications(recipientId, role, page, size);
-        return ResponseEntity.ok(notifications);
+    public ResponseEntity<Page<NotificationResponseDto>> getNotifications(@AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(notificationService.getUserNotifications(user, page, size));
     }
 
-    /**
-     * Get real-time unread count for navbar badges.
-     * GET /api/v1/notifications/unread-count?recipientId=10&role=CUSTOMER
-     */
     @GetMapping("/unread-count")
-    public ResponseEntity<UnreadCountDto> getUnreadCount(
-            @RequestParam Long recipientId,
-            @RequestParam Role role) {
-
-        long count = notificationService.getUnreadCount(recipientId, role);
-        return ResponseEntity.ok(new UnreadCountDto(count));
+    public ResponseEntity<UnreadCountDto> getUnreadCount(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(new UnreadCountDto(notificationService.getUnreadCount(user)));
     }
 
-    /**
-     * Mark a specific notification as read.
-     * PATCH /api/v1/notifications/5/read?recipientId=10
-     */
     @PatchMapping("/{id}/read")
-    public ResponseEntity<Void> markAsRead(
-            @PathVariable Long id,
-            @RequestParam Long recipientId) {
-
-        notificationService.markAsRead(id, recipientId);
+    public ResponseEntity<Void> markAsRead(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        notificationService.markAsRead(id, user);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Mark all notifications as read for current active user.
-     * PATCH /api/v1/notifications/read-all?recipientId=10&role=CUSTOMER
-     */
     @PatchMapping("/read-all")
-    public ResponseEntity<Void> markAllAsRead(
-            @RequestParam Long recipientId,
-            @RequestParam Role role) {
-
-        notificationService.markAllAsRead(recipientId, role);
+    public ResponseEntity<Void> markAllAsRead(@AuthenticationPrincipal User user) {
+        notificationService.markAllAsRead(user);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/preferences")
+    public ResponseEntity<List<NotificationPreferenceResponseDto>> getPreferences(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(notificationService.getPreferences(user));
+    }
+
+    @PutMapping("/preferences/{category}")
+    public ResponseEntity<NotificationPreferenceResponseDto> updatePreference(@PathVariable NotificationCategory category,
+            @RequestParam boolean enabled, @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(notificationService.updatePreference(user, category, enabled));
     }
 }

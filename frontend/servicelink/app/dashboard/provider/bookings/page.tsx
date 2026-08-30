@@ -15,6 +15,7 @@ import {
 } from "@/store/slices/providerBookingsSlice";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import api from "@/utils/axios";
 
 /**
  * ─────────────────────────────────────────────────────────────────────────
@@ -136,6 +137,7 @@ const groupLabelColor = (s: string): string => {
 
 const TAB_FILTERS = [
     { label: "All", key: "ALL" },
+    { label: "Pro", key: "PRO" },
     { label: "Rescheduled", key: "RESCHEDULED" },
     { label: "Pending", key: "PENDING" },
     { label: "Accepted", key: "CONFIRMED" },
@@ -209,6 +211,60 @@ export default function BookingsPage() {
     const [mobileView, setMobileView] = useState<"list" | "detail">("list");
     const [measuredQty, setMeasuredQty] = useState<number | undefined>(undefined);
 
+    const [proJobs, setProJobs] = useState<any[]>([]);
+    const [selectedProJob, setSelectedProJob] = useState<any | null>(null);
+    const [proLoading, setProLoading] = useState(false);
+    const [proSeen, setProSeen] = useState(false);
+    const [b2cSeen, setB2cSeen] = useState(false);
+
+    const loadProJobs = async () => {
+        setProLoading(true);
+        try {
+            const { data } = await api.get("/pro/jobs/provider/assigned");
+            setProJobs(data);
+        } catch (err) {
+            console.error("Failed to load Pro jobs:", err);
+        } finally {
+            setProLoading(false);
+        }
+    };
+
+    const handleRespondProJob = async (jobId: number, action: "accept" | "reject") => {
+        try {
+            await api.post(`/pro/jobs/${jobId}/${action}`);
+            toast.success(`Request ${action}ed successfully!`);
+            loadProJobs();
+            setSelectedProJob(null);
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || `Failed to ${action} request.`);
+        }
+    };
+
+    useEffect(() => {
+        loadProJobs();
+    }, []);
+
+    useEffect(() => {
+        if (activeFilter === "ALL" || activeFilter === "PENDING") {
+            setB2cSeen(true);
+        } else if (activeFilter === "PRO") {
+            setProSeen(true);
+        }
+    }, [activeFilter]);
+
+    useEffect(() => {
+        if (activeFilter === "PRO") {
+            if (proJobs.length > 0 && !selectedProJob) {
+                setSelectedProJob(proJobs[0]);
+            }
+        } else {
+            setSelectedProJob(null);
+            if (items.length > 0 && !selectedId) {
+                setSelectedId(items[0].id);
+            }
+        }
+    }, [activeFilter, proJobs, items]);
+
     const [lightbox, setLightbox] = useState<{ type: "image" | "video"; src?: string } | null>(null);
     const [playingAudio, setPlayingAudio] = useState(false);
     const [audioProgress, setAudioProgress] = useState(0);
@@ -265,6 +321,7 @@ export default function BookingsPage() {
 
     const counts: Record<string, number> = {
         ALL: items.length,
+        PRO: proJobs.length,
         RESCHEDULED: items.filter(wasRescheduled).length,
         PENDING: items.filter((b) => b.status === "PENDING").length,
         CONFIRMED: items.filter((b) => b.status === "CONFIRMED").length,
@@ -420,8 +477,15 @@ export default function BookingsPage() {
                 {TAB_FILTERS.map(({ label, key }) => (
                     <button
                         key={key}
-                        onClick={() => setActiveFilter(key)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+                        onClick={() => {
+                            setActiveFilter(key);
+                            if (key === "PRO") {
+                                setProSeen(true);
+                            } else if (key === "PENDING" || key === "ALL") {
+                                setB2cSeen(true);
+                            }
+                        }}
+                        className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                             activeFilter === key ? "text-white" : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
                         }`}
                         style={activeFilter === key ? { backgroundColor: BRAND.navy } : {}}
@@ -434,6 +498,11 @@ export default function BookingsPage() {
                         >
                             {counts[key]}
                         </span>
+                        {/* Red Dot Indicator */}
+                        {((key === "PRO" && !proSeen && proJobs.some((pj) => pj.assignmentStatus === "PENDING")) ||
+                          ((key === "PENDING" || key === "ALL") && !b2cSeen && items.some((b) => b.status === "PENDING"))) && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse" />
+                        )}
                     </button>
                 ))}
             </div>
@@ -446,120 +515,259 @@ export default function BookingsPage() {
                 <div
                     className={`${mobileView === "list" ? "flex" : "hidden"} lg:flex flex-col w-full lg:w-72 lg:flex-shrink-0 space-y-6 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto pr-0 lg:pr-1`}
                 >
-                    {groups.length === 0 && (
-                        <div className="text-center text-gray-400 text-sm py-12">No bookings found.</div>
-                    )}
-                    {groups.map(({ key, label, color, items: groupItems }) => (
-                        // NOTE: no `overflow-hidden` on this wrapper anymore — it was clipping cards
-                        // that render taller than the group's initial layout pass (e.g. once the
-                        // WhatsApp row below is added, or on the "All" tab where several groups stack).
-                        // `overflow-hidden` was only ever needed to keep the header's rounded corners
-                        // clean, so that's handled directly on the header/footer elements instead.
-                        <div key={key} className="w-full bg-white rounded-xl border border-gray-100 shadow-sm">
-                            <div className="px-4 pt-4 pb-2 border-b border-gray-100 rounded-t-xl">
-                                <p className="text-xs font-bold tracking-wide uppercase flex items-center gap-1" style={{ color }}>
-                                    {key === "RESCHEDULED" && <RefreshCcw size={11} />}
-                                    {label} ({groupItems.length})
-                                </p>
-                            </div>
-                            <div className="p-2 pb-3 space-y-2 rounded-b-xl">
-                                {groupItems.map((b: any) => {
-                                    const { display, weekday } = formatDate(b.appointmentDate);
-                                    const rescheduled = wasRescheduled(b);
-                                    return (
-                                        <div
-                                            key={b.id}
-                                            onClick={() => handleSelectBooking(b.id)}
-                                            className={`w-full rounded-lg p-2.5 cursor-pointer transition-colors border ${
-                                                selectedId === b.id
-                                                    ? "bg-orange-100 border-orange-200"
-                                                    : rescheduled
-                                                        ? "border-[#1e3a8a]/20 bg-[#1e3a8a]/5 hover:bg-[#1e3a8a]/10"
-                                                        : "border-transparent hover:bg-gray-50"
-                                            }`}
-                                        >
-                                            <div className="flex items-start gap-2.5 w-full">
-                                                {b.customerProfilePictureUrl ? (
-                                                    // eslint-disable-next-line @next/next/no-img-element
-                                                    <img src={b.customerProfilePictureUrl} alt={b.customerName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                                                ) : (
-                                                    <div className="w-10 h-10 rounded-full text-white flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: BRAND.navy }}>
-                                                        {initialsOf(b.customerName)}
-                                                    </div>
-                                                )}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-start justify-between gap-1">
-                                                        <p className="text-sm font-semibold text-gray-800 truncate">{b.customerName}</p>
-                                                        <p className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: BRAND.orange }}>
-                                                            Rs. {(b.totalPrice ?? 0).toLocaleString()}
-                                                        </p>
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 mt-0.5 truncate">{b.subServiceName}</p>
-
-                                                    {rescheduled && (
-                                                        <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#1e3a8a] bg-[#1e3a8a]/10 border border-[#1e3a8a]/20 px-1.5 py-0.5 rounded-full">
-                                                            <RefreshCcw size={9} /> {b.status === "PENDING" ? "Awaiting your approval" : "Rescheduled"}
-                                                        </span>
-                                                    )}
-
-                                                    <div className="flex items-center gap-1 mt-1.5 text-xs text-gray-400">
-                                                        <Calendar size={10} /> {display} · {weekday}
-                                                    </div>
-                                                    {/* flex-wrap so the status pill drops to its own line instead of
-                                                        getting clipped by the card's edge on narrower widths */}
-                                                    <div className="flex items-center justify-between mt-1.5 gap-2 flex-wrap">
-                                                        <div className="flex items-center gap-1 text-xs text-gray-400 truncate min-w-0 max-w-[60%]">
-                                                            <MapPin size={10} className="flex-shrink-0" /> <span className="truncate">{b.address}</span>
-                                                        </div>
-                                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap ${statusBadgeStyle(b.status)}`}>
-                                                            {statusLabel(b.status)}
-                                                        </span>
-                                                    </div>
-
-                                                    {/* WhatsApp — lives in the shared card loop, so it renders on
-                                                        every card in every group (Rescheduled, Pending, Accepted,
-                                                        In Progress, Completed, Cancelled) and therefore on "All" too,
-                                                        regardless of which customer/booking it is. Gated ONLY on
-                                                        customerPhone existing on the record — no ID allowlist.
-                                                        When there's no phone on file it renders disabled instead of
-                                                        disappearing, so cards stay visually consistent.
-                                                        stopPropagation so tapping it doesn't also select the card. */}
-                                                    {b.customerPhone ? (
-                                                        <a
-                                                            href={whatsappHref(
-                                                                b.customerPhone,
-                                                                `Hello ${b.customerName}, regarding your booking BK-${b.id}.`
-                                                            )}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-white px-2.5 py-1 rounded-full w-fit"
-                                                            style={{ backgroundColor: "#25D366" }}
-                                                        >
-                                                            <WhatsAppIcon size={11} /> WhatsApp
-                                                        </a>
-                                                    ) : (
-                                                        <span
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            title="No phone number on file"
-                                                            className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-gray-400 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full w-fit cursor-not-allowed"
-                                                        >
-                                                            <WhatsAppIcon size={11} /> WhatsApp
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
+                    {activeFilter === "PRO" ? (
+                        proJobs.length === 0 ? (
+                            <div className="text-center text-gray-400 text-sm py-12">No Pro job requests.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                {proJobs.map((pj) => (
+                                    <div
+                                        key={pj.id}
+                                        onClick={() => {
+                                            setSelectedProJob(pj);
+                                            setMobileView("detail");
+                                        }}
+                                        className={`w-full rounded-xl p-3.5 cursor-pointer transition-all border ${
+                                            selectedProJob?.id === pj.id
+                                                ? "bg-slate-100 border-[#1e3a8a]"
+                                                : "border-gray-200 hover:bg-gray-50 bg-white"
+                                        }`}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <span className="text-[10px] font-bold text-[#1e3a8a] bg-[#1e3a8a]/5 px-2 py-0.5 rounded">
+                                                {pj.reference}
+                                            </span>
+                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase ${
+                                                pj.assignmentStatus === "ACCEPTED" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                                                pj.assignmentStatus === "REJECTED" ? "bg-red-50 text-red-600 border-red-100" :
+                                                "bg-amber-50 text-amber-600 border-amber-100"
+                                            }`}>
+                                                {pj.assignmentStatus}
+                                            </span>
                                         </div>
-                                    );
-                                })}
+                                        <h4 className="text-sm font-bold text-slate-800 mt-2 line-clamp-1">{pj.title}</h4>
+                                        <p className="text-[11px] font-semibold text-slate-500 mt-0.5">{pj.requiredSkill} (Pro Service)</p>
+                                        
+                                        <div className="flex items-center gap-1.5 mt-2.5 text-[10px] text-gray-400 font-semibold">
+                                            <Calendar size={11} />
+                                            <span>{pj.startDate} to {pj.endDate}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400 font-semibold">
+                                            <Clock size={11} />
+                                            <span>{pj.startTime.substring(0, 5)} - {pj.endTime.substring(0, 5)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400 font-semibold truncate">
+                                            <MapPin size={11} className="flex-shrink-0" />
+                                            <span className="truncate">{pj.location}</span>
+                                        </div>
+                                        {pj.providerEarning && (
+                                            <div className="mt-2 text-xs font-extrabold text-[#e8683f]">
+                                                Expected: Rs. {pj.providerEarning.toLocaleString()} {pj.pricingModel ? `/ ${pj.pricingModel === "PER_JOB" ? "Job" : pj.pricingModel === "PER_DAY" ? "Day" : pj.pricingModel === "PER_HOUR" ? "Hour" : "Sq. Ft."}` : ""}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
-                        </div>
-                    ))}
+                        )
+                    ) : (
+                        <>
+                            {groups.length === 0 && (
+                                <div className="text-center text-gray-400 text-sm py-12">No bookings found.</div>
+                            )}
+                            {groups.map(({ key, label, color, items: groupItems }) => (
+                                <div key={key} className="w-full bg-white rounded-xl border border-gray-100 shadow-sm">
+                                    <div className="px-4 pt-4 pb-2 border-b border-gray-100 rounded-t-xl">
+                                        <p className="text-xs font-bold tracking-wide uppercase flex items-center gap-1" style={{ color }}>
+                                            {key === "RESCHEDULED" && <RefreshCcw size={11} />}
+                                            {label} ({groupItems.length})
+                                        </p>
+                                    </div>
+                                    <div className="p-2 pb-3 space-y-2 rounded-b-xl">
+                                        {groupItems.map((b: any) => {
+                                            const { display, weekday } = formatDate(b.appointmentDate);
+                                            const rescheduled = wasRescheduled(b);
+                                            return (
+                                                <div
+                                                    key={b.id}
+                                                    onClick={() => handleSelectBooking(b.id)}
+                                                    className={`w-full rounded-lg p-2.5 cursor-pointer transition-colors border ${
+                                                        selectedId === b.id
+                                                            ? "bg-orange-100 border-orange-200"
+                                                            : rescheduled
+                                                                ? "border-[#1e3a8a]/20 bg-[#1e3a8a]/5 hover:bg-[#1e3a8a]/10"
+                                                                : "border-transparent hover:bg-gray-50"
+                                                    }`}
+                                                >
+                                                    <div className="flex items-start gap-2.5 w-full">
+                                                        {b.customerProfilePictureUrl ? (
+                                                            <img src={b.customerProfilePictureUrl} alt={b.customerName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                                                        ) : (
+                                                            <div className="w-10 h-10 rounded-full text-white flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: BRAND.navy }}>
+                                                                {initialsOf(b.customerName)}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-start justify-between gap-1">
+                                                                <p className="text-sm font-semibold text-gray-800 truncate">{b.customerName}</p>
+                                                                <p className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: BRAND.orange }}>
+                                                                    Rs. {(b.totalPrice ?? 0).toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 mt-0.5 truncate">{b.subServiceName}</p>
+
+                                                            {rescheduled && (
+                                                                <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#1e3a8a] bg-[#1e3a8a]/10 border border-[#1e3a8a]/20 px-1.5 py-0.5 rounded-full">
+                                                                    <RefreshCcw size={9} /> {b.status === "PENDING" ? "Awaiting your approval" : "Rescheduled"}
+                                                                </span>
+                                                            )}
+
+                                                            <div className="flex items-center gap-1 mt-1.5 text-xs text-gray-400">
+                                                                <Calendar size={10} /> {display} · {weekday}
+                                                            </div>
+                                                            <div className="flex items-center justify-between mt-1.5 gap-2 flex-wrap">
+                                                                <div className="flex items-center gap-1 text-xs text-gray-400 truncate min-w-0 max-w-[60%]">
+                                                                    <MapPin size={10} className="flex-shrink-0" /> <span className="truncate">{b.address}</span>
+                                                                </div>
+                                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap ${statusBadgeStyle(b.status)}`}>
+                                                                    {statusLabel(b.status)}
+                                                                </span>
+                                                            </div>
+
+                                                            {b.customerPhone ? (
+                                                                <a
+                                                                    href={whatsappHref(
+                                                                        b.customerPhone,
+                                                                        `Hello ${b.customerName}, regarding your booking BK-${b.id}.`
+                                                                    )}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-white px-2.5 py-1 rounded-full w-fit"
+                                                                    style={{ backgroundColor: "#25D366" }}
+                                                                >
+                                                                    <WhatsAppIcon size={11} /> WhatsApp
+                                                                </a>
+                                                            ) : (
+                                                                <span
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    title="No phone number on file"
+                                                                    className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-gray-400 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full w-fit cursor-not-allowed"
+                                                                >
+                                                                    <WhatsAppIcon size={11} /> WhatsApp
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    )}
                 </div>
 
                 {/* RIGHT: Detail — hidden on mobile until a booking is picked */}
                 <div className={`${mobileView === "detail" ? "block" : "hidden"} lg:block flex-1 min-w-0 w-full`}>
-                    {!selectedSummary ? (
+                    {activeFilter === "PRO" ? (
+                        !selectedProJob ? (
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-10 sm:p-16 text-center text-gray-400 text-sm">
+                                Select a Pro job request to view details.
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden p-6 space-y-4">
+                                {/* Mobile back button */}
+                                <button
+                                    onClick={() => setMobileView("list")}
+                                    className="lg:hidden flex items-center gap-1.5 px-4 pt-4 text-sm font-semibold text-gray-500"
+                                >
+                                    <ArrowLeft size={15} /> Back to jobs
+                                </button>
+
+                                {/* Pro Job Details Header */}
+                                <div className="flex justify-between items-start border-b border-slate-100 pb-4">
+                                    <div>
+                                        <span className="text-xs font-bold text-[#1e3a8a] bg-[#1e3a8a]/5 px-2.5 py-0.5 rounded">
+                                            {selectedProJob.reference}
+                                        </span>
+                                        <h2 className="text-lg font-black text-slate-800 mt-2">{selectedProJob.title}</h2>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            Role Required: <span className="font-bold text-[#1e3a8a]">{selectedProJob.requiredSkill}</span>
+                                        </p>
+                                    </div>
+                                    <span className={`px-2.5 py-1 rounded text-xs font-extrabold border uppercase ${
+                                        selectedProJob.assignmentStatus === "ACCEPTED" ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                                        selectedProJob.assignmentStatus === "REJECTED" ? "bg-red-50 text-red-600 border-red-200" :
+                                        "bg-amber-50 text-amber-600 border-amber-200"
+                                    }`}>
+                                        {selectedProJob.assignmentStatus}
+                                    </span>
+                                </div>
+
+                                {/* Date, Time, Location */}
+                                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl text-xs font-semibold text-slate-700">
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold">Start Date</p>
+                                        <p className="mt-0.5">{selectedProJob.startDate}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold">End Date</p>
+                                        <p className="mt-0.5">{selectedProJob.endDate}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold">Start Time</p>
+                                        <p className="mt-0.5">{selectedProJob.startTime?.substring(0, 5)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold">End Time</p>
+                                        <p className="mt-0.5">{selectedProJob.endTime?.substring(0, 5)}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold">Location</p>
+                                        <p className="mt-0.5">{selectedProJob.location}</p>
+                                    </div>
+                                </div>
+
+                                {/* Expected Earnings */}
+                                {selectedProJob.providerEarning && (
+                                    <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl">
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold">Expected Earnings</p>
+                                        <p className="text-lg font-black text-[#e8683f] mt-0.5">
+                                            Rs. {selectedProJob.providerEarning.toLocaleString()} {selectedProJob.pricingModel ? `/ ${selectedProJob.pricingModel === "PER_JOB" ? "Job" : selectedProJob.pricingModel === "PER_DAY" ? "Day" : selectedProJob.pricingModel === "PER_HOUR" ? "Hour" : "Sq. Ft."}` : ""}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Instructions */}
+                                <div>
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Instructions</h4>
+                                    <p className="text-sm text-slate-600 leading-relaxed font-medium bg-slate-50/50 p-3 rounded-xl border border-dashed border-slate-200">
+                                        {selectedProJob.instructions?.split("\n\n---WORKFORCE_REQUIREMENTS---")[0] || "No special instructions provided."}
+                                    </p>
+                                </div>
+
+                                {/* Accept/Reject Actions */}
+                                {selectedProJob.assignmentStatus === "PENDING" && (
+                                    <div className="flex gap-4 pt-4 border-t border-slate-100">
+                                        <button
+                                            onClick={() => handleRespondProJob(selectedProJob.id, "reject")}
+                                            className="w-1/2 border border-slate-200 hover:bg-slate-50 text-slate-700 py-2.5 rounded-xl font-bold transition-colors text-sm"
+                                        >
+                                            Reject
+                                        </button>
+                                        <button
+                                            onClick={() => handleRespondProJob(selectedProJob.id, "accept")}
+                                            className="w-1/2 text-white py-2.5 rounded-xl font-bold transition-colors text-sm"
+                                            style={{ backgroundColor: BRAND.navy }}
+                                        >
+                                            Accept Request
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    ) : !selectedSummary ? (
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-10 sm:p-16 text-center text-gray-400 text-sm">
                             Select a booking to view details.
                         </div>

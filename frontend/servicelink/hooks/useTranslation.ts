@@ -11,7 +11,7 @@ export function useTranslation() {
 
     const language = isProvider ? providerLanguage : userLanguage;
 
-    const t = (key: string): string => {
+    const t = (key: string, fallback?: string): string => {
         const dict = translations[language] || translations["en"];
         
         // 1. Resolve nested path (e.g., "navigation.home")
@@ -38,7 +38,7 @@ export function useTranslation() {
             }
         }
 
-        return key;
+        return fallback ?? key;
     };
 
     return { t, language };

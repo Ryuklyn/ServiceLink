@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 import { useLogout } from "@/hooks/useLogout";
-import { useUserTranslation } from "@/hooks/useUserTranslation";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const pageTitles: Record<string, string> = {
   "/dashboard/user": "Dashboard",
@@ -25,7 +25,7 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
   const pathname = usePathname();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { t } = useUserTranslation();
+  const { t } = useTranslation();
 
   const { data: user } = useAppSelector((state) => state.user);
   const { unreadCount } = useAppSelector((state) => state.notifications);
@@ -77,7 +77,7 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
         <div className="flex items-center gap-2 sm:gap-4 shrink-0 ml-auto text-navbar-text">
           {/* Notifications — dynamic unread count, fixed route typo */}
           <Link
-              href="/dashboard/user/notifications"
+              href="/dashboard/user/notification"
               className="relative p-2 hover:bg-white/10 rounded-full transition-colors"
           >
             <Bell className="w-5 h-5 text-navbar-text" />
@@ -119,7 +119,7 @@ export default function SearchBar({ onMenuClick }: SearchBarProps) {
                     {t("Profile")}
                   </Link>
                   <Link
-                      href="/dashboard/user/notifications"
+                      href="/dashboard/user/notification"
                       onClick={() => setShowDropdown(false)}
                       className="flex items-center gap-3 px-4 py-3 text-sm text-text-primary hover:bg-surface-hover transition-colors"
                   >

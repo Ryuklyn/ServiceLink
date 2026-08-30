@@ -88,6 +88,10 @@ export default function WhatsAppButton({
 
     const buttonClasses = `${baseClasses} ${className || ""}`;
 
+    if (!phone || !phone.trim()) {
+        return null;
+    }
+
     return (
         <>
             <button

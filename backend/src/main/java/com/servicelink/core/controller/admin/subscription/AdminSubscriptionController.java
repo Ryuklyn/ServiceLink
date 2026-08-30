@@ -9,6 +9,10 @@ import com.servicelink.core.dto.response.admin.subscription.SubscriptionStatsDTO
 import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import com.servicelink.core.model.provider.subscription.SubscriptionStatus;
 import com.servicelink.core.service.provider.subscription.ProviderSubscriptionService;
+import com.servicelink.core.service.business.SubscriptionService;
+import com.servicelink.core.dto.response.admin.subscription.ProSubscriptionStatsDTO;
+import com.servicelink.core.dto.response.admin.subscription.ProAdminSubscriptionRowDTO;
+import com.servicelink.core.dto.response.admin.subscription.ProSubscriptionHistoryDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +36,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminSubscriptionController {
 
     private final ProviderSubscriptionService subscriptionService;
+    private final SubscriptionService proSubscriptionService;
 
     @GetMapping("/stats")
     public ResponseEntity<SubscriptionStatsDTO> getStats() {
@@ -70,6 +75,34 @@ public class AdminSubscriptionController {
             @RequestBody @Valid RevokeSubscriptionRequest req
     ) {
         return ResponseEntity.ok(subscriptionService.adminRevoke(providerId, req));
+    }
+
+    @GetMapping("/pro/stats")
+    public ResponseEntity<ProSubscriptionStatsDTO> getProStats() {
+        return ResponseEntity.ok(proSubscriptionService.getProStats());
+    }
+
+    @GetMapping("/pro")
+    public ResponseEntity<java.util.List<ProAdminSubscriptionRowDTO>> getProSubscriptions() {
+        return ResponseEntity.ok(proSubscriptionService.getProSubscriptions());
+    }
+
+    @GetMapping("/pro/{workspaceId}/history")
+    public ResponseEntity<ProSubscriptionHistoryDTO> getProHistory(@PathVariable Long workspaceId) {
+        return ResponseEntity.ok(proSubscriptionService.getProSubscriptionHistory(workspaceId));
+    }
+
+    @PostMapping("/pro/{workspaceId}/cancel")
+    public ResponseEntity<ProAdminSubscriptionRowDTO> cancelPro(@PathVariable Long workspaceId) {
+        return ResponseEntity.ok(proSubscriptionService.cancelProSubscription(workspaceId));
+    }
+
+    @PostMapping("/pro/{workspaceId}/extend")
+    public ResponseEntity<ProAdminSubscriptionRowDTO> extendPro(
+            @PathVariable Long workspaceId,
+            @RequestParam int days
+    ) {
+        return ResponseEntity.ok(proSubscriptionService.extendProSubscription(workspaceId, days));
     }
 
     // NOTE: no /transactions endpoint wired up yet — the frontend's Payment

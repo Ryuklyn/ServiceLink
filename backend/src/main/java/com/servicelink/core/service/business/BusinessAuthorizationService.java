@@ -26,7 +26,7 @@ public class BusinessAuthorizationService {
     private final WorkspaceRepository workspaceRepository;
 
     public void requireDirectoryAccess(User user, Long organizationId) {
-        requireRole(user, organizationId, Set.of(TeamRole.ADMIN, TeamRole.MANAGER, TeamRole.STAFF));
+        requireRole(user, organizationId, Set.of(TeamRole.ADMIN, TeamRole.MANAGER, TeamRole.STAFF, TeamRole.FINANCE));
     }
 
     public void requirePoolManagement(User user, Long organizationId) {

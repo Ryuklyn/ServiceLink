@@ -3,8 +3,6 @@ package com.servicelink.core.service.business.pool;
 import com.servicelink.core.dto.response.business.pool.ProviderPoolCardDTO;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.availability.ProviderScheduleSettings;
-import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
-import com.servicelink.core.model.provider.subscription.SubscriptionStatus;
 import com.servicelink.core.model.business.providerpool.ProviderPoolEntry;
 import com.servicelink.core.model.business.providerpool.ProviderPoolStatus;
 import com.servicelink.core.repository.business.ProviderPoolEntryRepository;
@@ -17,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,23 +27,66 @@ public class ProviderPoolService {
     private final ProOrdersEligibilityChecker proOrdersEligibilityChecker;
 
     // ────────────────────────────────────────────────────────────────────
-    // ELIGIBILITY: The single source of truth for Pro Orders eligibility
+    // ELIGIBILITY: The single source of truth for Pro Orders eligibility.
+    //
+    // checkProOrdersEligibility() is the canonical check — it returns the
+    // *first* failing reason, if any. computeProOrdersEligible() is a thin
+    // boolean wrapper for callers (directory filtering, card DTOs) that
+    // only need yes/no. Any other service that needs to gate on Pro Orders
+    // eligibility (e.g. ProviderScheduleSettingsService when saving the
+    // "Accept Business & Pro Orders" toggle) should call
+    // checkProOrdersEligibility() rather than re-deriving these conditions,
+    // so there is exactly one place this rule can drift.
     // ────────────────────────────────────────────────────────────────────
 
-    public boolean computeProOrdersEligible(Provider provider) {
-        if (!Boolean.TRUE.equals(provider.getIsActive())
-                || !Boolean.TRUE.equals(provider.getIsVerified())
-                || !Boolean.TRUE.equals(provider.getHasCompletedOnboarding())) {
-            return false;
+    public enum EligibilityFailure {
+        PROVIDER_INACTIVE("Your account must be active to accept Business & Pro orders."),
+        VERIFICATION_REQUIRED("Complete KYC verification before accepting Business & Pro orders."),
+        ONBOARDING_INCOMPLETE("Finish onboarding before accepting Business & Pro orders."),
+        SUBSCRIPTION_REQUIRED("Activate a paid subscription to accept Business & Pro orders."),
+        PRO_ORDERS_DISABLED("Turn on \"Accept Business & Pro Orders\" in your availability settings.");
+
+        public final String message;
+
+        EligibilityFailure(String message) {
+            this.message = message;
         }
-        boolean paidAndActive = proOrdersEligibilityChecker.isEligible(provider.getId());
+    }
+
+    /**
+     * Returns the first reason this provider is NOT eligible for Pro Orders,
+     * or empty if they are fully eligible. Order matters: account-level gates
+     * (active/verified/onboarding) are checked before subscription and
+     * before the provider's own toggle, since those are the more fundamental
+     * blockers a caller should surface first.
+     */
+    public Optional<EligibilityFailure> checkProOrdersEligibility(Provider provider) {
+        if (!Boolean.TRUE.equals(provider.getIsActive())) {
+            return Optional.of(EligibilityFailure.PROVIDER_INACTIVE);
+        }
+        if (!Boolean.TRUE.equals(provider.getIsVerified())) {
+            return Optional.of(EligibilityFailure.VERIFICATION_REQUIRED);
+        }
+        if (!Boolean.TRUE.equals(provider.getHasCompletedOnboarding())) {
+            return Optional.of(EligibilityFailure.ONBOARDING_INCOMPLETE);
+        }
+        if (!proOrdersEligibilityChecker.isEligible(provider.getId())) {
+            return Optional.of(EligibilityFailure.SUBSCRIPTION_REQUIRED);
+        }
 
         boolean acceptsProOrders = scheduleSettingsRepository.findById(provider.getId())
                 .map(ProviderScheduleSettings::getAcceptsProOrders)
                 .map(Boolean.TRUE::equals)
                 .orElse(false);
+        if (!acceptsProOrders) {
+            return Optional.of(EligibilityFailure.PRO_ORDERS_DISABLED);
+        }
 
-        return paidAndActive && acceptsProOrders;
+        return Optional.empty();
+    }
+
+    public boolean computeProOrdersEligible(Provider provider) {
+        return checkProOrdersEligibility(provider).isEmpty();
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -109,14 +151,9 @@ public class ProviderPoolService {
         Provider provider = providerRepository.findById(providerId)
                 .orElseThrow(() -> new IllegalArgumentException("Provider not found with ID: " + providerId));
 
-        if (!Boolean.TRUE.equals(provider.getIsVerified())) {
-            throw new BusinessException("Only verified providers can join a Pro provider pool", "PROVIDER_NOT_VERIFIED");
-        }
-        if (!Boolean.TRUE.equals(provider.getIsActive()) || !Boolean.TRUE.equals(provider.getHasCompletedOnboarding())) {
-            throw new BusinessException("Provider is not active and ready for new Pro work", "PROVIDER_NOT_ELIGIBLE");
-        }
-        if (!computeProOrdersEligible(provider)) {
-            throw new BusinessException("Provider is not currently visible for Pro Orders", "PROVIDER_NOT_PRO_VISIBLE");
+        Optional<EligibilityFailure> failure = checkProOrdersEligibility(provider);
+        if (failure.isPresent()) {
+            throw new BusinessException(failure.get().message, "PROVIDER_NOT_PRO_VISIBLE");
         }
 
         var existing = poolEntryRepository.findByOrganizationIdAndProviderId(organizationId, providerId);

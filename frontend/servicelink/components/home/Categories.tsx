@@ -1,4 +1,5 @@
 import { CATEGORIES } from "@/data/homeData";
+import Link from "next/link";
 
 export default function Categories() {
   return (
@@ -21,9 +22,9 @@ export default function Categories() {
             const Icon = cat.icon;
             
             return (
-              <a 
+              <Link
                 key={idx} 
-                href="#"
+                href="/services"
                 className="flex items-center gap-4 p-4 rounded-xl md:rounded-full bg-white border border-gray-200 hover:border-[#1e3a8a]/25 hover:shadow-md transition-all group"
               >
                 <div className={`w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#1e3a8a]/10 transition-colors ${cat.color}`}>
@@ -37,7 +38,7 @@ export default function Categories() {
                     {cat.providers} providers
                   </p>
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>

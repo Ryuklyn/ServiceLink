@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { kycApi } from "@/lib/api/kycApi";
 import { User, MapPin, ArrowRight } from "lucide-react";
 import {
   FormInput,
@@ -26,6 +28,7 @@ type FormState = {
   gender: string;
   phone: string;
   email: string;
+  referralCode?: string;
   currentAddress: Address;
   permanentAddress: Address;
   sameAddress: boolean;
@@ -62,6 +65,7 @@ const createForm = (data?: Partial<FormState>): FormState => ({
   gender: data?.gender ?? "",
   phone: data?.phone ?? "",
   email: data?.email ?? "",
+  referralCode: data?.referralCode ?? "",
   currentAddress: data?.currentAddress ?? { ...emptyAddress },
   permanentAddress: data?.permanentAddress ?? { ...emptyAddress },
   sameAddress: data?.sameAddress ?? true,
@@ -93,10 +97,32 @@ export default function PersonalInfoStep({
                                          }: PersonalInfoStepProps) {
   const [form, setForm] = useState<FormState>(() => createForm(initialData));
   const [errors, setErrors] = useState<FormErrors>({});
+  const searchParams = useSearchParams();
+  const [referralState, setReferralState] = useState<{ loading: boolean; message: string; valid: boolean }>({ loading: false, message: "", valid: false });
 
   useEffect(() => {
     if (initialData) setForm(createForm(initialData));
   }, [initialData]);
+
+  const verifyReferral = async (code = form.referralCode ?? "") => {
+    const normalized = code.trim().toUpperCase();
+    if (!normalized) { setReferralState({ loading: false, message: "", valid: false }); return; }
+    setReferralState({ loading: true, message: "", valid: false });
+    try {
+      const result = await kycApi.verifyReferralCode(normalized);
+      setReferralState({ loading: false, valid: result.valid, message: result.valid ? `Referred by ${result.providerName}${result.serviceCategory ? ` · ${result.serviceCategory}` : ""}` : "Referral code not found. You can continue without one." });
+    } catch { setReferralState({ loading: false, valid: false, message: "Unable to verify referral code. Please try again." }); }
+  };
+
+  useEffect(() => {
+    const code = searchParams.get("ref");
+    if (code && !form.referralCode) {
+      setForm((prev) => ({ ...prev, referralCode: code.toUpperCase() }));
+      void verifyReferral(code);
+    }
+  // Referral links should only initialise an empty draft once.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -207,6 +233,15 @@ export default function PersonalInfoStep({
                 error={errors.gender}
                 required
             />
+          </div>
+
+          <div>
+            <label htmlFor="referralCode" className="block text-sm font-semibold text-stone-700 mb-1.5">Referral Code <span className="font-normal text-stone-400">(Optional)</span></label>
+            <div className="flex gap-2">
+              <input id="referralCode" value={form.referralCode ?? ""} onChange={(e) => { update("referralCode", e.target.value.toUpperCase()); setReferralState({ loading: false, message: "", valid: false }); }} placeholder="e.g. SL-AB12CD34" className="min-w-0 flex-1 rounded-xl border border-stone-200 px-3 py-3 text-sm uppercase outline-none focus:border-[#1e3a8a]" />
+              <button type="button" onClick={() => void verifyReferral()} disabled={referralState.loading || !(form.referralCode ?? "").trim()} className="rounded-xl bg-[#1e3a8a] px-4 text-sm font-semibold text-white disabled:opacity-50">{referralState.loading ? "Checking…" : "Verify"}</button>
+            </div>
+            {referralState.message && <p className={`mt-2 text-xs ${referralState.valid ? "text-green-600" : "text-stone-500"}`}>{referralState.message}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

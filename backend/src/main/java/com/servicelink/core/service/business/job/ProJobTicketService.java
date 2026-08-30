@@ -7,16 +7,19 @@ import com.servicelink.core.exception.ResourceNotFoundException;
 import com.servicelink.core.model.appointment.Appointment;
 import com.servicelink.core.model.business.job.*;
 import com.servicelink.core.model.common.TimeSlot;
+import com.servicelink.core.model.notification.NotificationCategory;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.business.providerpool.ProviderPoolEntry;
 import com.servicelink.core.model.business.providerpool.ProviderPoolStatus;
 import com.servicelink.core.model.user.User;
+import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
 import com.servicelink.core.repository.appointment.ServiceCatalogRepository;
 import com.servicelink.core.repository.business.ProviderPoolEntryRepository;
 import com.servicelink.core.repository.business.job.*;
 import com.servicelink.core.repository.provider.ProviderRepository;
 import com.servicelink.core.service.business.pool.ProviderPoolService;
+import com.servicelink.core.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -43,11 +46,15 @@ public class ProJobTicketService {
     private final ProviderPoolEntryRepository poolEntryRepository;
     private final ProviderPoolService providerPoolService;
     private final AppointmentRepository appointmentRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public ProJobTicketResponse create(Long organizationId, User actor, CreateProJobTicketRequest request) {
         if (!request.endTime().isAfter(request.startTime())) {
             throw new BusinessException("End time must be after start time", "INVALID_JOB_SCHEDULE");
+        }
+        if (request.endDate().isBefore(request.startDate())) {
+            throw new BusinessException("End date cannot be before start date", "INVALID_JOB_SCHEDULE");
         }
         var catalog = catalogRepository.findByIdAndIsActiveTrue(request.serviceCatalogId())
                 .orElseThrow(() -> new ResourceNotFoundException("Active service catalog", request.serviceCatalogId()));
@@ -58,7 +65,8 @@ public class ProJobTicketService {
                 .serviceCatalog(catalog)
                 .title(request.title())
                 .workersRequired(request.workersRequired())
-                .scheduledDate(request.scheduledDate())
+                .startDate(request.startDate())
+                .endDate(request.endDate())
                 .startTime(request.startTime())
                 .endTime(request.endTime())
                 .location(request.location())
@@ -84,15 +92,83 @@ public class ProJobTicketService {
         billingRepository.save(billing);
 
         writeAudit(organizationId, saved.getId(), actor, "JOB_CREATED", "Job ticket requested and initialized.");
+        notificationService.sendPrivateNotification(actor.getId(), actor.getRole(), NotificationCategory.JOB_TICKET,
+                "Job ticket created", "Job " + saved.getTitle() + " is ready for provider assignment.", "/dashboard/business/jobs");
 
         return toResponse(saved);
+    }
+
+    @Transactional
+    public ProJobTicketResponse update(Long organizationId, Long jobId, User actor, CreateProJobTicketRequest request) {
+        if (!request.endTime().isAfter(request.startTime())) {
+            throw new BusinessException("End time must be after start time", "INVALID_JOB_SCHEDULE");
+        }
+        if (request.endDate().isBefore(request.startDate())) {
+            throw new BusinessException("End date cannot be before start date", "INVALID_JOB_SCHEDULE");
+        }
+
+        ProJobTicket job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job Ticket", jobId));
+        if (!job.getOrganizationId().equals(organizationId)) {
+            throw new BusinessException("Unauthorized job ticket access", "UNAUTHORIZED");
+        }
+
+        var catalog = catalogRepository.findByIdAndIsActiveTrue(request.serviceCatalogId())
+                .orElseThrow(() -> new ResourceNotFoundException("Active service catalog", request.serviceCatalogId()));
+
+        job.setServiceCatalog(catalog);
+        job.setTitle(request.title());
+        job.setWorkersRequired(request.workersRequired());
+        job.setStartDate(request.startDate());
+        job.setEndDate(request.endDate());
+        job.setStartTime(request.startTime());
+        job.setEndTime(request.endTime());
+        job.setLocation(request.location());
+        job.setLatitude(request.latitude());
+        job.setLongitude(request.longitude());
+        job.setInstructions(request.instructions());
+        job.setPricingModel(request.pricingModel());
+        job.setBusinessPrice(request.businessPrice());
+        job.setProviderEarning(request.providerEarning());
+
+        ProJobTicket saved = jobRepository.save(job);
+
+        // Update billing estimated/final amount if still pending
+        billingRepository.findByJobTicketId(jobId).ifPresent(billing -> {
+            if (billing.getPaymentStatus() == ProPaymentStatus.PENDING) {
+                billing.setEstimatedAmount(request.businessPrice());
+                billing.setFinalAmount(request.businessPrice());
+                billingRepository.save(billing);
+            }
+        });
+
+        writeAudit(organizationId, saved.getId(), actor, "JOB_UPDATED", "Job ticket details updated.");
+
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public void deleteJob(Long organizationId, Long jobId, User actor) {
+        ProJobTicket job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job Ticket", jobId));
+        if (!job.getOrganizationId().equals(organizationId)) {
+            throw new BusinessException("Unauthorized job ticket access", "UNAUTHORIZED");
+        }
+
+        assignmentRepository.deleteByJobTicketId(jobId);
+        attendanceRepository.deleteByJobTicketId(jobId);
+        slaRepository.deleteByJobTicketId(jobId);
+        billingRepository.deleteByJobTicketId(jobId);
+        auditLogRepository.deleteByJobTicketId(jobId);
+
+        jobRepository.delete(job);
     }
 
     @Transactional(readOnly = true)
     public Page<ProJobTicketResponse> list(Long organizationId, ProJobStatus status, Pageable pageable) {
         Page<ProJobTicket> jobs = (status == null)
-                ? jobRepository.findByOrganizationIdOrderByScheduledDateDescStartTimeDesc(organizationId, pageable)
-                : jobRepository.findByOrganizationIdAndStatusOrderByScheduledDateDescStartTimeDesc(organizationId, status, pageable);
+                ? jobRepository.findByOrganizationIdOrderByStartDateDescStartTimeDesc(organizationId, pageable)
+                : jobRepository.findByOrganizationIdAndStatusOrderByStartDateDescStartTimeDesc(organizationId, status, pageable);
         return jobs.map(this::toResponse);
     }
 
@@ -114,7 +190,9 @@ public class ProJobTicketService {
                         a.getProvider().getId(),
                         a.getProvider().getFullName(),
                         a.getProvider().getBusinessName(),
-                        a.getProvider().getProfilePictureUrl()
+                        a.getProvider().getProfilePictureUrl(),
+                        a.getRequiredSkill() != null ? a.getRequiredSkill() : job.getServiceCatalog().getCategory().getName(),
+                        a.getStatus() != null ? a.getStatus().name() : "ACCEPTED"
                 )).toList();
 
         var attendList = attendance.stream()
@@ -166,7 +244,8 @@ public class ProJobTicketService {
                 service.getCategory().getName(),
                 service.getSubServiceName(),
                 job.getWorkersRequired(),
-                job.getScheduledDate(),
+                job.getStartDate(),
+                job.getEndDate() != null ? job.getEndDate() : job.getStartDate(),
                 job.getStartTime(),
                 job.getEndTime(),
                 job.getLocation(),
@@ -193,18 +272,34 @@ public class ProJobTicketService {
         // Get pool entries for this organization
         List<ProviderPoolEntry> poolEntries = poolEntryRepository.findAllByOrganizationIdAndStatus(organizationId, ProviderPoolStatus.ACTIVE);
 
+        List<WorkforceReq> reqs = parseWorkforceRequirements(job.getInstructions());
+        List<String> categories = new java.util.ArrayList<>();
+        if (reqs.isEmpty()) {
+            categories.add(job.getServiceCatalog().getCategory().getName().toLowerCase());
+        } else {
+            for (WorkforceReq r : reqs) {
+                categories.add(r.skill().toLowerCase());
+            }
+        }
+
         return poolEntries.stream()
                 .map(entry -> {
                     Provider provider = entry.getProvider();
                     boolean skillMatches = provider.getPrimaryCategoryName() != null 
-                            && provider.getPrimaryCategoryName().equalsIgnoreCase(job.getServiceCatalog().getCategory().getName());
+                            && categories.contains(provider.getPrimaryCategoryName().toLowerCase());
                     if (!skillMatches) return null;
 
                     boolean proEligible = providerPoolService.computeProOrdersEligible(provider);
                     if (!proEligible) return null;
 
-                    // Check for conflicts
-                    boolean hasConflict = checkProviderHasConflict(provider.getId(), job.getScheduledDate(), job.getStartTime(), job.getEndTime());
+                    boolean hasConflict = checkProviderHasConflict(
+                            provider.getId(), 
+                            job.getStartDate(), 
+                            job.getEndDate() != null ? job.getEndDate() : job.getStartDate(), 
+                            job.getStartTime(), 
+                            job.getEndTime(),
+                            job.getId()
+                    );
 
                     return new ProEligibleProviderResponse(
                             provider.getId(),
@@ -222,7 +317,7 @@ public class ProJobTicketService {
     }
 
     @Transactional
-    public void assignProvider(Long organizationId, Long jobId, Long providerId, User actor) {
+    public void assignProvider(Long organizationId, Long jobId, Long providerId, String requiredSkill, User actor) {
         ProJobTicket job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job Ticket", jobId));
         if (!job.getOrganizationId().equals(organizationId)) {
@@ -240,12 +335,22 @@ public class ProJobTicketService {
             throw new BusinessException("Provider is not eligible for Pro orders", "PROVIDER_NOT_ELIGIBLE");
         }
 
-        if (assignmentRepository.existsByJobTicketIdAndProviderId(jobId, providerId)) {
-            throw new BusinessException("Provider is already assigned to this job", "DUPLICATE_ASSIGNMENT");
+        boolean existsActive = assignmentRepository.findByJobTicketIdAndProviderId(jobId, providerId)
+                .map(a -> a.getStatus() != JobAssignmentStatus.REJECTED)
+                .orElse(false);
+        if (existsActive) {
+            throw new BusinessException("Provider already has an active assignment request for this job", "DUPLICATE_ASSIGNMENT");
         }
 
         // Check availability conflicts (B2C & Pro)
-        if (checkProviderHasConflict(providerId, job.getScheduledDate(), job.getStartTime(), job.getEndTime())) {
+        if (checkProviderHasConflict(
+                providerId, 
+                job.getStartDate(), 
+                job.getEndDate() != null ? job.getEndDate() : job.getStartDate(), 
+                job.getStartTime(), 
+                job.getEndTime(),
+                job.getId()
+        )) {
             throw new BusinessException("Provider has a scheduling conflict during this time slot.", "SCHEDULE_CONFLICT");
         }
 
@@ -253,42 +358,35 @@ public class ProJobTicketService {
         JobAssignment assignment = JobAssignment.builder()
                 .jobTicket(job)
                 .provider(provider)
+                .requiredSkill(requiredSkill)
+                .status(JobAssignmentStatus.PENDING)
                 .build();
         assignmentRepository.save(assignment);
 
         // Update Job Status
-        long count = assignmentRepository.countByJobTicketId(jobId);
-        if (count >= job.getWorkersRequired()) {
-            job.setStatus(ProJobStatus.ASSIGNED);
-        } else if (count > 0) {
+        updateOverallJobStatus(job);
+
+        writeAudit(organizationId, jobId, actor, "PROVIDER_REQUEST_SENT", "Sent assignment request to " + provider.getFullName() + " for role " + requiredSkill);
+        notificationService.sendPrivateNotification(provider.getUser().getId(), Role.PROVIDER, NotificationCategory.JOB_TICKET,
+                "New Pro job request", "You have been requested for " + job.getTitle() + " on " + job.getStartDate() + ".", null);
+    }
+
+    private void updateOverallJobStatus(ProJobTicket job) {
+        List<JobAssignment> assignments = assignmentRepository.findByJobTicketId(job.getId());
+        long acceptedCount = assignments.stream()
+                .filter(a -> a.getStatus() == JobAssignmentStatus.ACCEPTED)
+                .count();
+
+        if (acceptedCount == 0) {
+            boolean hasPending = assignments.stream()
+                    .anyMatch(a -> a.getStatus() == JobAssignmentStatus.PENDING);
+            job.setStatus(hasPending ? ProJobStatus.ASSIGNING : ProJobStatus.REQUESTED);
+        } else if (acceptedCount < job.getWorkersRequired()) {
             job.setStatus(ProJobStatus.PARTIALLY_ASSIGNED);
         } else {
-            job.setStatus(ProJobStatus.ASSIGNING);
+            job.setStatus(ProJobStatus.ASSIGNED);
         }
         jobRepository.save(job);
-
-        // Expect attendance
-        Attendance attendance = Attendance.builder()
-                .jobTicket(job)
-                .provider(provider)
-                .status(AttendanceStatus.MISSING)
-                .build();
-        attendanceRepository.save(attendance);
-
-        // Calculate expected arrival Instant
-        LocalDateTime expectedLdt = LocalDateTime.of(job.getScheduledDate(), job.getStartTime());
-        Instant expectedArrival = expectedLdt.atZone(ZoneId.systemDefault()).toInstant();
-
-        // Create SLA expected record
-        ProJobSLA sla = ProJobSLA.builder()
-                .jobTicket(job)
-                .provider(provider)
-                .expectedArrival(expectedArrival)
-                .complianceStatus(SlaComplianceStatus.MISSING)
-                .build();
-        slaRepository.save(sla);
-
-        writeAudit(organizationId, jobId, actor, "PROVIDER_ASSIGNED", "Assigned provider " + provider.getFullName());
     }
 
     @Transactional
@@ -313,18 +411,69 @@ public class ProJobTicketService {
                 .forEach(slaRepository::delete);
 
         // Recalculate status
-        long count = assignmentRepository.countByJobTicketId(jobId);
-        if (count == 0) {
-            job.setStatus(ProJobStatus.REQUESTED);
-        } else if (count < job.getWorkersRequired()) {
-            job.setStatus(ProJobStatus.PARTIALLY_ASSIGNED);
-        } else {
-            job.setStatus(ProJobStatus.ASSIGNED);
-        }
-        jobRepository.save(job);
+        updateOverallJobStatus(job);
 
         Provider provider = providerRepository.getReferenceById(providerId);
         writeAudit(organizationId, jobId, actor, "PROVIDER_UNASSIGNED", "Unassigned provider " + provider.getFullName());
+    }
+
+    @Transactional
+    public void respondToAssignment(Long jobId, Long providerId, JobAssignmentStatus newStatus) {
+        JobAssignment assignment = assignmentRepository.findByJobTicketIdAndProviderId(jobId, providerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job assignment not found", jobId));
+
+        if (assignment.getStatus() != JobAssignmentStatus.PENDING) {
+            throw new BusinessException("Assignment has already been responded to", "ALREADY_RESPONDED");
+        }
+
+        assignment.setStatus(newStatus);
+        assignmentRepository.save(assignment);
+
+        ProJobTicket job = assignment.getJobTicket();
+
+        if (newStatus == JobAssignmentStatus.ACCEPTED) {
+            // Check for conflict right before accepting
+            if (checkProviderHasConflict(
+                    providerId, 
+                    job.getStartDate(), 
+                    job.getEndDate() != null ? job.getEndDate() : job.getStartDate(), 
+                    job.getStartTime(), 
+                    job.getEndTime(),
+                    job.getId()
+            )) {
+                assignment.setStatus(JobAssignmentStatus.PENDING); // revert status
+                assignmentRepository.save(assignment);
+                throw new BusinessException("You have a scheduling conflict during this time slot.", "SCHEDULE_CONFLICT");
+            }
+
+            // Create expectation records (Attendance, SLA)
+            Attendance attendance = Attendance.builder()
+                    .jobTicket(job)
+                    .provider(assignment.getProvider())
+                    .status(AttendanceStatus.MISSING)
+                    .build();
+            attendanceRepository.save(attendance);
+
+            LocalDateTime expectedLdt = LocalDateTime.of(job.getStartDate(), job.getStartTime());
+            Instant expectedArrival = expectedLdt.atZone(ZoneId.systemDefault()).toInstant();
+
+            ProJobSLA sla = ProJobSLA.builder()
+                    .jobTicket(job)
+                    .provider(assignment.getProvider())
+                    .expectedArrival(expectedArrival)
+                    .complianceStatus(SlaComplianceStatus.MISSING)
+                    .build();
+            slaRepository.save(sla);
+
+            writeAudit(job.getOrganizationId(), jobId, assignment.getProvider().getUser(), "PROVIDER_ACCEPTED", "Provider accepted the assignment.");
+        } else {
+            writeAudit(job.getOrganizationId(), jobId, assignment.getProvider().getUser(), "PROVIDER_REJECTED", "Provider rejected the assignment.");
+        }
+
+        // Synchronize overall job ticket status
+        updateOverallJobStatus(job);
+        notificationService.sendPrivateNotification(job.getCreatedByUserId(), Role.PRO, NotificationCategory.JOB_TICKET,
+                "Provider assignment response", assignment.getProvider().getFullName() + " " + newStatus.name().toLowerCase() + " job " + job.getTitle() + ".", "/dashboard/business/jobs");
     }
 
     @Transactional
@@ -354,7 +503,7 @@ public class ProJobTicketService {
         }
 
         Instant now = Instant.now();
-        LocalDateTime expectedLdt = LocalDateTime.of(job.getScheduledDate(), job.getStartTime());
+        LocalDateTime expectedLdt = LocalDateTime.of(job.getStartDate(), job.getStartTime());
         Instant expectedTime = expectedLdt.atZone(ZoneId.systemDefault()).toInstant();
 
         // 15 minutes grace period check
@@ -452,11 +601,50 @@ public class ProJobTicketService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProJobTicketResponse> getProviderJobs(Long providerId) {
+    public List<ProviderProJobResponse> getProviderJobs(Long providerId) {
         List<JobAssignment> assignments = assignmentRepository.findByProviderId(providerId);
         return assignments.stream()
-                .map(JobAssignment::getJobTicket)
-                .map(this::toResponse)
+                .map(a -> {
+                    ProJobTicket job = a.getJobTicket();
+                    String skill = a.getRequiredSkill() != null ? a.getRequiredSkill() : job.getServiceCatalog().getCategory().getName();
+                    
+                    ProPricingModel model = job.getPricingModel();
+                    BigDecimal earning = job.getProviderEarning();
+                    
+                    List<WorkforceReq> reqs = parseWorkforceRequirements(job.getInstructions());
+                    for (WorkforceReq r : reqs) {
+                        if (r.skill() != null && r.skill().equalsIgnoreCase(skill)) {
+                            if (r.pricingModel() != null) {
+                                model = r.pricingModel();
+                            }
+                            if (r.providerEarning() != null) {
+                                earning = r.providerEarning();
+                            } else if (r.price() != null) {
+                                earning = r.price();
+                            }
+                            break;
+                        }
+                    }
+                    
+                    return new ProviderProJobResponse(
+                            job.getId(),
+                            "JT-" + job.getId(),
+                            job.getTitle(),
+                            skill,
+                            a.getStatus() != null ? a.getStatus().name() : "ACCEPTED",
+                            job.getStartDate(),
+                            job.getEndDate() != null ? job.getEndDate() : job.getStartDate(),
+                            job.getStartTime(),
+                            job.getEndTime(),
+                            job.getLocation(),
+                            job.getInstructions(),
+                            model,
+                            job.getBusinessPrice(),
+                            earning,
+                            job.getStatus(),
+                            job.getCreatedAt()
+                    );
+                })
                 .toList();
     }
 
@@ -470,7 +658,7 @@ public class ProJobTicketService {
         long pendingApprovals = poolEntryRepository.findAllByOrganizationIdAndStatus(organizationId, ProviderPoolStatus.PENDING_APPROVAL).size();
 
         Pageable pageFirst = PageRequest.of(0, 1000);
-        List<ProJobTicket> allJobs = jobRepository.findByOrganizationIdOrderByScheduledDateDescStartTimeDesc(organizationId, pageFirst).getContent();
+        List<ProJobTicket> allJobs = jobRepository.findByOrganizationIdOrderByStartDateDescStartTimeDesc(organizationId, pageFirst).getContent();
 
         long jobsThisMonth = allJobs.stream()
                 .filter(j -> j.getCreatedAt() != null && j.getCreatedAt().getMonth() == LocalDate.now().getMonth())
@@ -646,21 +834,41 @@ public class ProJobTicketService {
     // HELPER METHODS
     // ────────────────────────────────────────────────────────────────────
 
-    private boolean checkProviderHasConflict(Long providerId, LocalDate date, LocalTime startTime, LocalTime endTime) {
-        // 1. Overlapping B2C slot check
-        if (startTime.isBefore(LocalTime.of(12, 0)) && endTime.isAfter(LocalTime.of(8, 0))) {
-            if (appointmentRepository.existsActiveBooking(providerId, date, TimeSlot.MORNING)) return true;
-        }
-        if (startTime.isBefore(LocalTime.of(16, 0)) && endTime.isAfter(LocalTime.of(12, 0))) {
-            if (appointmentRepository.existsActiveBooking(providerId, date, TimeSlot.AFTERNOON)) return true;
-        }
-        if (startTime.isBefore(LocalTime.of(20, 0)) && endTime.isAfter(LocalTime.of(16, 0))) {
-            if (appointmentRepository.existsActiveBooking(providerId, date, TimeSlot.EVENING)) return true;
+    private boolean checkProviderHasConflict(Long providerId, LocalDate startDate, LocalDate endDate, LocalTime startTime, LocalTime endTime, Long excludeJobId) {
+        // 1. Overlapping B2C appointments check
+        List<Appointment> b2cAppointments = appointmentRepository.findActiveBetween(providerId, startDate, endDate);
+        for (Appointment appt : b2cAppointments) {
+            TimeSlot slot = appt.getTimeSlot();
+            boolean overlaps = false;
+            if (slot == TimeSlot.MORNING) {
+                overlaps = startTime.isBefore(LocalTime.of(12, 0)) && endTime.isAfter(LocalTime.of(8, 0));
+            } else if (slot == TimeSlot.AFTERNOON) {
+                overlaps = startTime.isBefore(LocalTime.of(16, 0)) && endTime.isAfter(LocalTime.of(12, 0));
+            } else if (slot == TimeSlot.EVENING) {
+                overlaps = startTime.isBefore(LocalTime.of(20, 0)) && endTime.isAfter(LocalTime.of(16, 0));
+            }
+            if (overlaps) return true;
         }
 
-        // 2. Overlapping Pro Job assignments check
-        List<JobAssignment> overlapJobs = assignmentRepository.findOverlappingAssignments(providerId, date, startTime, endTime);
-        return !overlapJobs.isEmpty();
+        // 2. Overlapping accepted Pro Job assignments check
+        List<JobAssignment> proAssignments = assignmentRepository.findByProviderId(providerId);
+        for (JobAssignment assignment : proAssignments) {
+            if (assignment.getStatus() != JobAssignmentStatus.ACCEPTED) continue;
+            ProJobTicket otherJob = assignment.getJobTicket();
+            if (otherJob.getId().equals(excludeJobId)) continue;
+            if (otherJob.getStatus() == ProJobStatus.CANCELLED || otherJob.getStatus() == ProJobStatus.UNFULFILLED) continue;
+            
+            // Check date overlap
+            boolean dateOverlap = !startDate.isAfter(otherJob.getEndDate() != null ? otherJob.getEndDate() : otherJob.getStartDate()) 
+                    && !endDate.isBefore(otherJob.getStartDate());
+            if (!dateOverlap) continue;
+
+            // Check time overlap
+            boolean timeOverlap = startTime.isBefore(otherJob.getEndTime()) && endTime.isAfter(otherJob.getStartTime());
+            if (timeOverlap) return true;
+        }
+
+        return false;
     }
 
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -688,6 +896,15 @@ public class ProJobTicketService {
 
     private ProJobTicketResponse toResponse(ProJobTicket job) {
         var service = job.getServiceCatalog();
+        List<ProJobDetailResponse.AssignedProviderInfo> assignList = assignmentRepository.findByJobTicketId(job.getId()).stream()
+                .map(a -> new ProJobDetailResponse.AssignedProviderInfo(
+                        a.getProvider().getId(),
+                        a.getProvider().getFullName(),
+                        a.getProvider().getBusinessName(),
+                        a.getProvider().getProfilePictureUrl(),
+                        a.getRequiredSkill() != null ? a.getRequiredSkill() : service.getCategory().getName(),
+                        a.getStatus() != null ? a.getStatus().name() : "ACCEPTED"
+                )).toList();
         return new ProJobTicketResponse(
                 job.getId(),
                 "JT-" + job.getId(),
@@ -696,7 +913,8 @@ public class ProJobTicketService {
                 service.getCategory().getName(),
                 service.getSubServiceName(),
                 job.getWorkersRequired(),
-                job.getScheduledDate(),
+                job.getStartDate(),
+                job.getEndDate() != null ? job.getEndDate() : job.getStartDate(),
                 job.getStartTime(),
                 job.getEndTime(),
                 job.getLocation(),
@@ -705,7 +923,33 @@ public class ProJobTicketService {
                 job.getBusinessPrice(),
                 job.getProviderEarning(),
                 job.getStatus(),
-                job.getCreatedAt()
+                job.getCreatedAt(),
+                assignList
         );
+    }
+
+    private record WorkforceReq(
+        String skill,
+        int workersRequired,
+        ProPricingModel pricingModel,
+        BigDecimal price,
+        BigDecimal providerEarning
+    ) {}
+
+    private List<WorkforceReq> parseWorkforceRequirements(String instructions) {
+        if (instructions == null || !instructions.contains("---WORKFORCE_REQUIREMENTS---")) {
+            return List.of();
+        }
+        try {
+            String[] parts = instructions.split("---WORKFORCE_REQUIREMENTS---");
+            if (parts.length > 1) {
+                String json = parts[1].trim();
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                return mapper.readValue(json, mapper.getTypeFactory().constructCollectionType(List.class, WorkforceReq.class));
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return List.of();
     }
 }

@@ -4,6 +4,7 @@ import Categories from "@/components/home/Categories";
 import FeaturedServices from "@/components/home/FeaturedServices";
 import WhyServiceLink from "@/components/home/WhyServiceLink";
 import Testimonials from "@/components/home/Testimonials";
+import FAQ from "@/components/home/FAQ";
 import CTA from "@/components/home/CTA";
 import ServPro from "@/components/home/ServPro";
 
@@ -21,6 +22,7 @@ export default function Home() {
         <FeaturedServices />
         <WhyServiceLink />
         <Testimonials />
+        <FAQ />
         <CTA />
       </main>
 

@@ -8,8 +8,9 @@ import "leaflet/dist/leaflet.css";
 
 interface MapComponentProps {
     center?: [number, number];
-  radius?: number;
-  interactive?: boolean;
+    radius?: number;
+    interactive?: boolean;
+    markers?: Array<{ lat: number; lng: number; label: string }>;
 }
 
 // Fix Leaflet's marker asset paths within NextJS bundle optimization architectures
@@ -36,6 +37,7 @@ export default function MapComponent({
                                          center = [27.7172, 85.324],
                                        radius = 0,
                                        interactive = false,
+                                       markers,
                                      }: MapComponentProps) {
   // Approximate coordinates matching your target operational region (Kathmandu Valley area)
   // const providerPosition: [number, number] = [27.6915, 85.342];
@@ -43,7 +45,7 @@ export default function MapComponent({
   return (
       <MapContainer
           center={center}
-          zoom={14}
+          zoom={12}
           className="w-full h-full"
           scrollWheelZoom={interactive}
           dragging={interactive}
@@ -53,14 +55,26 @@ export default function MapComponent({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <Marker position={center} icon={customMarkerIcon}>
-        <Popup>
-          <div className="text-xs">
-            <p className="font-bold">Ram Electrical Services</p>
-            <p className="text-gray-500">En Route to your address</p>
-          </div>
-        </Popup>
-      </Marker>
+      {markers && markers.length > 0 ? (
+        markers.map((m, idx) => (
+          <Marker key={idx} position={[m.lat, m.lng]} icon={customMarkerIcon}>
+            <Popup>
+              <div className="text-xs font-semibold">
+                <p>{m.label}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))
+      ) : (
+        <Marker position={center} icon={customMarkerIcon}>
+          <Popup>
+            <div className="text-xs">
+              <p className="font-bold">Ram Electrical Services</p>
+              <p className="text-gray-500">En Route to your address</p>
+            </div>
+          </Popup>
+        </Marker>
+      )}
       <MapRecenter center={center} />
     </MapContainer>
   );

@@ -4,10 +4,15 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { KeyRound, ShieldCheck, ArrowRight, HelpCircle } from "lucide-react";
 import { pinApi } from "@/lib/api/pinApi";
 
+import type { ContactMode } from "@/components/kyc/PhoneStep";
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface PinStepProps {
     deviceId: string;
+    providerToken?: string;
+    contact?: string;
+    contactMode?: ContactMode;
     /** Provider's masked contact, shown for reassurance ("Welcome back, 98••••210"). */
     maskedContact?: string;
     onVerified: (accessToken: string, refreshToken?: string) => void;
@@ -27,6 +32,9 @@ function digitsOnly(v: string): string {
 
 export default function PinStep({
                                     deviceId,
+                                    providerToken,
+                                    contact,
+                                    contactMode,
                                     maskedContact,
                                     onVerified,
                                     onFallbackToOtp,
@@ -60,7 +68,9 @@ export default function PinStep({
 
         setLoading(true);
         try {
-            const res = await pinApi.verifyPin(deviceId, pin);
+            const email = contactMode === "email" ? contact : undefined;
+            const phone = contactMode === "phone" ? contact : undefined;
+            const res = await pinApi.verifyPin(deviceId, pin, providerToken, email, phone);
 
             if (!res.verified) {
                 const remaining = res.attemptsLeft ?? attemptsLeft - 1;
@@ -95,7 +105,7 @@ export default function PinStep({
         } finally {
             setLoading(false);
         }
-    }, [pin, deviceId, attemptsLeft, onVerified, onFallbackToOtp]);
+    }, [pin, deviceId, providerToken, contact, contactMode, attemptsLeft, onVerified, onFallbackToOtp]);
 
     // ── Derived ──────────────────────────────────────────────────────────────
     const isReady = pin.length === 4;
@@ -133,7 +143,7 @@ export default function PinStep({
                             <p className="text-gray-400 text-xs">
                                 {maskedContact
                                     ? <>Signed in as <strong className="text-[#1e3a8a]/70">{maskedContact}</strong></>
-                                    : "This device is recognized"}
+                                    : "Enter the PIN for your provider account"}
                             </p>
                         </div>
                     </div>

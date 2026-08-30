@@ -170,7 +170,16 @@ public class UserController {
             @Valid @RequestBody TwoFactorDisableRequestDTO dto,
             Authentication authentication) {
         verifyOwnership(id, authentication);
-        service.disable2FA(id, dto.getCurrentPassword());
+        service.disable2FA(id, dto.getCurrentPassword(), dto.getCode());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/2fa/regenerate-backup-codes")
+    public ResponseEntity<List<String>> regenerateBackupCodes(
+            @PathVariable Long id,
+            Authentication authentication) {
+        verifyOwnership(id, authentication);
+        List<String> codes = service.regenerateBackupCodes(id);
+        return ResponseEntity.ok(codes);
     }
 }

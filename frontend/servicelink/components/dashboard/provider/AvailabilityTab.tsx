@@ -129,6 +129,40 @@ interface DraftSlot {
     reason: string;
 }
 
+// Ordered so the most fundamental blocker is surfaced first — mirrors the
+// order ProviderPoolService.checkProOrdersEligibility checks on the backend.
+// Keeping these in sync avoids a UI that looks unlocked when the save will
+// actually be rejected server-side (or the reverse: locked when it wouldn't be).
+type UnlockBlocker =
+    | "PROVIDER_INACTIVE"
+    | "VERIFICATION_REQUIRED"
+    | "ONBOARDING_INCOMPLETE"
+    | "SUBSCRIPTION_REQUIRED"
+    | null;
+
+const BLOCKER_COPY: Record<Exclude<UnlockBlocker, null>, { title: string; body: string; showPlansLink: boolean }> = {
+    PROVIDER_INACTIVE: {
+        title: "Your account isn't active.",
+        body: "Contact support to reactivate your provider account.",
+        showPlansLink: false,
+    },
+    VERIFICATION_REQUIRED: {
+        title: "KYC verification required.",
+        body: "Complete your identity verification to accept Business & Pro orders.",
+        showPlansLink: false,
+    },
+    ONBOARDING_INCOMPLETE: {
+        title: "Finish setting up your profile.",
+        body: "Complete onboarding to accept Business & Pro orders.",
+        showPlansLink: false,
+    },
+    SUBSCRIPTION_REQUIRED: {
+        title: "Not available on the Free Trial.",
+        body: "Activate a paid subscription to accept Business & Pro orders.",
+        showPlansLink: true,
+    },
+};
+
 export default function AvailabilityTab() {
     const dispatch = useDispatch<AppDispatch>();
     const { currentMonth, slotsByDate, status, saveStatus, error } = useSelector(
@@ -140,15 +174,41 @@ export default function AvailabilityTab() {
     // Redux, so this tab just reads it — no prop drilling through the layout
     // needed. Pro orders require a PAID, currently-active plan; the free
     // trial deliberately does not unlock this (matches the backend rule
-    // enforced in ProviderScheduleSettingsService — this is a UX convenience,
-    // not the real enforcement).
+    // enforced in ProviderScheduleSettingsService / ProviderPoolService —
+    // this is a UX convenience, not the real enforcement).
     //
     // Backend DTO (SubscriptionStatusDTO) explicitly pins the boolean field
     // to `isActive` via @JsonProperty, overriding Jackson's default getIsX()
     // -> "active" stripping. So `isActive` is the correct, stable wire name.
     const { data: subscription } = useSelector((s: RootState) => s.providerSubscription);
     const isPaidPlan = Boolean(subscription?.planType && subscription.planType !== "FREE_TRIAL");
-    const proOrdersUnlocked = Boolean(subscription?.isActive && isPaidPlan);
+    const hasActivePaidPlan = Boolean(subscription?.isActive && isPaidPlan);
+
+    // ── Account-level gates ────────────────────────────────────────────
+    // NOTE: adjust this selector to match your actual slice — this assumes
+    // a `providerProfile` slice mirroring the isVerified /
+    // hasCompletedOnboarding / isActive fields the backend's Provider
+    // entity exposes (same fields ProviderPoolService.checkProOrdersEligibility
+    // checks). These likely already exist somewhere in your store since the
+    // Directory card's "KYC Verified" / "KYC Pending" badge reads isVerified
+    // from a Provider-shaped payload.
+    const providerProfile = useSelector((s: RootState) => s.providerProfile?.data);
+    const isAccountActive = Boolean(providerProfile?.isActive);
+    const isVerified = Boolean(providerProfile?.isVerified);
+    const hasCompletedOnboarding = Boolean(providerProfile?.hasCompletedOnboarding);
+
+    // First failing gate, in the same priority order the backend checks them.
+    const unlockBlocker: UnlockBlocker = !isAccountActive
+        ? "PROVIDER_INACTIVE"
+        : !isVerified
+            ? "VERIFICATION_REQUIRED"
+            : !hasCompletedOnboarding
+                ? "ONBOARDING_INCOMPLETE"
+                : !hasActivePaidPlan
+                    ? "SUBSCRIPTION_REQUIRED"
+                    : null;
+
+    const proOrdersUnlocked = unlockBlocker === null;
 
     const [selectedDay, setSelectedDay] = useState(() => isoDate(new Date()));
     const [draftSlots, setDraftSlots] = useState<DraftSlot[]>([]);
@@ -200,9 +260,20 @@ export default function AvailabilityTab() {
         }));
     };
 
-    const toggleAcceptsProOrders = () => {
+    const toggleAcceptsProOrders = async () => {
         if (!proOrdersUnlocked) return; // guarded again below at the switch itself; belt & suspenders
-        setDraftSettings((prev) => ({ ...prev, acceptsProOrders: !prev.acceptsProOrders }));
+        const newAccepts = !draftSettings.acceptsProOrders;
+        const nextSettings = { ...draftSettings, acceptsProOrders: newAccepts };
+        setDraftSettings(nextSettings);
+
+        const result = await dispatch(saveScheduleSettings(nextSettings));
+        if (saveScheduleSettings.fulfilled.match(result)) {
+            toast.success(newAccepts ? "Accepting Business & Pro orders enabled." : "Accepting Business & Pro orders disabled.");
+            dispatch(fetchMonthAvailability(currentMonth));
+        } else {
+            toast.error((result.payload as string) ?? "Failed to update settings.");
+            setDraftSettings(settings);
+        }
     };
 
     const handleSaveSettings = async () => {
@@ -281,9 +352,10 @@ export default function AvailabilityTab() {
 
     // Visual-only: while locked, always render the switch as OFF regardless
     // of whatever value is saved underneath (e.g. a paid plan that lapsed
-    // last week shouldn't still look "on" to the provider). Saving is
-    // blocked entirely while locked (see the disabled Save button below),
-    // so this never silently overwrites their stored preference.
+    // last week, or a KYC status that was later revoked, shouldn't still
+    // look "on" to the provider). Saving is blocked entirely while locked
+    // (see the disabled Save button below), so this never silently
+    // overwrites their stored preference.
     const displayAcceptsProOrders = proOrdersUnlocked && draftSettings.acceptsProOrders;
 
     return (
@@ -573,9 +645,12 @@ export default function AvailabilityTab() {
                             </div>
                         </div>
 
-                        {/* Accept Business & Pro Orders — gated behind an active PAID plan.
-                            During FREE_TRIAL (or a lapsed/cancelled subscription), this is
-                            forced off and disabled with an inline unlock CTA. */}
+                        {/* Accept Business & Pro Orders — gated behind account status,
+                            KYC verification, onboarding completion, AND an active PAID
+                            plan (mirrors ProviderPoolService.checkProOrdersEligibility
+                            on the backend, checked in the same priority order). Any
+                            failing gate forces this off and disabled with an inline
+                            CTA specific to that blocker. */}
                         <div className="rounded-lg border border-slate-100 p-3 sm:col-span-2 lg:col-span-1">
                             <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-1.5">
@@ -596,17 +671,19 @@ export default function AvailabilityTab() {
                             ) : (
                                 <div className="mt-2 rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-700">
                                     <p className="font-medium">
-                                        Not available on the Free Trial.
+                                        {BLOCKER_COPY[unlockBlocker!].title}
                                     </p>
                                     <p className="mt-0.5 text-amber-600">
-                                        Activate a paid subscription to accept Business &amp; Pro orders.
+                                        {BLOCKER_COPY[unlockBlocker!].body}
                                     </p>
-                                    <Link
-                                        href="/dashboard/provider/subscription"
-                                        className="mt-1.5 inline-block font-semibold text-[#1e3a8a] hover:underline"
-                                    >
-                                        View plans →
-                                    </Link>
+                                    {BLOCKER_COPY[unlockBlocker!].showPlansLink && (
+                                        <Link
+                                            href="/dashboard/provider/subscription"
+                                            className="mt-1.5 inline-block font-semibold text-[#1e3a8a] hover:underline"
+                                        >
+                                            View plans →
+                                        </Link>
+                                    )}
                                 </div>
                             )}
                         </div>

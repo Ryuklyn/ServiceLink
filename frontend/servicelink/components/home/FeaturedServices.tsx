@@ -1,6 +1,7 @@
 import ServiceCard from "../ui/ServiceCard";
 import { FEATURED_SERVICES } from "@/data/homeData";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function FeaturedServices() {
   return (
@@ -17,9 +18,9 @@ export default function FeaturedServices() {
               Featured Services
             </h2>
           </div>
-          <button className="flex items-center gap-2 text-[#1e3a8a] font-medium hover:text-[#1e3a8a] transition-colors bg-[#1e3a8a]/10 px-5 py-2.5 rounded-full outline outline-1 outline-blue-100">
+          <Link href="/services" className="flex items-center gap-2 text-[#1e3a8a] font-medium hover:text-[#1e3a8a] transition-colors bg-[#1e3a8a]/10 px-5 py-2.5 rounded-full outline outline-1 outline-blue-100">
             View All <ArrowRight className="w-4 h-4" />
-          </button>
+          </Link>
         </div>
 
         {/* Grid */}

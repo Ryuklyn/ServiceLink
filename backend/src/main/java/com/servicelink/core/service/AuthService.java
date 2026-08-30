@@ -11,6 +11,10 @@ import com.servicelink.core.model.user.UserProfile;
 import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.security.JwtService;
 import com.servicelink.core.service.appointment.RescheduleTokenService;
+import com.servicelink.core.model.business.ProUser;
+import com.servicelink.core.model.business.TeamMember;
+import com.servicelink.core.repository.business.ProUserRepository;
+import com.servicelink.core.repository.business.TeamMemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -21,6 +25,7 @@ import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -38,6 +43,8 @@ public class AuthService {
     private final TwoFactorAuthService twoFactorAuthService;
     private final OtpService otpService;       // ➕ new
     private final EmailService emailService;   // ➕ new
+    private final ProUserRepository proUserRepository;
+    private final TeamMemberRepository teamMemberRepository;
 
     public AuthResponseDTO register(RegisterRequestDTO request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -141,20 +148,34 @@ public class AuthService {
 //
 //        activateRescheduleTokensIfCustomer(user);
 //        return issueFullLoginSession(user);
-//    }
-
     public AuthResponseDTO completeTwoFactorLogin(String preAuthToken, String code) {
 
         User user = resolvePreAuthUser(preAuthToken);
 
-        boolean valid = switch (user.getTwoFactorMethod()) {
-            case TOTP -> user.getTwoFactorSecret() != null
-                    && twoFactorAuthService.verifyCode(user.getTwoFactorSecret(), code);
-            case EMAIL -> otpService.verifyOtp("2fa:" + user.getEmail(), code);
-        };
+        boolean validPrimary = false;
+        try {
+            validPrimary = switch (user.getTwoFactorMethod()) {
+                case TOTP -> user.getTwoFactorSecret() != null
+                        && twoFactorAuthService.verifyCode(user.getTwoFactorSecret(), code);
+                case EMAIL -> otpService.verifyOtp("2fa:" + user.getEmail(), code);
+            };
+        } catch (Exception e) {
+            // Ignore error to fall back to backup code check
+        }
 
-        if (!valid) {
+        boolean validBackup = !validPrimary
+                && twoFactorAuthService.matchesAnyBackupCode(code, user.getBackupCodes());
+
+        if (!validPrimary && !validBackup) {
             throw new IllegalArgumentException("Invalid or expired verification code");
+        }
+
+        if (validBackup) {
+            List<String> remaining = user.getBackupCodes().stream()
+                    .filter(hash -> !BCrypt.checkpw(code, hash))
+                    .collect(Collectors.toCollection(ArrayList::new));
+            user.setBackupCodes(remaining);
+            userRepository.save(user);
         }
 
         activateRescheduleTokensIfCustomer(user);
@@ -224,11 +245,37 @@ public class AuthService {
                 .token(accessToken)
                 .refreshToken(refreshToken)
                 .email(user.getEmail())
-                .fullName(profile != null ? profile.getFullName() : user.getFullName())
+                .fullName(resolveFullName(user))
                 .profileImage(profile != null ? profile.getProfileImage() : null)
                 .requiresProfileImage(profile == null || profile.getProfileImage() == null)
                 .role(user.getRole().name())
                 .build();
+    }
+
+    public String resolveFullName(User user) {
+        if (user.getRole() == Role.PRO) {
+            Optional<ProUser> proUser = proUserRepository.findByUser_Id(user.getId());
+            if (proUser.isPresent() && proUser.get().getFullName() != null && !proUser.get().getFullName().isBlank()) {
+                return proUser.get().getFullName();
+            }
+            Optional<TeamMember> teamMember = teamMemberRepository.findAll().stream()
+                    .filter(tm -> tm.getUser() != null && tm.getUser().getId().equals(user.getId()))
+                    .findFirst();
+            if (teamMember.isPresent() && teamMember.get().getFullName() != null && !teamMember.get().getFullName().isBlank()) {
+                return teamMember.get().getFullName();
+            }
+        }
+
+        UserProfile profile = user.getProfile();
+        if (profile != null && profile.getFullName() != null && !profile.getFullName().isBlank()) {
+            return profile.getFullName();
+        }
+
+        if (user.getFullName() != null && !user.getFullName().isBlank()) {
+            return user.getFullName();
+        }
+
+        return "there";
     }
 
     private void activateRescheduleTokensIfCustomer(User user) {

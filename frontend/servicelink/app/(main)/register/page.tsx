@@ -122,7 +122,7 @@ export default function RegisterPage() {
           <span>Need help choosing?</span>
           <span className="mx-1">·</span>
           <Link
-            href="/support"
+            href="/#home-faqs"
             className="inline-flex items-center gap-1 hover:text-gray-600 transition-colors"
           >
             <HelpCircle size={14} />
@@ -130,7 +130,7 @@ export default function RegisterPage() {
           </Link>
           <span className="mx-1">·</span>
           <Link
-            href="/faq"
+            href="/#home-faqs"
             className="inline-flex items-center gap-1 hover:text-gray-600 transition-colors"
           >
             <FileText size={14} />

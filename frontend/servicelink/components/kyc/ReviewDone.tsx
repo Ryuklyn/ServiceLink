@@ -30,6 +30,7 @@ type Personal = {
   gender?: string;
   phone?: string;
   email?: string;
+  referralCode?: string;
   currentAddress?: Address;
 };
 
@@ -147,6 +148,7 @@ function buildKycPayload(allData: AllData, draftSessionId?: string | null): KycS
 
   return {
     applicantIdentifier: normalizedPhone ?? personal.email,
+    referralCode: personal.referralCode?.trim() || undefined,
     fullName: personal.fullName,
     dob: personal.dob,
     gender: personal.gender,

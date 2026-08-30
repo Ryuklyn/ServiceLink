@@ -11,4 +11,7 @@ public interface ProJobBillingRepository extends JpaRepository<ProJobBilling, Lo
     List<ProJobBilling> findByOrganizationId(Long organizationId);
 
     List<ProJobBilling> findByJobTicket_OrganizationId(Long organizationId);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM ProJobBilling b WHERE b.jobTicket.id = :jobId")
+    void deleteByJobTicketId(@org.springframework.data.repository.query.Param("jobId") Long jobId);
 }

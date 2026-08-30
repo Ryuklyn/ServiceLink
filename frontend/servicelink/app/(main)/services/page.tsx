@@ -17,7 +17,6 @@ import {
     ChevronLeft,
     ChevronRight,
     ChevronDown,
-    Heart,
     Star,
     Users,
     Clock,
@@ -152,9 +151,6 @@ function ServiceCard({ service }: { service: ServiceItem }) {
                     alt={service.title}
                     className="w-full h-full object-cover"
                 />
-                <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition">
-                    <Heart className="w-4 h-4 text-gray-600" />
-                </button>
                 <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-white/95 rounded-full px-2.5 py-1 text-xs font-semibold text-gray-800">
                     <Star className="w-3 h-3 fill-[#e8683f] text-[#e8683f]" />
                     {service.rating}
@@ -179,9 +175,9 @@ function ServiceCard({ service }: { service: ServiceItem }) {
           <span className="font-bold text-[#1e3a8a]">
             NPR {service.price}/hr
           </span>
-                    <button className="bg-[#1e3a8a] hover:bg-[#e8683f] text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                    <Link href="/login/user" className="bg-[#1e3a8a] hover:bg-[#e8683f] text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
                         Book Now
-                    </button>
+                    </Link>
                 </div>
             </div>
         </div>
@@ -190,7 +186,6 @@ function ServiceCard({ service }: { service: ServiceItem }) {
 
 export default function ServicesPage() {
     const [activeCategory, setActiveCategory] = useState("All");
-    const [location, setLocation] = useState("near-me");
 
     return (
         <div className="bg-gray-50 min-h-screen">
@@ -318,31 +313,6 @@ export default function ServicesPage() {
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-3 text-sm">
-                        <span className="text-gray-500">Location:</span>
-                        <div className="flex rounded-full bg-gray-100 p-1">
-                            <button
-                                onClick={() => setLocation("near-me")}
-                                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                                    location === "near-me"
-                                        ? "bg-[#1e3a8a] text-white"
-                                        : "text-gray-600"
-                                }`}
-                            >
-                                Near Me
-                            </button>
-                            <button
-                                onClick={() => setLocation("all-nepal")}
-                                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                                    location === "all-nepal"
-                                        ? "bg-[#1e3a8a] text-white"
-                                        : "text-gray-600"
-                                }`}
-                            >
-                                All Nepal
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </section>
 
@@ -373,7 +343,7 @@ export default function ServicesPage() {
                                 bookings and dedicated provider management.
                             </p>
                             <Link
-                                href="/servicelink-pro"
+                                href="/servicelinkpro"
                                 className="mt-5 inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-5 py-3 rounded-xl shadow-lg transition-all group"
                             >
                                 Explore ServiceLink Pro

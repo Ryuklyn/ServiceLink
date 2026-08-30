@@ -52,6 +52,11 @@ public class ProviderController {
                 providerProfileService.getAllPublicProviders(categoryId, PageRequest.of(page, size)));
     }
 
+    @GetMapping("/referrals/verify")
+    public ResponseEntity<ReferralCodeValidationDTO> verifyReferralCode(@RequestParam String code) {
+        return ResponseEntity.ok(providerProfileService.validateReferralCode(code));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ProviderProfileDTO> getPublicProfile(@PathVariable Long id) {
         return ResponseEntity.ok(providerProfileService.getPublicProfile(id));

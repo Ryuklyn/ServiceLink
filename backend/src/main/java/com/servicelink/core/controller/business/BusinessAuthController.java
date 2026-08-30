@@ -127,6 +127,8 @@ public class BusinessAuthController {
                 .token(accessToken)
                 .refreshToken(refreshToken)
                 .email(user.getEmail())
+                .fullName(authService.resolveFullName(user))
+                .role(user.getRole().name())
                 .build());
     }
 

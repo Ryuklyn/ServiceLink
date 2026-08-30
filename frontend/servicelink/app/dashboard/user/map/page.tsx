@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import "leaflet/dist/leaflet.css";
+import api from "@/utils/axios";
+import { getCategories } from "@/lib/api/providersApi";
+import Link from "next/link";
+import WhatsAppButton from "@/components/shared/WhatsAppButton";
 
 // Safely lazy load React-Leaflet tracking nodes dynamically outside the Next SSR compilation cycle
 const MapContainer = dynamic(
@@ -28,93 +32,71 @@ const Circle = dynamic(() => import("react-leaflet").then((m) => m.Circle), {
 interface MapProvider {
   id: string;
   name: string;
-  category:
-    | "Electrician"
-    | "Plumbing"
-    | "Cleaning"
-    | "Painting"
-    | "AC Repair"
-    | "Carpentry"
-    | "Internet Repair";
+  category: string;
   lat: number;
   lng: number;
   rating: number;
   isVerified: boolean;
+  phone: string;
+  avatarUrl: string | null;
+  initials: string;
   markerColor: string;
 }
 
-const CATEGORIES = [
-  "All",
-  "Verified",
-  "Available Now",
-  "Electrician",
-  "Plumbing",
-  "Cleaning",
-  "Painting",
-  "AC Repair",
-  "Carpentry",
-  "Internet Repair",
-];
+function getInitials(name: string): string {
+  return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
 
 export default function ServiceMapPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [rangeRadius, setRangeRadius] = useState<number>(8); // Unit state representing spatial filter radius in kilometers
+  const [categories, setCategories] = useState<string[]>(["All", "Verified", "Available Now"]);
+  const [providers, setProviders] = useState<MapProvider[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<MapProvider | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Bounded geolocation mock references mapping core fields near Kathmandu coordinates
   const userLocation: [number, number] = [27.6915, 85.342]; // Centered close to Baneshwor, Kathmandu
 
-  const serviceProviders: MapProvider[] = [
-    {
-      id: "1",
-      name: "Ram Electrical Services",
-      category: "Electrician",
-      lat: 27.705,
-      lng: 85.328,
-      rating: 4.8,
-      isVerified: true,
-      markerColor: "#b45309",
-    },
-    {
-      id: "2",
-      name: "Sita Plumbing Solutions",
-      category: "Plumbing",
-      lat: 27.686,
-      lng: 85.322,
-      rating: 4.9,
-      isVerified: true,
-      markerColor: "#1e3a8a",
-    },
-    {
-      id: "3",
-      name: "CleanNest Deep Cleaning",
-      category: "Cleaning",
-      lat: 27.698,
-      lng: 85.351,
-      rating: 4.6,
-      isVerified: false,
-      markerColor: "#10b981",
-    },
-    {
-      id: "4",
-      name: "CoolTech AC Repair",
-      category: "AC Repair",
-      lat: 27.712,
-      lng: 85.345,
-      rating: 4.7,
-      isVerified: true,
-      markerColor: "#f97316",
-    },
-    {
-      id: "5",
-      name: "KTM Painting Masters",
-      category: "Painting",
-      lat: 27.678,
-      lng: 85.339,
-      rating: 4.5,
-      isVerified: false,
-      markerColor: "#06b6d4",
-    },
-  ];
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        // Load categories
+        const cats = await getCategories();
+        const activeCats = cats.filter(c => c.isActive).map(c => c.name);
+        setCategories(["All", "Verified", "Available Now", ...activeCats]);
+
+        // Load providers
+        const { data } = await api.get("/providers", { params: { size: 100 } });
+        const mapped = (data.content || []).map((p: any, idx: number) => {
+          // If lat/lng are missing or 0, jitter around center
+          const lat = p.latitude && p.latitude !== 0 ? p.latitude : 27.6915 + Math.sin(idx + 1) * 0.02;
+          const lng = p.longitude && p.longitude !== 0 ? p.longitude : 85.342 + Math.cos(idx + 1) * 0.02;
+
+          return {
+            id: String(p.id),
+            name: p.businessName || p.fullName,
+            category: p.primaryCategoryName || "General",
+            lat,
+            lng,
+            rating: p.averageRating || 5.0,
+            isVerified: p.isVerified || false,
+            phone: p.phone || "",
+            avatarUrl: p.profilePictureUrl?.trim() ? p.profilePictureUrl : null,
+            initials: getInitials(p.fullName || ""),
+            markerColor: p.isVerified ? "#16a34a" : "#1e3a8a"
+          };
+        });
+        setProviders(mapped);
+      } catch (err) {
+        console.error("Error loading map data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   // Client side distance matrix calculator running geographic range matching operations
   const calculateDistance = (
@@ -132,13 +114,13 @@ export default function ServiceMapPage() {
         Math.cos((lat2 * Math.PI) / 180) *
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    const b = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * b;
   };
 
   // Perform dynamic coordinate cross calculations within the filtering logic tree
   const filteredProviders = useMemo(() => {
-    return serviceProviders.filter((provider) => {
+    return providers.filter((provider) => {
       const distance = calculateDistance(
         userLocation[0],
         userLocation[1],
@@ -152,17 +134,21 @@ export default function ServiceMapPage() {
       if (selectedCategory === "Available Now") return true; // Mimic layout context matching everything active
       return provider.category === selectedCategory;
     });
-  }, [selectedCategory, rangeRadius]);
+  }, [providers, selectedCategory, rangeRadius]);
 
   // Leaflet Marker Icon Generators inject inline HTML vector properties mapping theme color arrays
-  const createCustomIcon = (color: string) => {
+  const createCustomIcon = (avatarUrl: string | null, initials: string) => {
     if (typeof window === "undefined") return null;
     const L = require("leaflet");
+    const avatarHtml = avatarUrl
+      ? `<img src="${avatarUrl}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" />`
+      : `<div style="background-color: #1e3a8a; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold;">${initials}</div>`;
+
     return new L.DivIcon({
-      html: `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>`,
+      html: `<div style="width: 36px; height: 36px; border-radius: 55%; border: 2.5px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); overflow: hidden; display: flex; align-items: center; justify-content: center; background: white;">${avatarHtml}</div>`,
       className: "custom-map-marker-node",
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
     });
   };
 
@@ -170,15 +156,23 @@ export default function ServiceMapPage() {
     if (typeof window === "undefined") return null;
     const L = require("leaflet");
     return new L.DivIcon({
-      html: `<div style="background-color: #3a57b5; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(30,58,138,0.4);" class="pulse-user-node"></div>`,
+      html: `<div style="background-color: #e8683f; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(232,104,63,0.4);" class="pulse-user-node"></div>`,
       className: "user-location-marker-node",
       iconSize: [20, 20],
       iconAnchor: [10, 10],
     });
   };
 
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8 text-center text-sm text-slate-400">
+        Loading service map...
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4 h-[calc(100vh-140px)] flex flex-col">
+    <div className="space-y-4 h-[calc(100vh-140px)] flex flex-col relative">
       {/* Horizontal Nav Bar Chip Scroller Filters Component Row */}
       <div className="relative flex items-center shrink-0">
         <button className="absolute left-0 bg-linear-to-r from-gray-50 via-white to-transparent p-1 z-10 text-gray-500 hover:text-gray-800">
@@ -186,7 +180,7 @@ export default function ServiceMapPage() {
         </button>
 
         <div className="flex items-center gap-2 overflow-x-auto px-6 py-1 no-scrollbar scroll-smooth w-full">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -276,30 +270,23 @@ export default function ServiceMapPage() {
 
           {/* Map Over Provider Collection Elements */}
           {filteredProviders.map((provider) => {
-            const icon = createCustomIcon(provider.markerColor);
+            const icon = createCustomIcon(provider.avatarUrl, provider.initials);
             return icon ? (
               <Marker
                 key={provider.id}
                 position={[provider.lat, provider.lng]}
                 icon={icon}
+                eventHandlers={{
+                  click: () => setSelectedProvider(provider),
+                }}
               >
                 <Popup>
-                  <div className="p-1 font-sans min-w-[140px]">
-                    <div className="flex items-center gap-1">
-                      <p className="text-xs font-bold text-gray-900">
-                        {provider.name}
-                      </p>
-                      {provider.isVerified && (
-                        <span className="text-[9px] bg-blue-50 text-[#1e3a8a] px-1 rounded font-black">
-                          ✓
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-[#e8683f] font-semibold mt-0.5">
-                      {provider.category}
+                  <div className="p-1 font-sans min-w-[140px] text-center">
+                    <p className="text-xs font-bold text-gray-900 leading-tight">
+                      {provider.name}
                     </p>
-                    <p className="text-[10px] text-amber-500 font-bold mt-1">
-                      ★ {provider.rating} Rating
+                    <p className="text-[9px] text-[#e8683f] font-semibold">
+                      {provider.category}
                     </p>
                   </div>
                 </Popup>
@@ -307,6 +294,68 @@ export default function ServiceMapPage() {
             ) : null;
           })}
         </MapContainer>
+
+        {/* Empty State Overlay */}
+        {filteredProviders.length === 0 && (
+          <div className="absolute inset-0 bg-slate-50/90 backdrop-blur-[1px] flex flex-col items-center justify-center p-6 text-center z-20">
+            <MapPin className="w-10 h-10 text-gray-400 mb-2 animate-bounce" />
+            <h3 className="font-bold text-sm text-gray-900">No Providers Found</h3>
+            <p className="text-xs text-gray-500 mt-1 max-w-[240px]">
+              Try expanding the search radius or selecting a different category.
+            </p>
+          </div>
+        )}
+
+        {/* Active Provider Short Details Card */}
+        {selectedProvider && (
+          <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-white border border-gray-100 rounded-2xl shadow-xl p-4 z-20 flex gap-3 animate-in slide-in-from-bottom duration-200">
+            <div className="relative shrink-0">
+              {selectedProvider.avatarUrl ? (
+                <img
+                  src={selectedProvider.avatarUrl}
+                  alt={selectedProvider.name}
+                  className="w-12 h-12 rounded-full object-cover border border-gray-100"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
+                  {selectedProvider.initials}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <h4 className="font-bold text-sm text-gray-900 truncate">
+                  {selectedProvider.name}
+                </h4>
+                <button
+                  onClick={() => setSelectedProvider(null)}
+                  className="text-gray-400 hover:text-gray-600 font-bold text-xs px-1.5 py-0.5 rounded-full hover:bg-gray-50 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-xs text-[#e8683f] font-semibold">
+                {selectedProvider.category}
+              </p>
+              <div className="flex items-center gap-1 mt-1 text-xs text-amber-500 font-bold">
+                ★ {selectedProvider.rating.toFixed(1)}
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Link
+                  href={`/dashboard/user/explore/profile?id=${selectedProvider.id}`}
+                  className="flex-1 text-center bg-primary hover:bg-[#152a65] text-white py-1.5 rounded-lg text-[11px] font-bold transition-colors"
+                >
+                  View Profile
+                </Link>
+                <WhatsAppButton
+                  phone={selectedProvider.phone}
+                  message={`Hi ${selectedProvider.name}, I saw your location on the ServiceLink Map and wanted to ask about your services.`}
+                  className="flex-1 py-1.5 text-[11px]"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Custom Styles Injection Overrides */}
@@ -327,7 +376,7 @@ export default function ServiceMapPage() {
           50% {
             transform: scale(1.15);
             opacity: 0.8;
-            box-shadow: 0 0 12px rgba(30, 58, 138, 0.6);
+            box-shadow: 0 0 12px rgba(232, 104, 63, 0.6);
           }
         }
         .pulse-user-node {
@@ -335,7 +384,7 @@ export default function ServiceMapPage() {
         }
         .leaflet-popup-content-wrapper {
           border-radius: 8px !important;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
           padding: 2px !important;
         }
         .leaflet-popup-content {

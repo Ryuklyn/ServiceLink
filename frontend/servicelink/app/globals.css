@@ -132,7 +132,35 @@ h6 {
 /* USER DASHBOARD DESIGN SYSTEM                             */
 /* ──────────────────────────────────────────────────────── */
 
-/* Light Mode / Default User Dashboard */
+/* System Mode (Original Blue Theme Layout) */
+.user-dashboard-system {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --primary: #1e3a8a;
+  --primary-hover: #172e6b;
+  --primary-foreground: #ffffff;
+  --surface: #ffffff;
+  --surface-secondary: #f1f5f9;
+  --surface-hover: #e2e8f0;
+  --border: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --input: #ffffff;
+  --input-border: #cbd5e1;
+  --ring: #1e3a8a;
+
+  /* Shells colors (Original Blue) */
+  --navbar-bg: #1e3a8a;
+  --navbar-text: #ffffff;
+  --sidebar-bg: #1e3a8a;
+  --sidebar-text: #cbd5e1;
+  --sidebar-active-bg: #1d4ed8;
+  --sidebar-active-text: #ffffff;
+}
+
+/* Light Mode (SaaS White Layout) */
 .user-dashboard-light {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -151,7 +179,7 @@ h6 {
   --input-border: #cbd5e1;
   --ring: #1e3a8a;
 
-  /* Shells colors */
+  /* Shells colors (SaaS White) */
   --navbar-bg: #ffffff;
   --navbar-text: #0f172a;
   --sidebar-bg: #ffffff;
@@ -160,7 +188,7 @@ h6 {
   --sidebar-active-text: #1e3a8a;
 }
 
-/* Dark Mode User Dashboard */
+/* Dark Mode (Charcoal Dark Layout - Antigravity style) */
 .user-dashboard-dark {
   --background: #090d16;
   --foreground: #f8fafc;
@@ -179,12 +207,12 @@ h6 {
   --input-border: #222d44;
   --ring: #3b82f6;
 
-  /* Shells colors */
-  --navbar-bg: #1e3a8a;
+  /* Shells colors (Charcoal template theme) */
+  --navbar-bg: #121212;
   --navbar-text: #ffffff;
-  --sidebar-bg: #1e3a8a;
-  --sidebar-text: #cbd5e1;
-  --sidebar-active-bg: #1d4ed8;
+  --sidebar-bg: #121212;
+  --sidebar-text: #a1a1aa;
+  --sidebar-active-bg: #27272a;
   --sidebar-active-text: #ffffff;
 }
 
@@ -192,7 +220,35 @@ h6 {
 /* PROVIDER DASHBOARD DESIGN SYSTEM                         */
 /* ──────────────────────────────────────────────────────── */
 
-/* Light Mode / Default Provider Dashboard */
+/* System Mode (Original Orange Theme Layout) */
+.provider-dashboard-system {
+  --background: #fcfcfc;
+  --foreground: #18181b;
+  --primary: #e8683f;
+  --primary-hover: #c8501f;
+  --primary-foreground: #ffffff;
+  --surface: #ffffff;
+  --surface-secondary: #f4f4f5;
+  --surface-hover: #e4e4e7;
+  --border: #e4e4e7;
+  --border-subtle: #f4f4f5;
+  --text-primary: #09090b;
+  --text-secondary: #27272a;
+  --text-muted: #71717a;
+  --input: #ffffff;
+  --input-border: #d4d4d8;
+  --ring: #e8683f;
+
+  /* Shells colors (Original Orange Gradient) */
+  --navbar-bg: linear-gradient(to right, #e8683f, #c8501f);
+  --navbar-text: #ffffff;
+  --sidebar-bg: linear-gradient(to bottom, #e8683f, #c8501f);
+  --sidebar-text: #cbd5e1;
+  --sidebar-active-bg: #c8501f;
+  --sidebar-active-text: #ffffff;
+}
+
+/* Light Mode (SaaS White Layout) */
 .provider-dashboard-light {
   --background: #fcfcfc;
   --foreground: #18181b;
@@ -211,7 +267,7 @@ h6 {
   --input-border: #d4d4d8;
   --ring: #e8683f;
 
-  /* Shells colors */
+  /* Shells colors (SaaS White) */
   --navbar-bg: #ffffff;
   --navbar-text: #18181b;
   --sidebar-bg: #ffffff;
@@ -220,7 +276,7 @@ h6 {
   --sidebar-active-text: #e8683f;
 }
 
-/* Dark Mode Provider Dashboard */
+/* Dark Mode (Charcoal Dark Layout - Antigravity style) */
 .provider-dashboard-dark {
   --background: #0d0f14;
   --foreground: #f1f5f9;
@@ -239,12 +295,12 @@ h6 {
   --input-border: #262e3d;
   --ring: #e8683f;
 
-  /* Shells colors */
-  --navbar-bg: linear-gradient(to right, #e8683f, #c8501f);
+  /* Shells colors (Charcoal template theme) */
+  --navbar-bg: #121212;
   --navbar-text: #ffffff;
-  --sidebar-bg: linear-gradient(to bottom, #e8683f, #c8501f);
-  --sidebar-text: #cbd5e1;
-  --sidebar-active-bg: #c8501f;
+  --sidebar-bg: #121212;
+  --sidebar-text: #a1a1aa;
+  --sidebar-active-bg: #27272a;
   --sidebar-active-text: #ffffff;
 }
 

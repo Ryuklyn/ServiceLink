@@ -251,34 +251,46 @@ public class UserService {
             throw new IllegalArgumentException("Invalid or expired verification code");
         }
 
+        List<String> plaintextCodes = twoFactorAuthService.generatePlaintextBackupCodes(10);
         user.set2FAEnabled(true);
+        user.setBackupCodes(twoFactorAuthService.hashBackupCodes(plaintextCodes));
         repo.save(user);
 
-        return TwoFactorSetupVerifyResponseDTO.builder().build();
+        sendAlertSafely(() -> emailService.send2FAEnabledAlert(user.getEmail()),
+                "2FA-enabled alert", user.getId());
+
+        return TwoFactorSetupVerifyResponseDTO.builder()
+                .backupCodes(plaintextCodes)
+                .build();
     }
 
-    /** Disable 2FA — requires password re-entry, clears both TOTP and email-method state */
-//    public void disable2FA(Long userId, String currentPassword) {
-//        User user = findUserOrThrow(userId);
-//
-//        requirePassword(user);
-//        verifyCurrentPassword(user, currentPassword);
-//
-//        user.set2FAEnabled(false);
-//        user.setTwoFactorMethod(null);
-//        user.setTwoFactorSecret(null);
-//        user.setBackupCodes(new ArrayList<>());
-//        repo.save(user);
-//
-//        sendAlertSafely(() -> emailService.send2FADisabledAlert(user.getEmail()),
-//                "2FA-disabled alert", user.getId());
-//    }
+    public List<String> regenerateBackupCodes(Long userId) {
+        User user = findUserOrThrow(userId);
+        if (!user.is2FAEnabled()) {
+            throw new IllegalStateException("2FA is not enabled for this account");
+        }
+        List<String> plaintextCodes = twoFactorAuthService.generatePlaintextBackupCodes(10);
+        user.setBackupCodes(twoFactorAuthService.hashBackupCodes(plaintextCodes));
+        repo.save(user);
+        return plaintextCodes;
+    }
 
     public void disable2FA(Long userId, String currentPassword) {
+        disable2FA(userId, currentPassword, null);
+    }
+
+    public void disable2FA(Long userId, String currentPassword, String code) {
         User user = findUserOrThrow(userId);
 
         requirePassword(user);
         verifyCurrentPassword(user, currentPassword);
+
+        if (user.getTwoFactorSecret() != null && code != null && !code.isBlank()) {
+            boolean valid = twoFactorAuthService.verifyCode(user.getTwoFactorSecret(), code);
+            if (!valid) {
+                throw new IllegalArgumentException("Invalid verification code");
+            }
+        }
 
         user.set2FAEnabled(false);
         user.setTwoFactorMethod(null);

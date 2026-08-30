@@ -56,7 +56,7 @@ export default function RecentJobTickets({ jobs, loading }: RecentJobTicketsProp
                   <tr key={t.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-3 font-semibold text-gray-800">{t.reference}</td>
                     <td className="py-3 text-[#1e3a8a] font-medium">{t.service}</td>
-                    <td className="py-3 text-gray-600">{t.scheduledDate} {t.startTime.substring(0, 5)}</td>
+                    <td className="py-3 text-gray-600">{t.startDate} {t.startTime?.substring(0, 5)}</td>
                     <td className="py-3">
                       <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${statusStyle[t.status] || "bg-gray-50 text-gray-500"}`}>
                         {t.status}

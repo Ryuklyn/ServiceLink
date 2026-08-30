@@ -17,4 +17,7 @@ public interface ProJobSLARepository extends JpaRepository<ProJobSLA, Long> {
     List<ProJobSLA> findByOrganizationId(@Param("organizationId") Long organizationId);
 
     List<ProJobSLA> findByProviderId(Long providerId);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM ProJobSLA s WHERE s.jobTicket.id = :jobId")
+    void deleteByJobTicketId(@org.springframework.data.repository.query.Param("jobId") Long jobId);
 }

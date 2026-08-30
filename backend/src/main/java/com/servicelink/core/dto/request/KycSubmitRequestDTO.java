@@ -8,6 +8,7 @@ import java.util.List;
 public class KycSubmitRequestDTO {
 
     private String applicantIdentifier; // ← add this
+    private String referralCode;
 
     // Personal
     private String fullName;

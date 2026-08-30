@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
     CheckCircle2,
     Clock,
@@ -16,11 +16,13 @@ import {
     Loader2,
 } from "lucide-react";
 import { FaCrown } from "react-icons/fa";
+import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     fetchProviderProfile,
     uploadProviderPicture,
 } from "@/store/slices/providerProfileSlice";
+import { providerKycApi, type ProviderKycDetail } from "@/lib/api/providerKycApi";
 
 // ─── Presentational helpers ────────────────────────────────────────────────
 
@@ -97,10 +99,19 @@ export default function ProfileOverview() {
         (state) => state.providerProfile,
     );
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [kyc, setKyc] = useState<ProviderKycDetail | null>(null);
 
     useEffect(() => {
         dispatch(fetchProviderProfile());
     }, [dispatch]);
+
+    useEffect(() => {
+        let cancelled = false;
+        providerKycApi.getMyKyc()
+            .then((data) => { if (!cancelled) setKyc(data); })
+            .catch(() => { /* Profile remains usable when KYC details are temporarily unavailable. */ });
+        return () => { cancelled = true; };
+    }, []);
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -317,24 +328,33 @@ export default function ProfileOverview() {
                 {/* KYC Verification */}
                 <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                     <h3 className="font-semibold text-gray-900">KYC Verification</h3>
-                    {profile.isVerified ? (
+                    {kyc?.status === "APPROVED" || (!kyc && profile.isVerified) ? (
                         <span className="mt-3 inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             KYC Approved
                         </span>
                     ) : (
                         <span className="mt-3 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                            Pending Verification
+                            {kyc?.status ? kyc.status.replace(/_/g, " ") : "Pending Verification"}
                         </span>
                     )}
-                    <p className="mt-2 text-xs text-gray-500">
-                        {profile.hasCompletedOnboarding ? "Onboarding complete." : "Onboarding incomplete — finish your profile setup."}
-                    </p>
+                    {kyc?.documents.length ? (
+                        <div className="mt-3 space-y-1.5">
+                            {kyc.documents.map((document) => (
+                                <div key={`${document.name}-${document.url}`} className="flex items-center justify-between gap-2 text-xs">
+                                    <span className="truncate text-gray-600">{document.name}</span>
+                                    <span className="shrink-0 font-medium text-green-600">{kyc.status === "APPROVED" ? "Verified" : kyc.status.replace(/_/g, " ")}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="mt-2 text-xs text-gray-500">{profile.hasCompletedOnboarding ? "No KYC documents available." : "Onboarding incomplete — finish your profile setup."}</p>
+                    )}
 
-                    <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-[#1e3a8a] hover:bg-gray-50">
+                    <Link href="/dashboard/provider/profile?tab=kyc" className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-[#1e3a8a] hover:bg-gray-50">
                         <FileText className="h-4 w-4" />
-                        View Documents
-                    </button>
+                        KYC details
+                    </Link>
                 </div>
 
                 {/* Recent Reviews */}

@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +22,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
@@ -138,6 +140,7 @@ public class SecurityConfig {
                         // Provider PIN auth (POST — OTP-adjacent, not method-restricted)
                         .requestMatchers(
                                 "/api/providers/auth/check-device",
+                                "/api/providers/auth/check-account",
                                 "/api/providers/auth/set-pin",
                                 "/api/providers/auth/skip-pin",
                                 "/api/providers/auth/verify-pin"
@@ -160,6 +163,7 @@ public class SecurityConfig {
                         // =====================================================
                         .requestMatchers(HttpMethod.GET,
                                 "/api/providers",
+                                "/api/providers/referrals/verify",
                                 "/api/providers/catalog",
                                 "/api/providers/categories",
                                 "/api/providers/{providerId}",

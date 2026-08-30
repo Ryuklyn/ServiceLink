@@ -7,6 +7,12 @@ import com.servicelink.core.model.provider.availability.AvailabilityException;
 import com.servicelink.core.model.provider.availability.ProviderScheduleSettings;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
 import com.servicelink.core.repository.provider.availability.AvailabilityExceptionRepository;
+import com.servicelink.core.repository.business.job.JobAssignmentRepository;
+import com.servicelink.core.model.business.job.JobAssignment;
+import com.servicelink.core.model.business.job.JobAssignmentStatus;
+import com.servicelink.core.model.business.job.ProJobStatus;
+import com.servicelink.core.model.business.job.ProJobTicket;
+import java.time.LocalTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,16 +28,20 @@ public class AvailabilityResolverService {
     private final ProviderScheduleSettingsService settingsService;
     private final AvailabilityExceptionRepository exceptionRepo;
     private final AppointmentRepository appointmentRepo;
+    private final JobAssignmentRepository jobAssignmentRepository;
 
     public List<AvailabilitySlotDTO> resolveRange(Long providerId, LocalDate start, LocalDate end, boolean includeReason) {
         ProviderScheduleSettings settings = settingsService.getOrCreate(providerId);
         List<AvailabilityException> exceptions = exceptionRepo.findOverlapping(providerId, start, end);
         List<Appointment> bookings = appointmentRepo.findActiveBetween(providerId, start, end);
+        List<JobAssignment> proAssignments = jobAssignmentRepository.findByProviderId(providerId).stream()
+                .filter(a -> a.getStatus() == JobAssignmentStatus.ACCEPTED)
+                .toList();
 
         List<AvailabilitySlotDTO> result = new ArrayList<>();
         for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
             for (TimeSlot period : TimeSlot.values()) {
-                result.add(resolveSlot(date, period, settings, exceptions, bookings, includeReason));
+                result.add(resolveSlot(date, period, settings, exceptions, bookings, proAssignments, includeReason));
             }
         }
         return result;
@@ -39,10 +49,24 @@ public class AvailabilityResolverService {
 
     private AvailabilitySlotDTO resolveSlot(LocalDate date, TimeSlot period, ProviderScheduleSettings settings,
                                             List<AvailabilityException> exceptions, List<Appointment> bookings,
-                                            boolean includeReason) {
+                                            List<JobAssignment> proAssignments, boolean includeReason) {
         boolean booked = bookings.stream()
                 .anyMatch(b -> b.getAppointmentDate().equals(date) && b.getTimeSlot() == period);
         if (booked) return build(date, period, false, includeReason ? "Booked" : null);
+
+        // Check accepted Pro Job overlaps
+        boolean proBooked = proAssignments.stream()
+                .anyMatch(a -> {
+                    ProJobTicket jt = a.getJobTicket();
+                    if (jt.getStatus() == ProJobStatus.CANCELLED || jt.getStatus() == ProJobStatus.UNFULFILLED) return false;
+                    boolean dateOverlap = !date.isBefore(jt.getStartDate()) 
+                            && !date.isAfter(jt.getEndDate() != null ? jt.getEndDate() : jt.getStartDate());
+                    if (!dateOverlap) return false;
+                    LocalTime slotStart = period.getStartTime();
+                    LocalTime slotEnd = period.getEndTime();
+                    return slotStart.isBefore(jt.getEndTime()) && slotEnd.isAfter(jt.getStartTime());
+                });
+        if (proBooked) return build(date, period, false, includeReason ? "Booked (Pro Job)" : null);
 
         Optional<AvailabilityException> ex = exceptions.stream()
                 .filter(e -> !date.isBefore(e.getDateStart()) && !date.isAfter(e.getDateEnd()))

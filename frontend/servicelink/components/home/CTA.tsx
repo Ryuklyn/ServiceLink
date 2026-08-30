@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function CTA() {
   return (
     <section className="py-12 md:py-16 bg-white relative">
@@ -16,12 +18,12 @@ export default function CTA() {
               ServiceLink has you covered.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <button className="bg-[#e8683f] hover:bg-[#d95a2f] shadow-lg shadow-[#e8683f]/30 text-white font-bold px-8 py-4 rounded-xl transition-colors">
+              <Link href="/register/provider" className="bg-[#e8683f] hover:bg-[#d95a2f] shadow-lg shadow-[#e8683f]/30 text-white font-bold px-8 py-4 rounded-xl transition-colors">
                 Create Free Account
-              </button>
-              <button className="bg-white hover:bg-gray-100 text-[#1e3a8a] shadow-lg font-bold px-8 py-4 rounded-xl transition-colors">
+              </Link>
+              <Link href="/services" className="bg-white hover:bg-gray-100 text-[#1e3a8a] shadow-lg font-bold px-8 py-4 rounded-xl transition-colors">
                 Explore Services
-              </button>
+              </Link>
             </div>
           </div>
         </div>

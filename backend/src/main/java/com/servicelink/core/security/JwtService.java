@@ -37,6 +37,14 @@ public class JwtService {
         return buildToken(claims, email, accessTokenExpiration);
     }
 
+    public String generateAccessToken(String email, Role role, String jti) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role.name());
+        claims.put("type", "ACCESS");
+        claims.put("jti", jti);
+        return buildToken(claims, email, accessTokenExpiration);
+    }
+
     // ─── Refresh Token ──────────────────────────────────────────────────────
 
     public String generateRefreshToken(String email) {

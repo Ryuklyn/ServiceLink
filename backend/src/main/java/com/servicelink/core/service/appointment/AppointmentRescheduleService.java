@@ -13,6 +13,9 @@ import com.servicelink.core.model.appointment.Appointment;
 import com.servicelink.core.model.appointment.AppointmentPaymentPurpose;
 import com.servicelink.core.model.appointment.AppointmentPaymentTransaction;
 import com.servicelink.core.model.appointment.AppointmentStatus;
+import com.servicelink.core.repository.business.job.JobAssignmentRepository;
+import com.servicelink.core.model.business.job.JobAssignmentStatus;
+import com.servicelink.core.model.business.job.ProJobStatus;
 import com.servicelink.core.model.business.PaymentGateway;
 import com.servicelink.core.model.business.PaymentStatus;
 import com.servicelink.core.model.common.TimeSlot;
@@ -55,6 +58,7 @@ public class AppointmentRescheduleService {
     private final KhaltiGatewayService khaltiService;
     private final UserRepository userRepo;
     private final ProviderServiceRepository providerServiceRepo;
+    private final JobAssignmentRepository jobAssignmentRepository;
 
     // ─────────────────────────────────────────────────────────────────────────
     // FREE RESCHEDULE — only when > 24h out, no token/fee involved
@@ -270,6 +274,23 @@ public class AppointmentRescheduleService {
                     "The " + newSlot.getDisplayLabel() + " slot on " + newDate
                             + " is already booked for this provider",
                     "APPOINTMENT_SLOT_TAKEN");
+        }
+
+        // Check overlap with Pro jobs
+        boolean hasProJobOverlap = jobAssignmentRepository.findByProviderId(appt.getProvider().getId()).stream()
+                .filter(a -> a.getStatus() == JobAssignmentStatus.ACCEPTED)
+                .anyMatch(a -> {
+                    com.servicelink.core.model.business.job.ProJobTicket jt = a.getJobTicket();
+                    if (jt.getStatus() == ProJobStatus.CANCELLED || jt.getStatus() == ProJobStatus.UNFULFILLED) return false;
+                    boolean dateOverlap = !newDate.isBefore(jt.getStartDate()) 
+                            && !newDate.isAfter(jt.getEndDate() != null ? jt.getEndDate() : jt.getStartDate());
+                    if (!dateOverlap) return false;
+                    LocalTime slotStart = newSlot.getStartTime();
+                    LocalTime slotEnd = newSlot.getEndTime();
+                    return slotStart.isBefore(jt.getEndTime()) && slotEnd.isAfter(jt.getStartTime());
+                });
+        if (hasProJobOverlap) {
+            throw new ConflictException("The provider is booked for a ServiceLink Pro job during this time slot.", "PRO_JOB_CONFLICT");
         }
     }
 

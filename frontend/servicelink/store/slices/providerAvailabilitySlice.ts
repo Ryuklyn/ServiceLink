@@ -47,7 +47,7 @@ const today = new Date();
 const initialState: ProviderAvailabilityState = {
     currentMonth: isoDate(firstOfMonth(today.getFullYear(), today.getMonth())),
     slotsByDate: {},
-    settings: { workingDays: [0, 1, 2, 3, 4, 5, 6], defaultSlots: ["MORNING", "AFTERNOON", "EVENING"], acceptsProOrders: true },
+    settings: { workingDays: [0, 1, 2, 3, 4, 5, 6], defaultSlots: ["MORNING", "AFTERNOON", "EVENING"], acceptsProOrders: false },
     status: "idle", saveStatus: "idle", settingsSaveStatus: "idle", error: null,
 };
 

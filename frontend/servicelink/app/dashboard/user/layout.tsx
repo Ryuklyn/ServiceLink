@@ -14,7 +14,7 @@ function UserDashboardContent({ children }: { children: React.ReactNode }) {
     const dispatch = useAppDispatch();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { theme } = useAppSelector((state) => state.userPreferences);
-    const [isDark, setIsDark] = useState(false);
+    const [themeClass, setThemeClass] = useState("user-dashboard-system");
 
     useEffect(() => {
         const storedTheme = localStorage.getItem("userTheme") as "system" | "light" | "dark" | null;
@@ -26,27 +26,17 @@ function UserDashboardContent({ children }: { children: React.ReactNode }) {
     }, [dispatch]);
 
     useEffect(() => {
-        const determineDark = () => {
-            if (theme === "dark") return true;
-            if (theme === "system") {
-                return window.matchMedia("(prefers-color-scheme: dark)").matches;
-            }
-            return false;
-        };
-        setIsDark(determineDark());
-
-        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-        const handleSystemThemeChange = () => {
-            if (theme === "system") {
-                setIsDark(mediaQuery.matches);
-            }
-        };
-        mediaQuery.addEventListener("change", handleSystemThemeChange);
-        return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+        if (theme === "system") {
+            setThemeClass("user-dashboard-system");
+        } else if (theme === "dark") {
+            setThemeClass("user-dashboard-dark dark");
+        } else {
+            setThemeClass("user-dashboard-light");
+        }
     }, [theme]);
 
     return (
-        <div className={`flex h-screen overflow-hidden ${isDark ? "user-dashboard-dark dark" : "user-dashboard-light bg-background"}`}>
+        <div className={`flex h-screen overflow-hidden ${themeClass}`}>
             {/* ✅ Mobile overlay — sidebar खुला हुँदा background dim हुने + tap गर्दा बन्द हुने */}
             {isSidebarOpen && (
                 <div

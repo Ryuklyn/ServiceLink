@@ -1,4 +1,5 @@
 import { CheckCircle2, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function ServPro() {
     const features = [
@@ -49,10 +50,10 @@ export default function ServPro() {
                                 ))}
                             </ul>
 
-                            <button className="mt-8 bg-[#e8683f] hover:bg-gray-50 text-white font-semibold flex items-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group">
+                            <Link href="/servicelinkpro" className="mt-8 w-fit bg-[#e8683f] hover:bg-gray-50 text-white font-semibold flex items-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group">
                                 Get Enterprise Access
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </button>
+                            </Link>
                         </div>
 
                         {/* Right: Product mockup image */}

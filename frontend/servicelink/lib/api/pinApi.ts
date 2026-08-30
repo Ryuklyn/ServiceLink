@@ -26,17 +26,28 @@ export interface CheckDeviceResponse {
     pinExists: boolean;
 }
 
+export interface CheckAccountResponse {
+    pinExists: boolean;
+    maskedContact: string;
+    email: string;
+}
+
 // ─── PIN API ──────────────────────────────────────────────────────────────────
 
 export const pinApi = {
-    /**
-     * Called on app load, before deciding whether to show PhoneStep or PinStep.
-     * No auth required — deviceId alone isn't sensitive.
-     */
+    /** Legacy device lookup retained for compatible clients. */
     checkDevice: async (deviceId: string): Promise<CheckDeviceResponse> => {
         const { data } = await publicApi.post<CheckDeviceResponse>(
             "/providers/auth/check-device",
             { deviceId },
+        );
+        return data;
+    },
+
+    checkAccount: async (payload: { email?: string; phone?: string }): Promise<CheckAccountResponse> => {
+        const { data } = await publicApi.post<CheckAccountResponse>(
+            "/providers/auth/check-account",
+            payload,
         );
         return data;
     },
@@ -59,11 +70,7 @@ export const pinApi = {
         return data;
     },
 
-    /**
-     * Called if the provider declines to set a PIN on this device.
-     * Just exchanges the short-lived providerToken for a full session,
-     * same tokens set-pin would have returned.
-     */
+    /** Legacy PIN-skip endpoint retained for compatible clients. */
     skipPin: async (providerToken: string): Promise<SkipPinResponse> => {
         const { data } = await publicApi.post<SkipPinResponse>(
             "/providers/auth/skip-pin",
@@ -73,14 +80,22 @@ export const pinApi = {
         return data;
     },
 
-    /** The fast, day-to-day login path — no OTP involved. */
+    /** PIN verification after the provider has identified their account. */
     verifyPin: async (
         deviceId: string,
         pin: string,
+        providerToken?: string,
+        email?: string,
+        phone?: string,
     ): Promise<VerifyPinResponse> => {
+        const headers: Record<string, string> = {};
+        if (providerToken) {
+            headers["X-Provider-Token"] = providerToken;
+        }
         const { data } = await publicApi.post<VerifyPinResponse>(
             "/providers/auth/verify-pin",
-            { deviceId, pin },
+            { deviceId, pin, email, phone },
+            { headers },
         );
         return data;
     },

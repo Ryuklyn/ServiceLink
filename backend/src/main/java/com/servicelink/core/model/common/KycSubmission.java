@@ -39,6 +39,9 @@ public class KycSubmission {
     @Column(nullable = false, unique = true)
     private String referenceNumber;
 
+    @Column(name = "referral_code")
+    private String referralCode;
+
     // ── Personal ──────────────────────────────────────────────────────────────
     private String fullName;
     private String dob;

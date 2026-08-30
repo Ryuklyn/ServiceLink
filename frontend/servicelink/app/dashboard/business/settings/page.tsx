@@ -7,16 +7,18 @@ import Image from "next/image";
 import {
     Building2, Users, CreditCard, Bell, Pencil, Upload, X, Plus, Trash2,
     ChevronDown, ChevronUp, Copy, Crown, Hash, Phone, Mail, AlertTriangle,
+    Shield, Check, Lock, RefreshCw, Download,
 } from "lucide-react";
 import api from "@/utils/axios";
 import { toast } from "react-toastify";
 import type { RootState, AppDispatch } from "@/store";
 import { getOrganization, updateOrganization, uploadOrgLogo, getWorkspace, updateWorkspace } from "@/lib/api/organizationApi";
-import { getSubscriptionByWorkspace, verifyPayment } from "@/lib/api/proSubscriptionApi";
+import { getSubscriptionByWorkspace, verifyPayment, getProSubscriptionHistory } from "@/lib/api/proSubscriptionApi";
 import PaymentModal from "@/components/business/payment/PaymentModal";
 import type { PlanCheckout } from "@/components/business/PlanStep";
 import type { OrganizationResponse, WorkspaceResponse, SubscriptionResponse, PlanType } from "@/types/business";
 import { fetchProSession } from "@/store/slices/proSessionSlice";
+import NotificationPreferences from "@/components/notifications/NotificationPreferences";
 
 const NAVY = "#1e3a8a";
 const ORANGE = "#e8683f";
@@ -24,17 +26,39 @@ const ORANGE = "#e8683f";
 const ALL_SERVICE_OPTIONS = ["HVAC", "Electrical", "Cleaning", "Plumbing", "Security", "Pest Control"];
 
 const PERMISSION_ROWS = [
-    { action: "Create job tickets", Admin: true, Manager: true, Staff: true, Finance: false },
-    { action: "Assign providers", Admin: true, Manager: true, Staff: false, Finance: false },
-    { action: "View SLA dashboard", Admin: true, Manager: true, Staff: false, Finance: false },
-    { action: "View & pay invoices", Admin: true, Manager: false, Staff: false, Finance: true },
-    { action: "Manage provider pool", Admin: true, Manager: true, Staff: false, Finance: false },
-    { action: "View audit log", Admin: true, Manager: true, Staff: false, Finance: true },
-    { action: "Invite team members", Admin: true, Manager: false, Staff: false, Finance: false },
-    { action: "Workspace settings", Admin: true, Manager: false, Staff: false, Finance: false },
+    { module: "Dashboard", Admin: "Full", Manager: "Full", Staff: "View", Finance: "View" },
+    { module: "Provider Pool", Admin: "Full", Manager: "Full", Staff: "View", Finance: "View" },
+    { module: "Provider Directory", Admin: "Full", Manager: "View", Staff: "View", Finance: "View" },
+    { module: "Job Tickets", Admin: "Full", Manager: "Full", Staff: "Assigned", Finance: "View" },
+    { module: "SLA Dashboard", Admin: "Full", Manager: "Full", Staff: "View", Finance: "View" },
+    { module: "Compliance", Admin: "Full", Manager: "Full", Staff: "View", Finance: "View" },
+    { module: "Billing", Admin: "Full", Manager: "View", Staff: "—", Finance: "Full" },
+    { module: "Subscription", Admin: "Full", Manager: "View", Staff: "—", Finance: "View" },
+    { module: "Team Members", Admin: "Full", Manager: "View", Staff: "—", Finance: "—" },
+    { module: "Settings", Admin: "Full", Manager: "Limited", Staff: "—", Finance: "—" },
+    { module: "Security", Admin: "Full", Manager: "Own", Staff: "Own", Finance: "Own" },
 ];
 
 const ROLE_OPTIONS = ["Manager", "Staff", "Finance"];
+
+function renderPermissionBadge(value: string) {
+    if (value === "Full") {
+        return <span className="inline-block text-[11px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-100/50">Full</span>;
+    }
+    if (value === "View") {
+        return <span className="inline-block text-[11px] font-black text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100/50">View</span>;
+    }
+    if (value === "Assigned") {
+        return <span className="inline-block text-[11px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-100/50">Assigned</span>;
+    }
+    if (value === "Own") {
+        return <span className="inline-block text-[11px] font-black text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-lg border border-purple-100/50">Own</span>;
+    }
+    if (value === "Limited") {
+        return <span className="inline-block text-[11px] font-black text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-100/50">Limited</span>;
+    }
+    return <span className="text-slate-300 font-semibold">—</span>;
+}
 
 const PLAN_TYPE_TO_TIER: Record<PlanType, "starter" | "growth" | "enterprise"> = {
     STARTER: "starter", GROWTH: "growth", ENTERPRISE: "enterprise",
@@ -54,21 +78,12 @@ const plans = [
         features: ["Unlimited members", "Unlimited branches", "Dedicated Support", "Advanced Analytics", "Custom Integrations"] },
 ];
 
-const initialNotifications = [
-    { id: "n1", title: "SLA breach alerts", desc: "Get notified when a job exceeds its SLA deadline", enabled: true },
-    { id: "n2", title: "New job requests", desc: "Notify when staff submit new service requests", enabled: true },
-    { id: "n3", title: "Invoice due reminders", desc: "Reminder 3 days before invoice due date", enabled: true },
-    { id: "n4", title: "Provider KYB expiry", desc: "Alert when a provider's KYB verification is expiring", enabled: false },
-    { id: "n5", title: "New provider onboarding", desc: "Notify when a provider accepts your onboarding invite", enabled: true },
-    { id: "n6", title: "Weekly summary report", desc: "Email summary of job stats every Monday", enabled: true },
-    { id: "n7", title: "Monthly billing statement", desc: "Detailed billing summary at month end", enabled: false },
-];
-
 const TABS = [
     { key: "profile", label: "Organization Profile", icon: Building2 },
     { key: "team", label: "Team Members", icon: Users },
     { key: "subscription", label: "Subscription", icon: CreditCard },
     { key: "notifications", label: "Notifications", icon: Bell },
+    { key: "security", label: "Security", icon: Shield },
 ];
 
 type ApiInviteStatus = "PENDING" | "ACCEPTED";
@@ -90,7 +105,7 @@ const inviteStatusDisplay: Record<ApiInviteStatus, string> = { PENDING: "Pending
 const getRoleBadgeStyles = (role: string) => {
     if (role === "Admin") return "bg-slate-100 text-slate-700";
     if (role === "Manager") return "bg-blue-50 text-[#1e3a8a]";
-    if (role === "Finance") return "bg-orange-50";
+    if (role === "Finance") return "bg-orange-50 text-[#e8683f]";
     return "bg-slate-100 text-slate-600";
 };
 
@@ -150,6 +165,27 @@ function SettingsPageContent() {
     const { organizationId, workspaceId, planType, subscriptionStatus, trialEndsAt } =
         useSelector((s: RootState) => s.proSession);
 
+    const filteredTabs = TABS.filter((tab) => {
+        if (!currentRole) return true;
+        const r = currentRole.toUpperCase();
+        if (r === "STAFF") {
+            return tab.key === "security" || tab.key === "notifications";
+        }
+        if (r === "FINANCE") {
+            return tab.key === "subscription" || tab.key === "security" || tab.key === "notifications";
+        }
+        return true;
+    });
+
+    useEffect(() => {
+        if (currentRole) {
+            const hasActiveTab = filteredTabs.some((t) => t.key === activeTab);
+            if (!hasActiveTab && filteredTabs.length > 0) {
+                setActiveTab(filteredTabs[0].key);
+            }
+        }
+    }, [currentRole, activeTab]);
+
     // ===================== ORGANIZATION PROFILE =====================
     const [org, setOrg] = useState<OrganizationResponse | null>(null);
     const [workspace, setWorkspace] = useState<WorkspaceResponse | null>(null);
@@ -162,11 +198,27 @@ function SettingsPageContent() {
     const [newService, setNewService] = useState("");
     const [showServiceInput, setShowServiceInput] = useState(false);
 
+    const effectiveOrgId = organizationId || org?.id || workspace?.organizationId;
+
     const fetchProfile = useCallback(async () => {
-        if (!organizationId || !workspaceId) return;
+        if (!workspaceId) return;
         try {
             setLoadingProfile(true);
-            const [orgData, wsData] = await Promise.all([getOrganization(organizationId), getWorkspace(workspaceId)]);
+            let orgData: OrganizationResponse;
+            let wsData: WorkspaceResponse;
+
+            if (organizationId) {
+                const [orgRes, wsRes] = await Promise.all([getOrganization(organizationId), getWorkspace(workspaceId)]);
+                orgData = orgRes;
+                wsData = wsRes;
+            } else {
+                wsData = await getWorkspace(workspaceId);
+                if (wsData.organizationId) {
+                    orgData = await getOrganization(wsData.organizationId);
+                } else {
+                    throw new Error("Organization ID not found on workspace");
+                }
+            }
             setOrg(orgData);
             setWorkspace(wsData);
             setDraftServices(wsData.preferredServices ?? []);
@@ -181,10 +233,10 @@ function SettingsPageContent() {
     useEffect(() => { if (activeTab === "profile" && !org) fetchProfile(); }, [activeTab, org, fetchProfile]);
 
     const handleLogoUpload = async (file: File) => {
-        if (!organizationId || !isAdmin) return;
+        if (!effectiveOrgId || !isAdmin) return;
         try {
             setUploadingLogo(true);
-            setOrg(await uploadOrgLogo(organizationId, file));
+            setOrg(await uploadOrgLogo(effectiveOrgId, file));
             toast.success("Logo updated");
         } catch (e: unknown) {
             toast.error(getErrorMessage(e, "Could not upload logo"));
@@ -194,11 +246,11 @@ function SettingsPageContent() {
     };
 
     const saveProfile = async () => {
-        if (!organizationId || !workspaceId) return;
+        if (!effectiveOrgId || !workspaceId) return;
         try {
             setSavingProfile(true);
             const [orgData, wsData] = await Promise.all([
-                updateOrganization(organizationId, { companyName: profileForm.companyName, contactNumber: profileForm.contactNumber }),
+                updateOrganization(effectiveOrgId, { companyName: profileForm.companyName, contactNumber: profileForm.contactNumber }),
                 updateWorkspace(workspaceId, { primaryBranchLocation: profileForm.primaryBranchLocation, preferredServices: draftServices }),
             ]);
             setOrg(orgData);
@@ -317,15 +369,29 @@ function SettingsPageContent() {
     // ===================== SUBSCRIPTION =====================
     const [subscription, setSubscription] = useState<SubscriptionResponse | null>(null);
     const [loadingSubscription, setLoadingSubscription] = useState(false);
-    const [selectedTier, setSelectedTier] = useState<"starter" | "growth" | null>(null); // enterprise excluded — not self-serve payable
+    const [selectedTier, setSelectedTier] = useState<"starter" | "growth" | null>(null);
     const [paymentBanner, setPaymentBanner] = useState<{ type: "success" | "failed"; message: string } | null>(null);
     const paymentCheckStarted = useRef(false);
+
+    const [historyLogs, setHistoryLogs] = useState<any>(null);
+    const [loadingHistory, setLoadingHistory] = useState(false);
 
     const fetchSubscription = useCallback(async () => {
         if (!workspaceId) return;
         try {
             setLoadingSubscription(true);
-            setSubscription(await getSubscriptionByWorkspace(workspaceId));
+            const subData = await getSubscriptionByWorkspace(workspaceId);
+            setSubscription(subData);
+            
+            try {
+                setLoadingHistory(true);
+                const hist = await getProSubscriptionHistory(workspaceId);
+                setHistoryLogs(hist);
+            } catch (err) {
+                console.error("Could not load workspace subscription history:", err);
+            } finally {
+                setLoadingHistory(false);
+            }
         } catch (e: unknown) {
             if (getErrorStatus(e) !== 404) toast.error("Could not load subscription");
         } finally {
@@ -335,7 +401,6 @@ function SettingsPageContent() {
 
     useEffect(() => { if (activeTab === "subscription" && !subscription) fetchSubscription(); }, [activeTab, subscription, fetchSubscription]);
 
-    // Detect tab param + gateway return on mount, run once
     useEffect(() => {
         const tabParam = searchParams.get("tab");
         if (tabParam) setActiveTab(tabParam);
@@ -352,9 +417,9 @@ function SettingsPageContent() {
                         setPaymentBanner({ type: "success", message: "Payment verified — your plan is now active." });
                         await Promise.all([
                             fetchSubscription(),
-                            dispatch(fetchProSession()),   // refreshes sidebar's Trial/Starter/Growth badge
+                            dispatch(fetchProSession()),
                         ]);
-                    }else {
+                    } else {
                         setPaymentBanner({ type: "failed", message: res.error ?? "We received a response but couldn't verify it. Contact support with your reference ID." });
                     }
                 } catch (e: unknown) {
@@ -367,9 +432,6 @@ function SettingsPageContent() {
         })();
     }, [searchParams, router, fetchSubscription]);
 
-    // Freshly-fetched subscription is the source of truth (especially right
-    // after a payment, where redux's proSession snapshot is stale) — redux
-    // only fills the gap before the fetch resolves on first paint.
     const effectivePlanType = subscription?.planType ?? (planType as PlanType | null) ?? null;
     const effectiveStatus = subscription?.status ?? subscriptionStatus ?? null;
     const effectiveTrialEndsAt = subscription?.trialEndsAt ?? trialEndsAt ?? null;
@@ -387,15 +449,140 @@ function SettingsPageContent() {
         setSelectedTier(tier);
     };
 
-    // ===================== NOTIFICATIONS =====================
-    const [notifications, setNotifications] = useState(initialNotifications);
-    const toggleNotification = (id: string) => setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, enabled: !n.enabled } : n)));
+    // ===================== SECURITY (2FA) =====================
+    const [meUser, setMeUser] = useState<any>(null);
+    const [loadingMe, setLoadingMe] = useState(false);
+
+    const [is2faSetupOpen, setIs2faSetupOpen] = useState(false);
+    const [setupStep, setSetupStep] = useState(1);
+    const [setupPassword, setSetupPassword] = useState("");
+    const [setupQrCode, setSetupQrCode] = useState("");
+    const [setupSecret, setSetupSecret] = useState("");
+    const [setupCode, setSetupCode] = useState("");
+    const [backupCodes, setBackupCodes] = useState<string[]>([]);
+    const [loadingSetup, setLoadingSetup] = useState(false);
+
+    const [is2faDisableOpen, setIs2faDisableOpen] = useState(false);
+    const [disablePassword, setDisablePassword] = useState("");
+    const [disableCode, setDisableCode] = useState("");
+    const [loadingDisable, setLoadingDisable] = useState(false);
+
+    const [isRegenerateBackupOpen, setIsRegenerateBackupOpen] = useState(false);
+    const [regeneratedCodes, setRegeneratedCodes] = useState<string[]>([]);
+
+    const fetchMe = useCallback(async () => {
+        try {
+            setLoadingMe(true);
+            const { data } = await api.get("/auth/me");
+            setMeUser(data);
+        } catch (e: unknown) {
+            console.error("Could not load user profile:", e);
+        } finally {
+            setLoadingMe(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeTab === "security" && !meUser) {
+            fetchMe();
+        }
+    }, [activeTab, meUser, fetchMe]);
+
+    const handleInit2fa = async () => {
+        if (!setupPassword) {
+            toast.error("Password is required");
+            return;
+        }
+        if (!meUser) return;
+        try {
+            setLoadingSetup(true);
+            const { data } = await api.post(`/users/${meUser.id}/2fa/init`, {
+                currentPassword: setupPassword,
+                method: "TOTP"
+            });
+            setSetupQrCode(data.qrCodeImageBase64);
+            setSetupSecret(data.manualSetupKey);
+            setSetupStep(2);
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Could not initiate 2FA setup"));
+        } finally {
+            setLoadingSetup(false);
+        }
+    };
+
+    const handleVerify2fa = async () => {
+        if (!setupCode || setupCode.length !== 6) {
+            toast.error("Enter a 6-digit verification code");
+            return;
+        }
+        if (!meUser) return;
+        try {
+            setLoadingSetup(true);
+            const { data } = await api.post(`/users/${meUser.id}/2fa/verify`, {
+                otp: setupCode
+            });
+            setBackupCodes(data.backupCodes || []);
+            setSetupStep(3);
+            fetchMe();
+            toast.success("Two-Step Verification successfully enabled!");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Invalid verification code. Please try again."));
+        } finally {
+            setLoadingSetup(false);
+        }
+    };
+
+    const handleDisable2fa = async () => {
+        if (!disablePassword) {
+            toast.error("Password is required");
+            return;
+        }
+        if (!meUser) return;
+        try {
+            setLoadingDisable(true);
+            await api.post(`/users/${meUser.id}/2fa/disable`, {
+                currentPassword: disablePassword,
+                code: disableCode
+            });
+            setIs2faDisableOpen(false);
+            setDisablePassword("");
+            setDisableCode("");
+            fetchMe();
+            toast.success("Two-Step Verification disabled.");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Failed to disable 2FA. Verify password and code."));
+        } finally {
+            setLoadingDisable(false);
+        }
+    };
+
+    const handleRegenerateBackup = async () => {
+        if (!meUser) return;
+        try {
+            const { data } = await api.post(`/users/${meUser.id}/2fa/regenerate-backup-codes`);
+            setRegeneratedCodes(data || []);
+            setIsRegenerateBackupOpen(true);
+            toast.success("New backup codes generated.");
+        } catch (e: unknown) {
+            toast.error(getErrorMessage(e, "Could not regenerate backup codes"));
+        }
+    };
+
+    const downloadBackupCodes = (codes: string[]) => {
+        const element = document.createElement("a");
+        const file = new Blob([codes.join("\n")], { type: "text/plain" });
+        element.href = URL.createObjectURL(file);
+        element.download = "servicelink-backup-codes.txt";
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+    };
 
     return (
         <main className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6 bg-slate-50/40 min-h-screen">
             {/* Tab bar */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 flex gap-2 overflow-x-auto sm:flex-wrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {TABS.map((tab) => {
+                {filteredTabs.map((tab) => {
                     const Icon = tab.icon;
                     const active = activeTab === tab.key;
                     return (
@@ -605,8 +792,7 @@ function SettingsPageContent() {
                         <h2 className="text-lg font-bold text-slate-900">Team Members</h2>
                         {isAdmin && (
                             <button onClick={openInviteModal} className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-colors w-full sm:w-auto" style={{ backgroundColor: ORANGE }}>
-                                <Plus size={15} />
-                                Invite Member
+                                <Plus size={15} /> Invite Member
                             </button>
                         )}
                     </div>
@@ -634,10 +820,10 @@ function SettingsPageContent() {
                                         const roleLabel = roleDisplay[m.role];
                                         const statusLabel = inviteStatusDisplay[m.inviteStatus];
                                         return (
-                                            <tr key={m.id} className={`border-b border-gray-50 hover:bg-slate-50/60 transition-colors ${idx === teamMembers.length - 1 ? "border-b-0" : ""}`}>
+                                            <tr key={m.id} className={`border-b border-gray-55 hover:bg-slate-50/60 transition-colors ${idx === teamMembers.length - 1 ? "border-b-0" : ""}`}>
                                                 <td className="py-3.5 pl-6 pr-4 font-bold text-slate-900">{m.fullName}</td>
                                                 <td className="py-3.5 pr-4">
-                                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${getRoleBadgeStyles(roleLabel)}`} style={roleLabel === "Finance" ? { color: ORANGE } : undefined}>{roleLabel}</span>
+                                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${getRoleBadgeStyles(roleLabel)}`}>{roleLabel}</span>
                                                 </td>
                                                 <td className="py-3.5 pr-4 font-medium" style={{ color: NAVY }}>{m.email}</td>
                                                 <td className="py-3.5 pr-4 text-slate-500 font-medium">{formatLastActive(m)}</td>
@@ -683,7 +869,7 @@ function SettingsPageContent() {
                                                     <p className="font-bold text-slate-900 text-sm truncate">{m.fullName}</p>
                                                     <p className="text-xs font-medium mt-0.5 truncate" style={{ color: NAVY }}>{m.email}</p>
                                                 </div>
-                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${getRoleBadgeStyles(roleLabel)}`} style={roleLabel === "Finance" ? { color: ORANGE } : undefined}>{roleLabel}</span>
+                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${getRoleBadgeStyles(roleLabel)}`}>{roleLabel}</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-2 flex-wrap">
                                                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${getInviteStatusStyles(statusLabel)}`}>{statusLabel}</span>
@@ -724,7 +910,7 @@ function SettingsPageContent() {
                                 <table className="w-full text-sm">
                                     <thead>
                                     <tr className="border-b border-gray-100 text-left">
-                                        <th className="py-2.5 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Action</th>
+                                        <th className="py-2.5 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide">Module</th>
                                         <th className="py-2.5 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide text-center">Admin</th>
                                         <th className="py-2.5 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide text-center">Manager</th>
                                         <th className="py-2.5 pr-4 font-semibold text-slate-400 text-xs uppercase tracking-wide text-center">Staff</th>
@@ -733,13 +919,12 @@ function SettingsPageContent() {
                                     </thead>
                                     <tbody>
                                     {PERMISSION_ROWS.map((row) => (
-                                        <tr key={row.action} className="border-b border-gray-50 last:border-b-0">
-                                            <td className="py-3 pr-4 font-semibold" style={{ color: NAVY }}>{row.action}</td>
-                                            {(["Admin", "Manager", "Staff", "Finance"] as const).map((role) => (
-                                                <td key={role} className="py-3 pr-4 text-center">
-                                                    {row[role] ? <span className="text-emerald-500 font-bold">✓</span> : <span className="text-slate-300">—</span>}
-                                                </td>
-                                            ))}
+                                        <tr key={row.module} className="border-b border-gray-50 last:border-b-0">
+                                            <td className="py-3 pr-4 font-semibold text-slate-800">{row.module}</td>
+                                            <td className="py-3 pr-4 text-center">{renderPermissionBadge(row.Admin)}</td>
+                                            <td className="py-3 pr-4 text-center">{renderPermissionBadge(row.Manager)}</td>
+                                            <td className="py-3 pr-4 text-center">{renderPermissionBadge(row.Staff)}</td>
+                                            <td className="py-3 pr-4 text-center">{renderPermissionBadge(row.Finance)}</td>
                                         </tr>
                                     ))}
                                     </tbody>
@@ -832,10 +1017,46 @@ function SettingsPageContent() {
                                     );
                                 })}
                             </div>
+
+                            {/* Billing & Invoice History */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mt-6">
+                                <h3 className="text-base font-bold text-slate-900 mb-4">Billing History</h3>
+                                {loadingHistory ? (
+                                    <div className="py-4 text-center text-sm text-slate-400">Loading history...</div>
+                                ) : !historyLogs || !historyLogs.transactions || historyLogs.transactions.length === 0 ? (
+                                    <div className="py-4 text-center text-sm text-slate-400">No transactions recorded yet.</div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead>
+                                                <tr className="border-b border-gray-100 text-slate-400 text-xs font-semibold uppercase">
+                                                    <th className="py-3">Date</th>
+                                                    <th className="py-3">Amount</th>
+                                                    <th className="py-3">Reference ID</th>
+                                                    <th className="py-3">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {historyLogs.transactions.map((tx: any) => (
+                                                    <tr key={tx.id} className="border-b border-gray-50 text-slate-700 font-medium">
+                                                        <td className="py-3">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                                                        <td className="py-3">NPR {tx.amountNpr.toLocaleString()}</td>
+                                                        <td className="py-3 font-mono text-xs">{tx.referenceId}</td>
+                                                        <td className="py-3">
+                                                            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${tx.status === "SUCCESS" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>
+                                                                {tx.status}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
                         </>
                     )}
 
-                    {/* Real payment flow — PaymentModal handles gateway pick, initiate, and redirect internally */}
                     {selectedTier && subscription && (
                         <PaymentModal
                             isOpen={!!selectedTier}
@@ -853,20 +1074,48 @@ function SettingsPageContent() {
 
             {/* ================= NOTIFICATIONS ================= */}
             {activeTab === "notifications" && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                    <h2 className="text-lg font-bold text-slate-900 mb-5">Notification Preferences</h2>
-                    <div className="divide-y divide-gray-100">
-                        {notifications.map((n) => (
-                            <div key={n.id} className="flex items-center justify-between gap-4 py-5">
-                                <div className="min-w-0">
-                                    <p className="text-sm font-bold text-slate-900">{n.title}</p>
-                                    <p className="text-sm text-slate-400 mt-0.5">{n.desc}</p>
+                <NotificationPreferences />
+            )}
+
+            {/* ================= SECURITY ================= */}
+            {activeTab === "security" && (
+                <div className="space-y-6">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                        <h2 className="text-lg font-bold text-slate-900 mb-1">Security Settings</h2>
+                        <p className="text-sm text-slate-400 mb-5">Configure two-step verification to protect your business account.</p>
+
+                        <div className="flex items-center justify-between p-4 border border-gray-100 rounded-xl bg-slate-50/50">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-800">Two-Step Verification (2FA)</h3>
+                                <p className="text-xs text-slate-400 mt-0.5">Use an authenticator app (TOTP) to secure your logins.</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${meUser?.is2FAEnabled ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>
+                                    {meUser?.is2FAEnabled ? "Enabled" : "Disabled"}
+                                </span>
+                                {meUser?.is2FAEnabled ? (
+                                    <button onClick={() => setIs2faDisableOpen(true)} className="px-4 py-2 rounded-xl text-sm font-bold bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors">
+                                        Disable
+                                    </button>
+                                ) : (
+                                    <button onClick={() => { setIs2faSetupOpen(true); setSetupStep(1); }} className="px-4 py-2 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-colors" style={{ backgroundColor: ORANGE }}>
+                                        Enable
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {meUser?.is2FAEnabled && (
+                            <div className="mt-5 pt-5 border-t border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-800">Backup Verification Codes</h3>
+                                    <p className="text-xs text-slate-400 mt-0.5">Generate new backup codes to access your account if you lose your device.</p>
                                 </div>
-                                <button onClick={() => toggleNotification(n.id)} className="relative w-12 h-6 rounded-full shrink-0 transition-colors" style={{ backgroundColor: n.enabled ? NAVY : "#cbd5e1" }} aria-pressed={n.enabled} aria-label={`Toggle ${n.title}`}>
-                                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${n.enabled ? "translate-x-6" : "translate-x-0"}`} />
+                                <button onClick={handleRegenerateBackup} className="px-4 py-2 rounded-xl text-sm font-bold border border-gray-200 text-slate-700 hover:bg-slate-50 transition-colors">
+                                    Regenerate Codes
                                 </button>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             )}
@@ -918,19 +1167,15 @@ function SettingsPageContent() {
                                         <option key={r} value={r}>{r}</option>
                                     ))}
                                 </select>
-                                <p className="text-xs text-slate-400 mt-1.5">Admin role is reserved for the workspace owner (KYB registrant).</p>
                             </div>
                         </div>
 
                         <div className="p-4 border-t border-gray-100 bg-white flex items-center justify-end gap-3 flex-wrap">
-                            <button onClick={closeModal} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50">Cancel</button>
-                            <button
-                                onClick={handleSendInvitation}
-                                disabled={!inviteForm.email || !inviteForm.name || saving}
-                                className={`px-5 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-colors ${!inviteForm.email || !inviteForm.name || saving ? "opacity-50 cursor-not-allowed" : ""}`}
-                                style={{ backgroundColor: ORANGE }}
-                            >
-                                {saving ? (editingMember ? "Saving..." : "Sending...") : editingMember ? "Save Changes" : "Send Invitation"}
+                            <button onClick={closeModal} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50">
+                                Cancel
+                            </button>
+                            <button onClick={handleSendInvitation} disabled={!inviteForm.email || !inviteForm.name || saving} className={`px-5 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-colors ${!inviteForm.email || !inviteForm.name || saving ? "opacity-50 cursor-not-allowed" : ""}`} style={{ backgroundColor: ORANGE }}>
+                                {saving ? (editingMember ? "Saving..." : "Sending...") : (editingMember ? "Save Changes" : "Send Invitation")}
                             </button>
                         </div>
                     </div>
@@ -952,14 +1197,151 @@ function SettingsPageContent() {
                                 </p>
                             </div>
                         </div>
+
                         <div className="flex items-center justify-end gap-3 mt-6 flex-wrap">
-                            <button onClick={() => setMemberToDelete(null)} disabled={removingId === memberToDelete.id} className="px-4 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50">Cancel</button>
-                            <button
-                                onClick={confirmRemoveMember}
-                                disabled={removingId === memberToDelete.id}
-                                className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-sm transition-colors disabled:opacity-50"
-                            >
+                            <button onClick={() => setMemberToDelete(null)} disabled={removingId === memberToDelete.id} className="px-4 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50">
+                                Cancel
+                            </button>
+                            <button onClick={confirmRemoveMember} disabled={removingId === memberToDelete.id} className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-sm transition-colors disabled:opacity-50">
                                 {removingId === memberToDelete.id ? "Removing..." : "Yes, Remove"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ================= 2FA SETUP MODAL ================= */}
+            {is2faSetupOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-6 relative animate-in fade-in zoom-in-95 duration-150">
+                        <button onClick={() => setIs2faSetupOpen(false)} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600">
+                            <X size={18} />
+                        </button>
+
+                        {setupStep === 1 && (
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 mb-1">Enable Two-Factor Authentication</h3>
+                                <p className="text-sm text-slate-500 mb-5">Please enter your password to start the 2FA setup process.</p>
+                                <input
+                                    type="password"
+                                    placeholder="Enter your password"
+                                    value={setupPassword}
+                                    onChange={(e) => setSetupPassword(e.target.value)}
+                                    className="w-full text-slate-900 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] mb-4"
+                                />
+                                <button onClick={handleInit2fa} disabled={loadingSetup} className="w-full py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50" style={{ backgroundColor: NAVY }}>
+                                    {loadingSetup ? "Verifying..." : "Verify Password"}
+                                </button>
+                            </div>
+                        )}
+
+                        {setupStep === 2 && (
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 mb-1">Scan QR Code</h3>
+                                <p className="text-sm text-slate-500 mb-4">Scan the QR code below using your authenticator app (Google Authenticator, Authy, etc.).</p>
+                                <div className="flex justify-center mb-4">
+                                    {setupQrCode && (
+                                        <Image src={`data:image/png;base64,${setupQrCode}`} alt="2FA QR Code" width={192} height={192} className="border border-gray-100 rounded-xl" unoptimized />
+                                    )}
+                                </div>
+                                <p className="text-xs text-slate-500 mb-1">Or enter manual key:</p>
+                                <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 mb-4 text-center font-mono text-sm tracking-wider select-all">{setupSecret}</div>
+                                <input
+                                    type="text"
+                                    placeholder="Enter 6-digit code"
+                                    value={setupCode}
+                                    maxLength={6}
+                                    onChange={(e) => setSetupCode(e.target.value)}
+                                    className="w-full text-center tracking-[0.5em] text-slate-900 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] mb-4"
+                                />
+                                <button onClick={handleVerify2fa} disabled={loadingSetup} className="w-full py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50" style={{ backgroundColor: NAVY }}>
+                                    {loadingSetup ? "Enabling..." : "Verify & Enable"}
+                                </button>
+                            </div>
+                        )}
+
+                        {setupStep === 3 && (
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 mb-1">Two-Step Verification Enabled</h3>
+                                <p className="text-sm text-slate-500 mb-4">Save these backup codes. You can use them to sign in if you lose access to your device. Each code can be used only once.</p>
+                                <div className="grid grid-cols-2 gap-2 bg-slate-50 p-4 rounded-xl mb-4 font-mono text-sm border border-gray-100">
+                                    {backupCodes.map((code) => (
+                                        <div key={code} className="text-center text-slate-700">{code}</div>
+                                    ))}
+                                </div>
+                                <div className="flex gap-3">
+                                    <button onClick={() => downloadBackupCodes(backupCodes)} className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-gray-200 text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+                                        <Download size={14} /> Download
+                                    </button>
+                                    <button onClick={() => { setIs2faSetupOpen(false); setSetupStep(1); }} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white" style={{ backgroundColor: NAVY }}>
+                                        Done
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ================= 2FA DISABLE MODAL ================= */}
+            {is2faDisableOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl p-6 relative animate-in fade-in zoom-in-95 duration-150">
+                        <button onClick={() => setIs2faDisableOpen(false)} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600">
+                            <X size={18} />
+                        </button>
+
+                        <h3 className="text-lg font-bold text-slate-900 mb-1">Disable Two-Step Verification</h3>
+                        <p className="text-sm text-slate-500 mb-4">To disable 2FA, please enter your password and current verification code.</p>
+                        
+                        <div className="space-y-3 mb-4">
+                            <input
+                                type="password"
+                                placeholder="Enter password"
+                                value={disablePassword}
+                                onChange={(e) => setDisablePassword(e.target.value)}
+                                className="w-full text-slate-900 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Enter 6-digit code"
+                                value={disableCode}
+                                maxLength={6}
+                                onChange={(e) => setDisableCode(e.target.value)}
+                                className="w-full text-center tracking-[0.5em] text-slate-900 rounded-xl border border-gray-200 p-2.5 text-sm font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a]"
+                            />
+                        </div>
+
+                        <button onClick={handleDisable2fa} disabled={loadingDisable} className="w-full py-2.5 rounded-xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors">
+                            {loadingDisable ? "Disabling..." : "Disable 2FA"}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ================= REGENERATE BACKUP CODES MODAL ================= */}
+            {isRegenerateBackupOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-6 relative animate-in fade-in zoom-in-95 duration-150">
+                        <button onClick={() => setIsRegenerateBackupOpen(false)} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600">
+                            <X size={18} />
+                        </button>
+
+                        <h3 className="text-lg font-bold text-slate-900 mb-1">New Backup Codes Generated</h3>
+                        <p className="text-sm text-slate-500 mb-4">Please download or print your new backup codes. Your old codes will no longer work.</p>
+                        
+                        <div className="grid grid-cols-2 gap-2 bg-slate-50 p-4 rounded-xl mb-4 font-mono text-sm border border-gray-100">
+                            {regeneratedCodes.map((code) => (
+                                <div key={code} className="text-center text-slate-700">{code}</div>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button onClick={() => downloadBackupCodes(regeneratedCodes)} className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-gray-200 text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+                                <Download size={14} /> Download
+                            </button>
+                            <button onClick={() => setIsRegenerateBackupOpen(false)} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white" style={{ backgroundColor: NAVY }}>
+                                Done
                             </button>
                         </div>
                     </div>

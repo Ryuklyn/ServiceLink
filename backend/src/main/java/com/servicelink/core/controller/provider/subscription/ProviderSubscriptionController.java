@@ -54,7 +54,7 @@ public class ProviderSubscriptionController {
             @RequestBody @Valid SubscriptionCheckoutRequestDTO req
     ) throws Exception {
         String successUrl = frontendUrl + "/dashboard/provider/subscription/success";
-        String failureUrl = frontendUrl + "/dashboard/provider/subscription DLKKKFKKG[DPP;L  BGJFEFVHERKDHCHJHDHYCHCSGG  /failure";
+        String failureUrl = frontendUrl + "/dashboard/provider/subscription/failure";
 
         return ResponseEntity.ok(paymentService.checkout(user.getId(), req, successUrl, failureUrl));
     }

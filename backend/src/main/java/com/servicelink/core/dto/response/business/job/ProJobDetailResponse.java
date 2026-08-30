@@ -13,7 +13,8 @@ public record ProJobDetailResponse(
     String category,
     String service,
     Integer workersRequired,
-    LocalDate scheduledDate,
+    LocalDate startDate,
+    LocalDate endDate,
     LocalTime startTime,
     LocalTime endTime,
     String location,
@@ -34,7 +35,9 @@ public record ProJobDetailResponse(
         Long providerId,
         String fullName,
         String businessName,
-        String profilePictureUrl
+        String profilePictureUrl,
+        String requiredSkill,
+        String status
     ) {}
 
     public record AttendanceInfo(

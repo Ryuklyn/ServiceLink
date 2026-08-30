@@ -18,6 +18,7 @@ export interface ProviderDirectoryCard {
     totalJobs?: number | null;
 
     isVerified: boolean;
+    alreadyInPool: boolean;
 }
 
 interface ProviderDirectoryState {

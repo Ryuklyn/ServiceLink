@@ -18,6 +18,8 @@ public interface KycRepository extends JpaRepository<KycSubmission, Long> {
     /** Find by phone (E.164) or email — the identifier used at OTP verification. */
     Optional<KycSubmission> findByApplicantIdentifier(String applicantIdentifier);
 
+    Optional<KycSubmission> findByEmail(String email);
+
     boolean existsByUser(User user);
 
     boolean existsByApplicantIdentifier(String applicantIdentifier);

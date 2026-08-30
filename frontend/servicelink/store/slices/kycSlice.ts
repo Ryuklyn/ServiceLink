@@ -53,6 +53,7 @@ export interface KycPersonalData {
     gender: string;
     phone: string;
     email: string;
+    referralCode?: string;
     currentAddress: KycAddress;
     permanentAddress: KycAddress;
     sameAddress: boolean;

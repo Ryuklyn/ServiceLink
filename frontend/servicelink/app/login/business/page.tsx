@@ -42,6 +42,13 @@ export default function BusinessSignInPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 2FA login states
+  const [show2FA, setShow2FA] = useState(false);
+  const [preAuthToken, setPreAuthToken] = useState("");
+  const [twoFactorMethod, setTwoFactorMethod] = useState("TOTP");
+  const [code, setCode] = useState("");
+  const [useBackupCode, setUseBackupCode] = useState(false);
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
 
@@ -53,17 +60,16 @@ export default function BusinessSignInPage() {
     try {
       setLoading(true);
 
-      // const response = await api.post("/auth/login", { email, password });
-      // const { token, role, fullName } = response.data;
-      //
-      // if (role !== "PRO") {
-      //   toast.error("This account is not registered as a business account");
-      //   return;
-      // }
-      //
-      // // Same key utils/jwt.ts's getProClaims() reads — keep in sync.
-      // localStorage.setItem("token", token);
       const response = await api.post("/auth/login", { email, password });
+      
+      if (response.data.requiresTwoFactor && response.data.preAuthToken) {
+        setPreAuthToken(response.data.preAuthToken);
+        setTwoFactorMethod(response.data.twoFactorMethod || "TOTP");
+        setShow2FA(true);
+        setLoading(false);
+        return;
+      }
+
       const { token, refreshToken, fullName } = response.data;
 
       localStorage.setItem("accessToken", token);
@@ -77,15 +83,50 @@ export default function BusinessSignInPage() {
         return;
       }
 
-      // toast.success(`Welcome back, ${fullName ?? "there"}`);
-      // router.push("/dashboard/business");
-
-      toast.success(`Welcome back, ${fullName}`);
+      toast.success(`Welcome back, ${fullName || "there"}`);
       router.push("/dashboard/business");
     } catch (error: any) {
       console.error("Login error:", error);
       toast.error(
           error?.response?.data?.message ?? "Invalid email or password",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim()) {
+      toast.error(useBackupCode ? "Enter a backup code" : "Enter verification code");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await api.post("/auth/2fa/login-verify", {
+        preAuthToken,
+        code: code.trim(),
+      });
+      const { token, refreshToken, fullName } = response.data;
+
+      localStorage.setItem("accessToken", token);
+      localStorage.setItem("refreshToken", refreshToken);
+
+      const claims = getProClaims();
+      if (claims?.role !== "PRO") {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        toast.error("This account is not registered as a business account");
+        return;
+      }
+
+      toast.success(`Welcome back, ${fullName || "there"}`);
+      router.push("/dashboard/business");
+    } catch (error: any) {
+      console.error("2FA verify error:", error);
+      toast.error(
+          error?.response?.data?.message ?? "Invalid verification code. Please try again."
       );
     } finally {
       setLoading(false);
@@ -169,142 +210,212 @@ export default function BusinessSignInPage() {
 
         {/* ── RIGHT PANEL ── */}
         <div className="flex-1 bg-[#f0f4fb] flex flex-col items-center justify-between py-10 px-6">
-          <form
-              onSubmit={handleSubmit}
-              className="w-full max-w-md bg-white rounded-2xl shadow-sm px-10 py-10 mt-auto mb-auto"
-          >
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-extrabold text-[#1e3a8a] mb-1">
-                Welcome back
-              </h2>
-              <p className="text-sm text-gray-400">Sign in to your workspace</p>
-            </div>
+          {show2FA ? (
+            <form
+              onSubmit={handleVerify2FA}
+              className="w-full max-w-md bg-white rounded-2xl shadow-sm px-10 py-10 mt-auto mb-auto space-y-6 animate-in fade-in zoom-in-95 duration-150"
+            >
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield size={22} className="text-[#1e3a8a]" />
+                </div>
+                <h2 className="text-2xl font-extrabold text-[#1e3a8a] mb-1">
+                  Two-Step Verification
+                </h2>
+                <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                  {useBackupCode
+                    ? "Enter one of your 8-digit recovery backup codes."
+                    : twoFactorMethod === "EMAIL"
+                    ? "Enter the 6-digit code we sent to your email."
+                    : "Enter the 6-digit code from your authenticator app."}
+                </p>
+              </div>
 
-            <div className="mb-5">
-              <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
-                Work Email or Phone
-              </label>
-              <div className="relative">
-                <Mail
-                    size={16}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                />
+              <div>
+                <label className="block text-xs font-bold text-[#1e3a8a] mb-1.5 uppercase tracking-wider">
+                  {useBackupCode ? "Backup Code" : "Verification Code"}
+                </label>
                 <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@company.com"
-                    disabled={loading}
-                    className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition bg-white disabled:opacity-50"
+                  type="text"
+                  placeholder={useBackupCode ? "XXXX-XXXX" : "000000"}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  disabled={loading}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-center font-mono font-bold text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition bg-white disabled:opacity-50"
                 />
               </div>
-            </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <Lock
-                    size={16}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                />
-                <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    disabled={loading}
-                    className="w-full border border-gray-200 rounded-lg pl-10 pr-11 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition bg-white disabled:opacity-50"
-                />
+              <button
+                type="submit"
+                disabled={loading || !code.trim()}
+                className="w-full flex items-center justify-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold py-3.5 rounded-lg transition disabled:opacity-50"
+              >
+                {loading ? "Verifying..." : "Verify"} <span>→</span>
+              </button>
+
+              <div className="flex flex-col gap-2.5 pt-2 text-center border-t border-gray-50">
                 <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                  type="button"
+                  onClick={() => {
+                    setUseBackupCode(!useBackupCode);
+                    setCode("");
+                  }}
+                  className="text-xs font-bold text-[#1e3a8a] hover:underline"
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {useBackupCode ? "Use authenticator code instead" : "Use a backup code instead"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShow2FA(false);
+                    setPreAuthToken("");
+                    setCode("");
+                  }}
+                  className="text-xs font-semibold text-gray-400 hover:text-gray-600 transition hover:underline"
+                >
+                  Back to Sign In
                 </button>
               </div>
-            </div>
+            </form>
+          ) : (
+            <form
+                onSubmit={handleSubmit}
+                className="w-full max-w-md bg-white rounded-2xl shadow-sm px-10 py-10 mt-auto mb-auto"
+            >
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-extrabold text-[#1e3a8a] mb-1">
+                  Welcome back
+                </h2>
+                <p className="text-sm text-gray-400">Sign in to your workspace</p>
+              </div>
 
-            <div className="flex items-center justify-between mb-6">
-              <label
-                  className="flex items-center gap-2 cursor-pointer"
-                  onClick={() => setRemember(!remember)}
-              >
-                <div
-                    className={`w-4 h-4 rounded border flex items-center justify-center transition ${
-                        remember
-                            ? "bg-[#1e3a8a] border-[#1e3a8a]"
-                            : "bg-white border-gray-300"
-                    }`}
-                >
-                  {remember && (
-                      <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                        <path
-                            d="M1 3.5L3.5 6L8 1"
-                            stroke="white"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                      </svg>
-                  )}
+              <div className="mb-5">
+                <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
+                  Work Email or Phone
+                </label>
+                <div className="relative">
+                  <Mail
+                      size={16}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@company.com"
+                      disabled={loading}
+                      className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition bg-white disabled:opacity-50"
+                  />
                 </div>
-                <span className="text-sm text-gray-600">Remember me</span>
-              </label>
-              <Link
-                  href="/login/business/forget-password"
-                  className="text-sm font-semibold text-[#e8683f] hover:text-[#d95a2f] transition"
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-[#1e3a8a] mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock
+                      size={16}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      disabled={loading}
+                      className="w-full border border-gray-200 rounded-lg pl-10 pr-11 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition bg-white disabled:opacity-50"
+                  />
+                  <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mb-6">
+                <label
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => setRemember(!remember)}
+                >
+                  <div
+                      className={`w-4 h-4 rounded border flex items-center justify-center transition ${
+                          remember
+                              ? "bg-[#1e3a8a] border-[#1e3a8a]"
+                              : "bg-white border-gray-300"
+                      }`}
+                  >
+                    {remember && (
+                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                          <path
+                              d="M1 3.5L3.5 6L8 1"
+                              stroke="white"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                          />
+                        </svg>
+                    )}
+                  </div>
+                  <span className="text-sm text-gray-600">Remember me</span>
+                </label>
+                <Link
+                    href="/login/business/forget-password"
+                    className="text-sm font-semibold text-[#e8683f] hover:text-[#d95a2f] transition"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+
+              <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold py-3.5 rounded-lg transition mb-5 disabled:opacity-50"
               >
-                Forgot Password?
-              </Link>
-            </div>
+                {loading ? "Signing in..." : "Sign In"} <span>→</span>
+              </button>
 
-            <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-[#e8683f] hover:bg-[#d95a2f] text-white text-sm font-semibold py-3.5 rounded-lg transition mb-5 disabled:opacity-50"
-            >
-              {loading ? "Signing in..." : "Sign In"} <span>→</span>
-            </button>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400">or</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
 
-            <div className="flex items-center gap-3 mb-5">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400">or</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-
-            <Link
-                href="/login/business/otp"
-                className="w-full flex items-center justify-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-[#1e3a8a] text-sm font-semibold py-3.5 rounded-lg transition mb-7"
-            >
-              <MessageCircle size={16} className="text-gray-500" />
-              Continue with OTP
-            </Link>
-
-            <p className="text-center text-sm text-gray-400 mb-1">
-              Don't have an organization account?
-            </p>
-            <p className="text-center">
               <Link
-                  href="/register/business"
-                  className="text-sm font-semibold text-[#e8683f] hover:text-[#d95a2f] transition"
+                  href="/login/business/otp"
+                  className="w-full flex items-center justify-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-[#1e3a8a] text-sm font-semibold py-3.5 rounded-lg transition mb-7"
               >
-                Create Workspace
+                <MessageCircle size={16} className="text-gray-500" />
+                Continue with OTP
               </Link>
-            </p>
 
-            <div className="flex items-center justify-center gap-1.5 mt-6">
-              <Shield size={13} className="text-gray-300" />
-              <Link
-                  href="/admin"
-                  className="text-xs text-gray-400 hover:text-gray-600 transition"
-              >
-                Platform Admin Login
-              </Link>
-            </div>
-          </form>
+              <p className="text-center text-sm text-gray-400 mb-1">
+                Don't have an organization account?
+              </p>
+              <p className="text-center">
+                <Link
+                    href="/register/business"
+                    className="text-sm font-semibold text-[#e8683f] hover:text-[#d95a2f] transition"
+                >
+                  Create Workspace
+                </Link>
+              </p>
+
+              <div className="flex items-center justify-center gap-1.5 mt-6">
+                <Shield size={13} className="text-gray-300" />
+                <Link
+                    href="/admin"
+                    className="text-xs text-gray-400 hover:text-gray-600 transition"
+                >
+                  Platform Admin Login
+                </Link>
+              </div>
+            </form>
+          )}
 
           <div className="flex items-center gap-6 mt-6">
             <div className="flex items-center gap-1.5 text-xs text-gray-400">

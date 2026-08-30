@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     LineChart,
     Line,
@@ -13,7 +13,8 @@ import {
     Cell,
 } from "recharts";
 import dynamic from "next/dynamic";
-import { MapPin, ChevronDown, Star } from "lucide-react";
+import { ChevronDown, Star, AlertCircle } from "lucide-react";
+import { insightsApi, ProviderAnalyticsResponse } from "@/lib/api/insightsApi";
 
 const MapComponent = dynamic(
     () => import("@/components/dashboard/user/map/MapComponent"),
@@ -28,42 +29,8 @@ const MapComponent = dynamic(
 );
 
 const tabs = ["This Week", "This Month", "Last 3 Months", "This Year"];
-
-const bookingsTrend = [
-    { day: 1, bookings: 3 },
-    { day: 2, bookings: 2 },
-    { day: 3, bookings: 4 },
-    { day: 4, bookings: 3 },
-    { day: 5, bookings: 5 },
-    { day: 6, bookings: 4 },
-    { day: 7, bookings: 6 },
-    { day: 8, bookings: 7 },
-    { day: 9, bookings: 6 },
-    { day: 10, bookings: 5 },
-    { day: 11, bookings: 4 },
-    { day: 12, bookings: 3 },
-];
-
-const serviceCategories = [
-    { name: "Wiring", value: 38, color: "#e8683f" },
-    { name: "Inverter", value: 29, color: "#1e3a8a" },
-    { name: "Electrical", value: 19, color: "#3b6fd4" },
-    { name: "Circuit Breaker", value: 13, color: "#f4a27a" },
-];
-
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const hours = ["8am", "9am", "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm", "6pm"];
-
-// Heatmap intensity data: 0-1 scale
-const heatmapData: number[][] = [
-    [0.7, 0.5, 0.6, 0.4, 0.3, 0.8, 0.9, 0.6, 0.5, 0.4, 0.3], // Mon
-    [0.5, 0.3, 0.2, 0.4, 0.6, 0.5, 1.0, 0.7, 0.3, 0.5, 0.2], // Tue
-    [0.3, 0.6, 0.4, 0.2, 0.5, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2], // Wed
-    [0.6, 0.4, 0.5, 0.3, 0.7, 0.6, 0.5, 0.8, 0.6, 0.4, 0.3], // Thu
-    [0.9, 0.3, 0.2, 0.5, 0.4, 0.6, 0.3, 0.4, 0.2, 0.5, 0.4], // Fri
-    [0.6, 0.5, 0.7, 0.4, 0.3, 0.5, 0.4, 0.3, 0.2, 0.4, 0.3], // Sat
-    [0.8, 0.6, 0.4, 0.3, 0.5, 0.7, 0.3, 0.4, 0.6, 1.0, 0.5], // Sun
-];
 
 const getHeatColor = (intensity: number) => {
     if (intensity >= 0.85) return "#c44a20";
@@ -72,14 +39,6 @@ const getHeatColor = (intensity: number) => {
     if (intensity >= 0.3) return "#f8c4b0";
     return "#fde8df";
 };
-
-const ratingData = [
-    { star: 5, pct: 72 },
-    { star: 4, pct: 18 },
-    { star: 3, pct: 5 },
-    { star: 2, pct: 3 },
-    { star: 1, pct: 2 },
-];
 
 const ratingBarColor = (star: number) => {
     if (star === 5) return "#1e3a8a";
@@ -90,6 +49,85 @@ const ratingBarColor = (star: number) => {
 export default function AnalyticsPage() {
     const [activeTab, setActiveTab] = useState("This Month");
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [data, setData] = useState<ProviderAnalyticsResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        async function load() {
+            setLoading(true);
+            setError(null);
+            try {
+                const res = await insightsApi.getAnalytics(activeTab);
+                if (active) {
+                    setData(res);
+                }
+            } catch (err: any) {
+                if (active) {
+                    setError(err?.response?.data?.message ?? err?.message ?? "Failed to load analytics");
+                }
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        }
+        load();
+        return () => {
+            active = false;
+        };
+    }, [activeTab]);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col gap-5 max-w-[1200px] mx-auto p-4 animate-pulse">
+                <div className="flex justify-between items-center h-10 bg-slate-100 rounded-lg w-1/3" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-24 bg-slate-100 rounded-xl border border-slate-200" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="h-64 bg-slate-100 rounded-xl border border-slate-200" />
+                    <div className="h-64 bg-slate-100 rounded-xl border border-slate-200" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="h-80 bg-slate-100 rounded-xl border border-slate-200" />
+                    <div className="h-80 bg-slate-100 rounded-xl border border-slate-200" />
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-center">
+                <AlertCircle className="w-10 h-10 text-red-500" />
+                <h3 className="text-base font-bold text-slate-800">Something went wrong</h3>
+                <p className="text-sm text-slate-500 max-w-sm">{error}</p>
+                <button
+                    onClick={() => setActiveTab(activeTab)}
+                    className="rounded-lg bg-[#1e3a8a] text-white text-sm font-semibold px-4 py-2 hover:bg-[#1e3a8a]/90 transition-colors"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
+
+    if (!data) return null;
+
+    // Heatmap scaling
+    const maxHeatVal = Math.max(...(data.peakHours?.flatMap(row => row) || [1]));
+
+    // Map markers
+    const markers = data.coverage.map((c) => ({
+        lat: c.lat,
+        lng: c.lng,
+        label: c.label,
+    }));
+    const mapCenter: [number, number] = markers.length > 0 ? [markers[0].lat, markers[0].lng] : [27.7172, 85.324];
 
     return (
         <div className="flex flex-col gap-5 max-w-[1200px] mx-auto">
@@ -101,7 +139,7 @@ export default function AnalyticsPage() {
                     <div className="relative">
                         <button
                             onClick={() => setDropdownOpen(!dropdownOpen)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
                         >
                             {activeTab}
                             <ChevronDown size={14} />
@@ -125,10 +163,10 @@ export default function AnalyticsPage() {
                 {/* Stat Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { label: "Total Bookings", value: "24", sub: null },
-                        { label: "Acceptance Rate", value: "96%", sub: null },
-                        { label: "Repeat Customer Rate", value: "38%", sub: null },
-                        { label: "Avg Response Time", value: "4 min", sub: null },
+                        { label: "Total Bookings", value: data.summary.totalBookings.toString() },
+                        { label: "Acceptance Rate", value: `${data.summary.acceptanceRate}%` },
+                        { label: "Repeat Customer Rate", value: `${data.summary.repeatCustomerRate}%` },
+                        { label: "Avg Response Time", value: `${data.summary.averageResponseTime} min` },
                     ].map(({ label, value }) => (
                         <div key={label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
                             <p className="text-xs text-gray-500 font-medium mb-2">{label}</p>
@@ -142,73 +180,82 @@ export default function AnalyticsPage() {
 
                     {/* Bookings Trend */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                        <h2 className="text-sm font-semibold text-gray-800 mb-4">Bookings Trend (June)</h2>
-                        <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={bookingsTrend} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                                <XAxis
-                                    dataKey="day"
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 11, fill: "#9ca3af" }}
-                                    ticks={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
-                                />
-                                <YAxis
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 11, fill: "#9ca3af" }}
-                                    ticks={[0, 2, 4, 6, 8]}
-                                    domain={[0, 8]}
-                                />
-                                <Tooltip
-                                    formatter={(v: any) => [v, "Bookings"]}
-                                    contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="bookings"
-                                    stroke="#e8683f"
-                                    strokeWidth={2}
-                                    dot={{ fill: "#e8683f", r: 3, strokeWidth: 0 }}
-                                    activeDot={{ r: 5, fill: "#e8683f" }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        <h2 className="text-sm font-semibold text-gray-800 mb-4">Bookings Trend ({activeTab})</h2>
+                        {data.bookingTrend.length === 0 ? (
+                            <div className="flex h-[200px] items-center justify-center text-sm text-slate-400">
+                                No activity in this period
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height={200}>
+                                <LineChart data={data.bookingTrend} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                    <XAxis
+                                        dataKey="label"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fontSize: 11, fill: "#9ca3af" }}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fontSize: 11, fill: "#9ca3af" }}
+                                    />
+                                    <Tooltip
+                                        formatter={(v: any) => [v, "Bookings"]}
+                                        contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="value"
+                                        stroke="#e8683f"
+                                        strokeWidth={2}
+                                        dot={{ fill: "#e8683f", r: 3, strokeWidth: 0 }}
+                                        activeDot={{ r: 5, fill: "#e8683f" }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
 
                     {/* Service Categories Donut */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                         <h2 className="text-sm font-semibold text-gray-800 mb-4">Service Categories</h2>
-                        <div className="flex items-center gap-6">
-                            <div className="flex-shrink-0">
-                                <PieChart width={160} height={160}>
-                                    <Pie
-                                        data={serviceCategories}
-                                        cx={75}
-                                        cy={75}
-                                        innerRadius={48}
-                                        outerRadius={72}
-                                        dataKey="value"
-                                        strokeWidth={2}
-                                        stroke="#fff"
-                                    >
-                                        {serviceCategories.map((entry, i) => (
-                                            <Cell key={i} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                </PieChart>
+                        {data.serviceCategories.length === 0 ? (
+                            <div className="flex h-[200px] items-center justify-center text-sm text-slate-400">
+                                No services found
                             </div>
-                            <div className="space-y-2.5 flex-1">
-                                {serviceCategories.map((s) => (
-                                    <div key={s.name} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-                                            <span className="text-xs text-gray-600">{s.name}</span>
+                        ) : (
+                            <div className="flex items-center gap-6">
+                                <div className="flex-shrink-0">
+                                    <PieChart width={160} height={160}>
+                                        <Pie
+                                            data={data.serviceCategories}
+                                            cx={75}
+                                            cy={75}
+                                            innerRadius={48}
+                                            outerRadius={72}
+                                            dataKey="value"
+                                            strokeWidth={2}
+                                            stroke="#fff"
+                                        >
+                                            {data.serviceCategories.map((entry, i) => (
+                                                <Cell key={i} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                    </PieChart>
+                                </div>
+                                <div className="space-y-2.5 flex-1 max-h-[160px] overflow-y-auto pr-1">
+                                    {data.serviceCategories.map((s) => (
+                                        <div key={s.name} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                                                <span className="text-xs text-gray-600 truncate">{s.name}</span>
+                                            </div>
+                                            <span className="text-xs font-semibold text-gray-700">{s.value}%</span>
                                         </div>
-                                        <span className="text-xs font-semibold text-gray-700">{s.value}%</span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 
@@ -224,7 +271,7 @@ export default function AnalyticsPage() {
                                 {/* Hour labels */}
                                 <div className="flex mb-1 ml-8">
                                     {hours.map((h) => (
-                                        <div key={h} className="flex-1 text-center text-xs text-gray-400">{h}</div>
+                                        <div key={h} className="flex-1 text-center text-[10px] text-gray-400">{h}</div>
                                     ))}
                                 </div>
                                 {/* Grid */}
@@ -232,25 +279,20 @@ export default function AnalyticsPage() {
                                     <div key={day} className="flex items-center mb-1">
                                         <div className="w-8 text-xs text-gray-500 font-medium flex-shrink-0">{day}</div>
                                         <div className="flex gap-1 flex-1">
-                                            {heatmapData[di].map((intensity, hi) => (
-                                                <div
-                                                    key={hi}
-                                                    className="flex-1 h-7 rounded-md transition-opacity"
-                                                    style={{ backgroundColor: getHeatColor(intensity) }}
-                                                    title={`${day} ${hours[hi]}: intensity ${Math.round(intensity * 100)}%`}
-                                                />
-                                            ))}
+                                            {data.peakHours[di]?.map((count, hi) => {
+                                                const intensity = maxHeatVal > 0 ? (count / maxHeatVal) : 0;
+                                                return (
+                                                    <div
+                                                        key={hi}
+                                                        className="flex-1 h-7 rounded-md transition-opacity"
+                                                        style={{ backgroundColor: getHeatColor(intensity) }}
+                                                        title={`${day} ${hours[hi]}: ${count} bookings`}
+                                                    />
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 ))}
-                                {/* Scroll indicator */}
-                                <div className="flex items-center gap-2 mt-3">
-                                    <span className="text-gray-400 text-xs">◀</span>
-                                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full">
-                                        <div className="h-1.5 w-3/4 bg-gray-400 rounded-full" />
-                                    </div>
-                                    <span className="text-gray-400 text-xs">▶</span>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -261,20 +303,25 @@ export default function AnalyticsPage() {
 
                         {/* Big rating */}
                         <div className="flex items-center gap-3 mb-5">
-                            <span className="text-4xl font-bold text-gray-900">4.8</span>
+                            <span className="text-4xl font-bold text-gray-900">{data.ratings.average}</span>
                             <div>
                                 <div className="flex gap-0.5 mb-1">
                                     {[1, 2, 3, 4, 5].map((s) => (
-                                        <Star key={s} size={16} fill="#f59e0b" stroke="none" />
+                                        <Star 
+                                            key={s} 
+                                            size={16} 
+                                            fill={s <= Math.round(data.ratings.average) ? "#f59e0b" : "none"} 
+                                            stroke={s <= Math.round(data.ratings.average) ? "none" : "#cbd5e1"} 
+                                        />
                                     ))}
                                 </div>
-                                <p className="text-xs text-gray-400">Based on 124 reviews</p>
+                                <p className="text-xs text-gray-400">Based on {data.ratings.totalReviews} reviews</p>
                             </div>
                         </div>
 
                         {/* Rating bars */}
                         <div className="space-y-2.5">
-                            {ratingData.map(({ star, pct }) => (
+                            {data.ratings.distribution.map(({ star, pct }) => (
                                 <div key={star} className="flex items-center gap-3">
                                     <span className="text-xs text-gray-500 w-5 text-right flex-shrink-0">{star}★</span>
                                     <div className="flex-1 bg-gray-100 rounded-full h-2.5">
@@ -286,6 +333,7 @@ export default function AnalyticsPage() {
                                             }}
                                         />
                                     </div>
+                                    <span className="text-xs text-gray-400 w-8 text-right flex-shrink-0">{pct}%</span>
                                 </div>
                             ))}
                         </div>
@@ -294,20 +342,18 @@ export default function AnalyticsPage() {
 
                 {/* Interactive Customer Map */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-                    {/* Optional Map Header */}
                     <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                         <div>
                             <h3 className="text-base font-semibold text-gray-800">Customer Coverage Map</h3>
                             <p className="text-xs text-gray-400">Optimizing your service area and travel time.</p>
                         </div>
                         <span className="bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                          Live View
+                          {markers.length} Locations
                         </span>
                     </div>
 
-                    {/* Leaflet Map Wrapper */}
                     <div className="w-full h-[350px] relative z-0">
-                        <MapComponent />
+                        <MapComponent center={mapCenter} markers={markers} interactive={true} />
                     </div>
                 </div>
 

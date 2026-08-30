@@ -38,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
         icon: "categories",
     },
     { id: "b2b", label: "B2B Organizations", href: "/dashboard/admin/b2b", icon: "b2b" },
-    { id: "escrow", label: "Escrow & Payouts", href: "/dashboard/admin/escrow", icon: "escrow" },
+    { id: "pro-subscription", label: "Pro Subscriptions", href: "/dashboard/admin/pro-subscription", icon: "pro-subscription" },
     {
         id: "subscription",
         label: "Provider Subscription",
@@ -52,7 +52,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
     users: Users,
     categories: Layers,
     b2b: Building2,
-    escrow: Wallet,
+    "pro-subscription": CreditCard,
     subscription: CreditCard,
 };
 

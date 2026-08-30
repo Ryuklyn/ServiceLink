@@ -14,6 +14,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.servicelink.core.model.business.Workspace;
+import com.servicelink.core.model.business.Subscription;
+import com.servicelink.core.repository.business.WorkspaceRepository;
+import com.servicelink.core.repository.business.SubscriptionRepository;
 import java.util.Map;
 import java.util.Optional;
 
@@ -26,6 +30,8 @@ public class ProUserController {
     private final ProUserRepository proUserRepository;
     private final TeamMemberRepository teamMemberRepository; // ← new
     private final ProUserMapper proUserMapper;
+    private final WorkspaceRepository workspaceRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     @PostMapping("/create")
     public ResponseEntity<?> create(@Valid @RequestBody ProUserRequest request) {
@@ -65,22 +71,52 @@ public class ProUserController {
                 .map(tm -> tm.getRole().name())
                 .orElse(null);
 
+        ProUserResponse resp = null;
         Optional<ProUserResponse> ownerResponse = proUserRepository.findByUser_Id(user.getId())
                 .map(proUserMapper::toResponse);
 
         if (ownerResponse.isPresent()) {
-            ProUserResponse resp = ownerResponse.get();
+            resp = ownerResponse.get();
             resp.setRole(role); // owner's TeamMember row is always ADMIN
-            return ResponseEntity.ok(resp);
-        }
-
-        return teamMemberRepository.findByUser_Id(user.getId())
-                .map(member -> ProUserResponse.builder()
+        } else {
+            var memberOpt = teamMemberRepository.findByUser_Id(user.getId());
+            if (memberOpt.isPresent()) {
+                var member = memberOpt.get();
+                resp = ProUserResponse.builder()
                         .workspaceId(member.getWorkspaceId())
                         .fullName(user.getFullName())
                         .role(member.getRole().name())
-                        .build())
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                        .build();
+            }
+        }
+
+        if (resp == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Enrich with Workspace, Organization, and Subscription info
+        if (resp.getWorkspaceId() != null) {
+            Optional<Workspace> wsOpt = workspaceRepository.findById(resp.getWorkspaceId());
+            if (wsOpt.isPresent()) {
+                Workspace ws = wsOpt.get();
+                resp.setWorkspaceName(ws.getName());
+                if (ws.getOrganization() != null) {
+                    resp.setOrganizationId(ws.getOrganization().getId());
+                    resp.setOrganizationName(ws.getOrganization().getCompanyName());
+                    resp.setLogoUrl(ws.getOrganization().getLogoUrl());
+                    resp.setBusinessType(ws.getOrganization().getBusinessType() != null ? ws.getOrganization().getBusinessType().name() : null);
+                }
+            }
+
+            Optional<Subscription> subOpt = subscriptionRepository.findByWorkspaceId(resp.getWorkspaceId());
+            if (subOpt.isPresent()) {
+                Subscription sub = subOpt.get();
+                resp.setPlanType(sub.getPlanType() != null ? sub.getPlanType().name() : null);
+                resp.setSubscriptionStatus(sub.getSubscriptionStatus() != null ? sub.getSubscriptionStatus().name() : null);
+                resp.setTrialEndsAt(sub.getTrialEndsAt() != null ? sub.getTrialEndsAt().toString() : null);
+            }
+        }
+
+        return ResponseEntity.ok(resp);
     }
 }

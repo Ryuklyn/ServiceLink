@@ -38,5 +38,5 @@ public class ProviderScheduleSettings {
 
     @Column(name = "accepts_pro_orders", nullable = false)
     @Builder.Default
-    private Boolean acceptsProOrders = true;
+    private Boolean acceptsProOrders = false;
 }

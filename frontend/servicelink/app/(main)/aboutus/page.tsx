@@ -127,13 +127,13 @@ export default function AboutPage() {
                         </p>
 
                         <div className="mt-7 flex flex-col sm:flex-row gap-3">
-                            <button className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group">
+                            <Link href="/services" className="bg-[#e8683f] hover:bg-[#d95a2f] text-white font-semibold flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl shadow-lg transition-all group">
                                 Explore Services
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                            <button className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-6 py-3.5 rounded-xl shadow-lg transition-all">
+                            </Link>
+                            <Link href="#founder" className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-6 py-3.5 rounded-xl shadow-lg transition-all">
                                 Meet the Team
-                            </button>
+                            </Link>
                         </div>
 
                         <hr className="mt-6 border-white/20" />
@@ -170,7 +170,7 @@ export default function AboutPage() {
             </section>
 
             {/* Trust Problem + Mission/Vision */}
-            <section className="py-16">
+            <section  className="py-16 scroll-mt-24">
                 <div className="max-w-7xl mx-auto px-4 lg:px-8 grid lg:grid-cols-[1.2fr_1fr] gap-10">
                     <div>
             <span className="text-sm font-bold uppercase tracking-wider text-[#e8683f]">
@@ -380,7 +380,7 @@ export default function AboutPage() {
             </section>
 
             {/* Founder Section */}
-            <section className="py-16">
+            <section id="founder" className="py-16">
                 <div className="bg-gradient-to-br from-[#1e3a8a] to-[#1e40af] rounded-2xl mx-4 lg:mx-8 px-8 lg:px-12 py-16">
                     <div className="max-w-5xl mx-auto grid sm:grid-cols-[220px_1fr] gap-10 items-start">
 
@@ -653,13 +653,13 @@ export default function AboutPage() {
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link
-                    href="/become-a-provider"
+                    href="/becomeprovider"
                     className="bg-white hover:bg-gray-50 text-[#1e3a8a] font-semibold px-6 py-3.5 rounded-xl shadow-lg transition-all"
                 >
                     Become a Provider
                 </Link>
                 <Link
-                    href="/servicelink-pro"
+                    href="/servicelinkpro"
                     className="border-2 border-white text-white font-semibold px-6 py-3.5 rounded-xl hover:bg-white/10 transition-all"
                 >
                     Explore ServiceLink Pro

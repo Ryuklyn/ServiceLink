@@ -27,6 +27,7 @@ export default function ProNavbar() {
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
     const { fullName, role } = useSelector((state: RootState) => state.proSession);
+    const unreadCount = useSelector((state: RootState) => state.notifications.unreadCount);
     const initials = getInitials(fullName);
     const roleLabel = formatRole(role);
 
@@ -77,9 +78,9 @@ export default function ProNavbar() {
                 <button className="hidden sm:block text-gray-500 hover:text-gray-700">
                     <Search size={20} />
                 </button>
-                <button className="relative text-gray-500 hover:text-gray-700">
+                <button onClick={() => router.push("/dashboard/business/notifications")} className="relative text-gray-500 hover:text-gray-700" aria-label="Notifications">
                     <Bell size={18} className="sm:w-5 sm:h-5" />
-                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                    {unreadCount > 0 && <span className="absolute -top-1 -right-2 min-w-4 h-4 px-1 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center">{unreadCount > 9 ? "9+" : unreadCount}</span>}
                 </button>
 
                 <div className="relative" ref={menuRef}>

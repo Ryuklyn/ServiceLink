@@ -28,5 +28,5 @@ export interface NavItem {
     id: string;
     label: string;
     href: string;
-    icon: "dashboard" | "users" | "categories" | "b2b" | "escrow" | "subscription";
+    icon: "dashboard" | "users" | "categories" | "b2b" | "pro-subscription" | "subscription";
 }

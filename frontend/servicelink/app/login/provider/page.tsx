@@ -14,55 +14,35 @@ import {
     setPhase,
     otpSent,
     otpVerified,
+    directPinEntry,
     resetToOtp,
     authenticated,
 } from "@/store/slices/authFlowSlice";
 import { getOrCreateDeviceId } from "@/lib/api/device";
 import { pinApi } from "@/lib/api/pinApi";
 
-// utils/axios.ts keeps its own token helpers private (not exported), but it
-// reads/writes these exact two localStorage keys — so we mirror that here
-// rather than importing a `storage` export that doesn't exist.
-const getRefreshToken = () =>
-    typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
-
 /**
- * Login Page  (/login)
+ * Provider login (/login/provider)
  *
  * Flow:
- *  checking   -> silently decides pinEntry vs otp based on refreshToken + check-device
- *  otp        -> PhoneStep -> OtpStep (first login, new device, forgot-PIN, or lockout)
- *  setPin     -> shown ONCE right after a first-time OTP success on this device
- *  pinEntry   -> fast daily path: PIN only, no phone/email re-entry
+ *  checking   -> establishes a stable device ID
+ *  otp        -> phone/email lookup; PIN accounts go to pinEntry, others receive OTP
+ *  setPin     -> required after OTP verification for a first PIN or PIN reset
+ *  pinEntry   -> PIN verified against the entered provider account
  *  authenticated -> redirect to /dashboard/provider
  */
 export default function LoginPage() {
     const router = useRouter();
     const dispatch = useAppDispatch();
-    const { phase, contact, contactMode, whatsappLink, deviceId, pendingProviderToken } =
+    const { phase, contact, contactMode, whatsappLink, deviceId, pendingProviderToken, isForgotPin } =
         useAppSelector((s) => s.authFlow);
 
-    // ── On mount: establish device identity, decide starting phase ───────────
+    // ── On mount: establish device identity, then always ask who is logging in.
+    // A stored session never bypasses the provider identifier step.
     useEffect(() => {
         const id = getOrCreateDeviceId();
         dispatch(setDeviceId(id));
-
-        const decideStartingPhase = async () => {
-            const refreshToken = getRefreshToken();
-            if (!refreshToken) {
-                dispatch(setPhase("otp"));
-                return;
-            }
-            try {
-                const { pinExists } = await pinApi.checkDevice(id);
-                dispatch(setPhase(pinExists ? "pinEntry" : "otp"));
-            } catch {
-                // Fail safe: never strand the user on a blank screen
-                dispatch(setPhase("otp"));
-            }
-        };
-
-        decideStartingPhase();
+        dispatch(setPhase("otp"));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -81,10 +61,40 @@ export default function LoginPage() {
         [dispatch],
     );
 
+    const handleSubmitContact = useCallback(
+        async (c: string, mode: typeof contactMode) => {
+            if (isForgotPin) {
+                return false; // let PhoneStep proceed with sending OTP normally
+            }
+            try {
+                const payload = mode === "phone" ? { phone: c } : { email: c };
+                const res = await pinApi.checkAccount(payload);
+                if (res.pinExists) {
+                    dispatch(directPinEntry({ contact: c, mode }));
+                    return true; // handled, bypass OTP sending
+                }
+            } catch (e) {
+                console.error("Account status check failed", e);
+
+                // A 404 is the expected "no provider PIN account" result, so
+                // PhoneStep may continue to the server's normal OTP validation.
+                // Any other error (for example a stale backend security rule)
+                // must not silently send an OTP for a PIN-enabled provider.
+                if ((e as { status?: number })?.status !== 404) {
+                    throw new Error(
+                        "We couldn't check your provider sign-in status. Please try again in a moment.",
+                    );
+                }
+            }
+            return false; // proceed with OTP
+        },
+        [dispatch, isForgotPin],
+    );
+
     /**
      * OtpStep (LOGIN purpose) hands us the short-lived providerToken.
      * We don't persist real session tokens yet — that only happens after
-     * set-pin / skip-pin, which is what actually issues the full session.
+     * set-pin, which is what actually issues the full session.
      */
     const handleOtpVerified = useCallback(
         (providerToken: string) => {
@@ -101,6 +111,32 @@ export default function LoginPage() {
         (accessToken: string, refreshToken?: string) => {
             localStorage.setItem("accessToken", accessToken);
             if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+
+            try {
+                const history = JSON.parse(localStorage.getItem("servicelink:provider:login-history") || "[]");
+                const ua = navigator.userAgent;
+                let browser = "Chrome";
+                let os = "Windows";
+                if (ua.includes("Firefox")) browser = "Firefox";
+                else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+                else if (ua.includes("Edg")) browser = "Edge";
+                if (ua.includes("Macintosh")) os = "macOS";
+                else if (ua.includes("Linux")) os = "Linux";
+                else if (ua.includes("Android")) os = "Android";
+                else if (ua.includes("iPhone")) os = "iOS";
+
+                history.unshift({
+                    device: os,
+                    type: browser,
+                    location: "Kathmandu, Nepal",
+                    time: new Date().toLocaleString(),
+                    status: "Success"
+                });
+                localStorage.setItem("servicelink:provider:login-history", JSON.stringify(history.slice(0, 50)));
+            } catch (e) {
+                console.error("Failed to log login history", e);
+            }
+
             dispatch(authenticated());
         },
         [dispatch],
@@ -119,8 +155,11 @@ export default function LoginPage() {
         return (
             <PinStep
                 deviceId={deviceId}
+                providerToken={pendingProviderToken}
+                contact={contact}
+                contactMode={contactMode}
                 onVerified={persistSessionAndFinish}
-                onFallbackToOtp={() => dispatch(resetToOtp())}
+                onFallbackToOtp={() => dispatch(resetToOtp({ isForgotPin: true }))}
             />
         );
     }
@@ -140,6 +179,7 @@ export default function LoginPage() {
         return (
             <PhoneStep
                 onOtpSent={handleOtpSent}
+                onSubmitContact={handleSubmitContact}
                 purpose="LOGIN"
                 footerPrompt="Don't have an account?"
                 footerLinkLabel="Register here"

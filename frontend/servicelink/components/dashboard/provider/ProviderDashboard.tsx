@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Clock,
     Navigation,
@@ -13,96 +13,49 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { FaWhatsapp } from "react-icons/fa";
+import { useTranslation } from "@/hooks/useTranslation";
+import api from "@/utils/axios";
+import type { AppointmentSummary } from "@/store/slices/providerBookingsSlice";
 
 // ─────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────
 
-type PaymentStatus = "Unpaid" | "Pending" | "Paid";
-type JobStatus = "PENDING" | "IN PROGRESS" | "COMPLETED";
-
-interface Job {
-    time: string;
-    title: string;
-    customer: string;
-    location: string;
-    amount: string;
-    status: JobStatus;
+interface ReferralSummary {
+    referralCode: string;
+    progress: number;
+    total: number;
+    freeMonthsEarned: number;
 }
 
-interface Booking {
-    customer: string;
-    service: string;
-    date: string;
-    amount: string;
-    payment: PaymentStatus;
-    rating: number | null;
+interface PagedResponse<T> {
+    content?: T[];
 }
 
 // ─────────────────────────────────────────────
 // DATA
 // ─────────────────────────────────────────────
 
-const todayJobs: Job[] = [
-    {
-        time: "4:00 PM",
-        title: "Lighting Installation",
-        customer: "Priya Thapa",
-        location: "Baluwatar, Kathmandu",
-        amount: "Rs. 750",
-        status: "PENDING",
-    },
-    {
-        time: "2:00 PM",
-        title: "Electrical Repair",
-        customer: "Rukesh Maharjan",
-        location: "Baneshwor, Kathmandu",
-        amount: "Rs. 600",
-        status: "IN PROGRESS",
-    },
-];
+const formatAmount = (amount: number | null) =>
+    amount == null ? "—" : `Rs. ${amount.toLocaleString()}`;
 
-const recentBookings: Booking[] = [
-    {
-        customer: "Sunita Pradhan",
-        service: "Wiring & Rewiring",
-        date: "2026-06-14",
-        amount: "Rs. 1200",
-        payment: "Unpaid",
-        rating: null,
-    },
-    {
-        customer: "Dinesh Karki",
-        service: "Inverter Setup",
-        date: "2026-06-13",
-        amount: "Rs. 950",
-        payment: "Unpaid",
-        rating: null,
-    },
-    {
-        customer: "Babatunde Okonkwo",
-        service: "Wiring & Rewiring",
-        date: "2026-06-13",
-        amount: "Rs. 800",
-        payment: "Pending",
-        rating: null,
-    },
-];
+const formatDate = (date: string) => {
+    const parsed = new Date(`${date}T00:00:00`);
+    return Number.isNaN(parsed.valueOf())
+        ? date
+        : new Intl.DateTimeFormat("en-NP", { day: "numeric", month: "short", year: "numeric" }).format(parsed);
+};
 
 // ─────────────────────────────────────────────
 // STYLE MAPS
 // ─────────────────────────────────────────────
 
-const jobStatusStyles: Record<JobStatus, string> = {
+const jobStatusStyles: Record<AppointmentSummary["status"], string> = {
     PENDING: "bg-yellow-100 text-yellow-700 border border-yellow-200",
-    "IN PROGRESS": "bg-[#E8683F] text-white",
+    IN_PROGRESS: "bg-[#E8683F] text-white",
     COMPLETED: "bg-green-100 text-green-700 border border-green-200",
-};
-
-const paymentStyles: Record<PaymentStatus, string> = {
-    Unpaid: "bg-gray-100 text-gray-500 border border-gray-200",
-    Pending: "bg-yellow-100 text-yellow-700 border border-yellow-200",
-    Paid: "bg-green-100 text-green-700 border border-green-200",
+    CONFIRMED: "bg-blue-100 text-blue-700 border border-blue-200",
+    CANCELLED: "bg-gray-100 text-gray-500 border border-gray-200",
 };
 
 // ─────────────────────────────────────────────
@@ -110,39 +63,44 @@ const paymentStyles: Record<PaymentStatus, string> = {
 // ─────────────────────────────────────────────
 
 /** Active Job Banner */
-function ActiveJobBanner() {
+function ActiveJobBanner({ booking }: { booking: AppointmentSummary | null }) {
+    const { t } = useTranslation();
+    if (!booking) return null;
+
     return (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="bg-surface border border-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-text-primary">
             <div className="flex items-start gap-3">
-                <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-[#E8683F] animate-pulse flex-shrink-0" />
+                <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse flex-shrink-0" />
                 <div>
-                    <p className="text-xs font-semibold text-[#E8683F] uppercase tracking-wide mb-0.5">
-                        In Progress
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-0.5">
+                        {t("dashboard.inProgress")}
                     </p>
-                    <h2 className="text-gray-900 font-bold text-lg leading-tight">
-                        Electrical Repair
+                    <h2 className="font-bold text-lg leading-tight">
+                        {booking.subServiceName}
                     </h2>
-                    <p className="text-gray-500 text-sm mt-0.5">
-                        Rukesh Maharjan &bull; Baneshwor, Kathmandu (1.2 km away)
+                    <p className="text-text-secondary text-sm mt-0.5">
+                        {booking.customerName} &bull; {booking.address || t("Address unavailable")}
                     </p>
                     <div className="flex items-center gap-1.5 mt-1.5">
-                        <Clock size={13} className="text-[#E8683F]" />
-                        <span className="text-sm text-[#E8683F] font-semibold">
-                            ETA: 8 mins
+                        <Clock size={13} className="text-primary" />
+                        <span className="text-sm text-primary font-semibold">
+                            {booking.estimatedStartTime ?? booking.timeSlot}
                         </span>
                     </div>
                 </div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto flex-shrink-0">
-                <button className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-[#1E3A8A] text-[#1E3A8A] rounded-xl text-sm font-semibold hover:bg-[#1E3A8A] hover:text-white transition-all w-full sm:w-auto">
+                <Link href={`/dashboard/provider/bookings?booking=${booking.id}`} className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-primary text-primary rounded-xl text-sm font-semibold hover:bg-primary hover:text-primary-foreground transition-all w-full sm:w-auto">
                     <Navigation size={15} />
-                    Track Customer
-                </button>
-                <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#25D366] text-white rounded-xl text-sm font-semibold hover:bg-[#1ebe5a] transition-all shadow-sm w-full sm:w-auto">
+                    {t("View booking")}
+                </Link>
+                {booking.customerPhone && (
+                <a href={`https://wa.me/${booking.customerPhone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#25D366] text-white rounded-xl text-sm font-semibold hover:bg-[#1ebe5a] transition-all shadow-sm w-full sm:w-auto">
                     <FaWhatsapp size={15} />
                     WhatsApp
-                </button>
+                </a>
+                )}
             </div>
         </div>
     );
@@ -152,6 +110,7 @@ function ActiveJobBanner() {
 
 /** ServiceLink Score Donut */
 function ServiceLinkScore() {
+    const { t } = useTranslation();
     const score = 81;
     const radius = 70;
     const stroke = 10;
@@ -160,16 +119,16 @@ function ServiceLinkScore() {
     const strokeDashoffset = circumference - (score / 100) * circumference;
 
     const stats = [
-        { label: "Response Rate", value: "94%" },
-        { label: "Completion", value: "98%" },
-        { label: "Avg Rating", value: "4.8★" },
-        { label: "Profile", value: "72%" },
+        { labelKey: "dashboard.responseRate", label: "Response Rate", value: "94%" },
+        { labelKey: "dashboard.completion", label: "Completion", value: "98%" },
+        { labelKey: "dashboard.avgRating", label: "Avg Rating", value: "4.8★" },
+        { labelKey: "dashboard.profile", label: "Profile", value: "72%" },
     ];
 
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-6">
-            <h3 className="text-gray-800 font-bold text-base mb-5">
-                ServiceLink Score
+        <div className="bg-surface border border-border rounded-xl shadow-sm p-4 sm:p-6 text-text-primary">
+            <h3 className="font-bold text-text-primary text-base mb-5">
+                {t("dashboard.serviceLinkScore", "ServiceLink Score")}
             </h3>
 
             <div className="flex justify-center mb-6">
@@ -208,20 +167,20 @@ function ServiceLinkScore() {
                         </defs>
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-3xl font-black text-gray-900">{score}</span>
-                        <span className="text-xs text-gray-400 font-medium">/100</span>
+                        <span className="text-3xl font-black text-text-primary">{score}</span>
+                        <span className="text-xs text-text-muted font-medium">/100</span>
                     </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
-                {stats.map(({ label, value }) => (
+                {stats.map(({ labelKey, label, value }) => (
                     <div
-                        key={label}
-                        className="bg-gray-50 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-center"
+                        key={labelKey}
+                        className="bg-surface-secondary rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-center border border-border"
                     >
-                        <p className="text-[11px] sm:text-xs text-gray-400 font-medium mb-0.5">{label}</p>
-                        <p className="text-sm sm:text-base font-bold text-gray-800">{value}</p>
+                        <p className="text-[11px] sm:text-xs text-text-muted font-medium mb-0.5">{t(labelKey, label)}</p>
+                        <p className="text-base font-extrabold text-text-primary leading-tight">{t(value)}</p>
                     </div>
                 ))}
             </div>
@@ -232,41 +191,50 @@ function ServiceLinkScore() {
 // ─────────────────────────────────────────────
 
 /** Today's Schedule */
-function TodaySchedule() {
+function TodaySchedule({ bookings, loading }: { bookings: AppointmentSummary[]; loading: boolean }) {
+    const { t } = useTranslation();
+    const todayLabel = new Intl.DateTimeFormat("en-NP", {
+        weekday: "long", month: "long", day: "numeric",
+    }).format(new Date());
+
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-6">
-            <h3 className="text-gray-800 font-bold text-base mb-1">Today, June 14</h3>
-            <p className="text-xs text-gray-400 mb-5">
-                {todayJobs.length} jobs scheduled
+        <div className="bg-surface border border-border rounded-xl shadow-sm p-4 sm:p-6 text-text-primary">
+            <h3 className="font-bold text-text-primary text-base mb-1">{todayLabel}</h3>
+            <p className="text-xs text-text-muted mb-5">
+                {bookings.length} {t("dashboard.jobsScheduled", "jobs scheduled")}
             </p>
 
             <div className="flex flex-col gap-4">
-                {todayJobs.map((job, i) => (
+                {loading ? (
+                    <p className="text-sm text-text-muted py-5 text-center">Loading schedule…</p>
+                ) : bookings.length === 0 ? (
+                    <p className="text-sm text-text-muted py-5 text-center">No upcoming jobs scheduled.</p>
+                ) : bookings.map((job) => (
                     <div
-                        key={i}
-                        className="flex items-start justify-between gap-3 pb-4 border-b border-gray-200 last:border-0 last:pb-0"
+                        key={job.id}
+                        className="flex items-start justify-between gap-3 pb-4 border-b border-border last:border-0 last:pb-0"
                     >
                         <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-400 font-medium mb-0.5">
-                                {job.time}
+                            <p className="text-xs text-text-muted font-medium mb-0.5">
+                                {formatDate(job.appointmentDate)} · {job.estimatedStartTime ?? job.timeSlot}
                             </p>
-                            <p className="text-sm font-bold text-gray-900 truncate">
-                                {job.title}
+                            <p className="text-sm font-bold text-text-primary truncate">
+                                {job.subServiceName}
                             </p>
-                            <p className="text-xs text-gray-500 mt-0.5">{job.customer}</p>
+                            <p className="text-xs text-text-secondary mt-0.5">{job.customerName}</p>
                             <div className="flex items-center gap-1 mt-1">
-                                <MapPin size={11} className="text-gray-300 flex-shrink-0" />
-                                <p className="text-xs text-gray-400 truncate">{job.location}</p>
+                                <MapPin size={11} className="text-text-muted flex-shrink-0" />
+                                <p className="text-xs text-text-muted truncate">{job.address || "Address unavailable"}</p>
                             </div>
                         </div>
                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                            <p className="text-sm font-bold text-gray-800">{job.amount}</p>
+                            <p className="text-sm font-bold text-text-primary">{formatAmount(job.totalPrice)}</p>
                             <span
                                 className={`text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
                                     jobStatusStyles[job.status]
                                 }`}
                             >
-                                {job.status}
+                                {t(job.status.replace(/_/g, " "))}
                             </span>
                         </div>
                     </div>
@@ -280,74 +248,75 @@ function TodaySchedule() {
 
 /** Earnings Card */
 function EarningsCard() {
+    const { t } = useTranslation();
     const earned = 12450;
     const goal = 16000;
     const percent = Math.round((earned / goal) * 100);
 
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-6">
+        <div className="bg-surface border border-border rounded-xl shadow-sm p-4 sm:p-6 text-text-primary">
             <div className="flex flex-col md:flex-row items-stretch md:items-start gap-6">
                 {/* Left Progress Content */}
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-500 font-medium mb-1">This Month's Earnings</p>
-                    <h2 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
+                    <p className="text-sm text-text-secondary font-medium mb-1">{t("This Month's Earnings")}</p>
+                    <h2 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tight">
                         Rs. {earned.toLocaleString()}
                     </h2>
                     <div className="mt-4">
                         <div className="flex justify-between items-center mb-1.5">
-                            <p className="text-xs text-gray-400">Goal: Rs. {goal.toLocaleString()}</p>
-                            <p className="text-xs font-bold text-[#E8683F]">{percent}%</p>
+                            <p className="text-xs text-text-muted">{t("Goal")}: Rs. {goal.toLocaleString()}</p>
+                            <p className="text-xs font-bold text-primary">{percent}%</p>
                         </div>
-                        <div className="h-2.5 bg-orange-100 rounded-full overflow-hidden">
+                        <div className="h-2.5 bg-primary/20 rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-[#E8683F] rounded-full transition-all"
+                                className="h-full bg-primary rounded-full transition-all"
                                 style={{ width: `${percent}%` }}
                             />
                         </div>
-                        <p className="text-xs text-gray-400 mt-2">
-                            You need 7 more jobs to hit your monthly goal.
+                        <p className="text-xs text-text-muted mt-2">
+                            {t("You need 7 more jobs to hit your monthly goal.")}
                         </p>
                     </div>
                 </div>
 
                 {/* Right Breakdown Metrics Grid */}
                 <div className="grid grid-cols-3 md:flex md:flex-col gap-2.5 sm:gap-3 w-full md:w-36 flex-shrink-0">
-                    <div className="bg-gray-50 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center md:text-left">
-                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium">This Week</p>
+                    <div className="bg-surface-secondary rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center md:text-left border border-border">
+                        <p className="text-[10px] sm:text-xs text-text-muted font-medium">{t("This Week")}</p>
                         <p className="text-sm sm:text-base font-bold text-green-600 mt-0.5">+12%</p>
                     </div>
-                    <div className="bg-gray-50 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center md:text-left">
-                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium">Today</p>
-                        <p className="text-sm sm:text-base font-bold text-gray-900 mt-0.5">2 jobs</p>
+                    <div className="bg-surface-secondary rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center md:text-left border border-border">
+                        <p className="text-[10px] sm:text-xs text-text-muted font-medium">{t("Today")}</p>
+                        <p className="text-sm sm:text-base font-bold text-text-primary mt-0.5">2 {t("jobs")}</p>
                     </div>
-                    <div className="bg-gray-50 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center md:text-left">
-                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium">Avg/Job</p>
-                        <p className="text-sm sm:text-base font-bold text-gray-900 mt-0.5">Rs. 520</p>
+                    <div className="bg-surface-secondary rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center md:text-left border border-border">
+                        <p className="text-[10px] sm:text-xs text-text-muted font-medium">{t("Avg/Job")}</p>
+                        <p className="text-sm sm:text-base font-bold text-text-primary mt-0.5">Rs. 520</p>
                     </div>
                 </div>
             </div>
 
-            <hr className="border-t border-gray-100 mt-5 mb-4" />
+            <hr className="border-t border-border mt-5 mb-4" />
 
             {/* Bottom Row Totals */}
-            <div className="flex flex-wrap items-center gap-y-2 text-sm sm:text-base">
+            <div className="flex flex-wrap items-center gap-y-2 text-sm sm:text-base text-text-primary">
                 <div className="flex items-center mr-4">
-                    <span className="text-xs text-gray-400 mr-1.5">Paid</span>
-                    <span className="font-bold text-[#E8683F]">Rs. 11,200</span>
+                    <span className="text-xs text-text-muted mr-1.5">{t("Paid")}</span>
+                    <span className="font-bold text-primary">Rs. 11,200</span>
                 </div>
 
-                <div className="hidden sm:block w-px h-5 bg-gray-200 mr-4" />
+                <div className="hidden sm:block w-px h-5 bg-border mr-4" />
 
                 <div className="flex items-center">
-                    <span className="text-xs text-gray-400 mr-1.5">Pending</span>
+                    <span className="text-xs text-text-muted mr-1.5">{t("Pending")}</span>
                     <span className="font-bold text-yellow-500">Rs. 1,250</span>
                 </div>
 
                 <Link
                     href="/dashboard/provider/earnings"
-                    className="ml-auto text-xs sm:text-sm font-semibold text-[#1E3A8A] hover:underline"
+                    className="ml-auto text-xs sm:text-sm font-semibold text-primary hover:underline"
                 >
-                    View Earnings →
+                    {t("View Earnings")} →
                 </Link>
             </div>
         </div>
@@ -357,18 +326,19 @@ function EarningsCard() {
 // ─────────────────────────────────────────────
 
 /** Recent Bookings Table */
-function RecentBookings() {
+function RecentBookings({ bookings, loading }: { bookings: AppointmentSummary[]; loading: boolean }) {
+    const { t } = useTranslation();
     return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6 overflow-hidden">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
-                Recent Bookings
+        <div className="bg-surface border border-border rounded-xl shadow-sm p-4 sm:p-6 overflow-hidden text-text-primary">
+            <h3 className="text-lg sm:text-xl font-bold text-text-primary mb-4 sm:mb-6">
+                {t("Recent Bookings")}
             </h3>
 
             {/* Added container for smooth mobile responsive layout scrolling */}
             <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
                 <table className="w-full min-w-[600px] sm:min-w-full">
                     <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
+                    <tr className="bg-surface-secondary border-b border-border">
                         {[
                             "Customer",
                             "Service",
@@ -379,47 +349,49 @@ function RecentBookings() {
                         ].map((col) => (
                             <th
                                 key={col}
-                                className="px-4 py-3 sm:px-5 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                                className="px-4 py-3 sm:px-5 sm:py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider"
                             >
-                                {col}
+                                {t(col)}
                             </th>
                         ))}
                     </tr>
                     </thead>
 
                     <tbody>
-                    {recentBookings.map((b, i) => (
+                    {loading ? (
+                        <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-text-muted">Loading recent bookings…</td></tr>
+                    ) : bookings.length === 0 ? (
+                        <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-text-muted">No bookings yet.</td></tr>
+                    ) : bookings.map((b) => (
                         <tr
-                            key={i}
-                            className="border-b border-gray-100 last:border-0 hover:bg-orange-50/30 transition-colors"
+                            key={b.id}
+                            className="border-b border-border last:border-0 hover:bg-surface-hover/30 transition-colors"
                         >
-                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 font-semibold text-gray-900 whitespace-nowrap">
-                                {b.customer}
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 font-semibold text-text-primary whitespace-nowrap">
+                                {b.customerName || "—"}
                             </td>
 
-                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 text-gray-600 whitespace-nowrap">
-                                {b.service}
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 text-text-secondary whitespace-nowrap">
+                                {b.subServiceName}
                             </td>
 
-                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 text-gray-600 whitespace-nowrap">
-                                {b.date}
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 text-text-secondary whitespace-nowrap">
+                                {formatDate(b.appointmentDate)}
                             </td>
 
-                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 font-semibold text-gray-900 whitespace-nowrap">
-                                {b.amount}
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 font-semibold text-text-primary whitespace-nowrap">
+                                {formatAmount(b.totalPrice)}
                             </td>
 
                             <td className="px-4 py-3.5 sm:px-5 sm:py-4 whitespace-nowrap">
                                     <span
-                                        className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border ${
-                                            paymentStyles[b.payment]
-                                        }`}
+                                        className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200"
                                     >
-                                        {b.payment}
+                                        {t("—")}
                                     </span>
                             </td>
 
-                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 text-center text-gray-400 font-medium whitespace-nowrap">
+                            <td className="px-4 py-3.5 sm:px-5 sm:py-4 text-center text-text-muted font-medium whitespace-nowrap">
                                 —
                             </td>
                         </tr>
@@ -430,8 +402,8 @@ function RecentBookings() {
 
             <div className="flex justify-end pt-5 sm:pt-6">
                 <Link href={"/dashboard/provider/bookings"}>
-                    <button className="flex items-center gap-2 text-sm sm:text-base font-medium text-[#1E3A8A] hover:text-[#16306f] transition-colors">
-                        View All Bookings
+                    <button className="flex items-center gap-2 text-sm sm:text-base font-medium text-primary hover:text-primary-hover transition-colors">
+                        {t("View All Bookings")}
                         <span className="text-lg sm:text-xl">→</span>
                     </button>
                 </Link>
@@ -443,78 +415,87 @@ function RecentBookings() {
 // ─────────────────────────────────────────────
 
 /** Referrals Panel */
-function ReferralsPanel() {
+function ReferralsPanel({ referral, loading }: { referral: ReferralSummary | null; loading: boolean }) {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
-    const referralCode = "SL-RUKESH-2026";
-    const totalSteps = 5;
-    const completed = 3;
+    const referralCode = referral?.referralCode ?? "—";
+    const totalSteps = referral?.total ?? 0;
+    const completed = referral?.progress ?? 0;
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(referralCode);
+        if (!referral?.referralCode) return;
+        navigator.clipboard.writeText(referral.referralCode);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
-            <h3 className="text-gray-800 font-bold text-base mb-1">Referrals</h3>
+        <div className="bg-surface border border-border rounded-xl shadow-sm p-4 sm:p-5 text-text-primary">
+            <h3 className="font-bold text-text-primary text-base mb-1">{t("navigation.referrals", "Referrals")}</h3>
 
             <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-bold text-gray-800">
-                    {completed} referrals completed!
+                <p className="text-sm font-bold text-text-primary">
+                    {loading ? "Loading…" : `${completed} ${t("dashboard.referralsCompleted", "referrals completed!")}`}
                 </p>
                 <div className="flex gap-1">
                     {Array.from({ length: totalSteps }).map((_, i) => (
                         <span
                             key={i}
                             className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${
-                                i < completed ? "bg-[#E8683F]" : "bg-gray-200"
+                                i < completed ? "bg-primary" : "bg-border"
                             }`}
                         />
                     ))}
                 </div>
             </div>
 
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div className="h-1.5 bg-border rounded-full overflow-hidden mb-3">
                 <div
-                    className="h-full bg-gradient-to-r from-[#E8683F] to-[#FF9A72] rounded-full"
-                    style={{ width: `${(completed / totalSteps) * 100}%` }}
+                    className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full"
+                    style={{ width: `${totalSteps ? Math.min(100, (completed / totalSteps) * 100) : 0}%` }}
                 />
             </div>
 
-            <p className="text-xs text-gray-400 mb-4">
-                42 providers in Kathmandu earned a free month last cycle.
+            <p className="text-xs text-text-muted mb-4">
+                {referral?.freeMonthsEarned
+                    ? `${referral.freeMonthsEarned} free month${referral.freeMonthsEarned === 1 ? "" : "s"} earned from successful referrals.`
+                    : t("Share your code with other service providers to earn free subscription months.")}
             </p>
 
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 mb-4">
-                <span className="flex-1 text-xs sm:text-sm font-mono font-semibold text-gray-700 tracking-wide truncate">
+            <div className="flex items-center gap-2 bg-surface-secondary border border-border rounded-xl px-3 py-2.5 mb-4">
+                <span className="flex-1 text-xs sm:text-sm font-mono font-semibold text-text-secondary tracking-wide truncate">
                     {referralCode}
                 </span>
                 <button
                     onClick={handleCopy}
-                    className="text-[#1E3A8A] hover:text-[#E8683F] transition p-1"
+                    className="text-primary hover:text-primary-hover transition p-1"
                 >
                     <Copy size={15} />
                 </button>
                 {copied && (
-                    <span className="text-xs text-green-500 font-medium whitespace-nowrap">Copied!</span>
+                    <span className="text-xs text-green-500 font-medium whitespace-nowrap">{t("Copied!")}</span>
                 )}
             </div>
 
             <div className="flex gap-2">
-                <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#25D366] text-white text-sm font-semibold rounded-xl hover:bg-[#1ebe5a] transition shadow-sm">
+                <button onClick={() => {
+                    if (!referral?.referralCode) return;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(`Join ServiceLink with my referral code ${referral.referralCode}: ${window.location.origin}/register/provider?ref=${referral.referralCode}`)}`, "_blank", "noopener,noreferrer");
+                }} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#25D366] text-white text-sm font-semibold rounded-xl hover:bg-[#1ebe5a] transition shadow-sm">
                     <FaWhatsapp size={15} />
                     WhatsApp
                 </button>
-                <button className="flex-1 flex items-center justify-center gap-2 py-2.5 border-2 border-[#1877F2] text-[#1877F2] text-sm font-semibold rounded-xl hover:bg-[#1877F2] hover:text-white transition">
+                <button onClick={() => navigator.share?.({ title: "Join ServiceLink", text: `Join ServiceLink with my referral code ${referralCode}`, url: `${window.location.origin}/register/provider?ref=${referralCode}` })} className="flex-1 flex items-center justify-center gap-2 py-2.5 border-2 border-[#1877F2] text-[#1877F2] text-sm font-semibold rounded-xl hover:bg-[#1877F2] hover:text-white transition">
                     <Share2 size={15} />
-                    Share
+                    {t("Share")}
                 </button>
             </div>
 
-            <p className="flex items-center justify-center gap-1.5 text-xs text-[#E8683F] font-semibold mt-3.5">
-                2 more referrals = 1 month FREE
-                <PartyPopper size={14} className="text-[#E8683F] rotate-[-10deg]" />
+            <p className="flex items-center justify-center gap-1.5 text-xs text-primary font-semibold mt-3.5">
+                {totalSteps > completed
+                    ? `${totalSteps - completed} more referral${totalSteps - completed === 1 ? "" : "s"} = 1 month FREE`
+                    : "You've unlocked your next free month!"}
+                <PartyPopper size={14} className="text-primary rotate-[-10deg]" />
             </p>
         </div>
     );
@@ -524,22 +505,23 @@ function ReferralsPanel() {
 
 /** Monthly Plan Card */
 function MonthlyPlanCard() {
+    const { t } = useTranslation();
     return (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
+        <div className="bg-surface border border-border rounded-xl shadow-sm p-4 sm:p-5 text-text-primary">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-semibold text-gray-800">Monthly Plan</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                        18 days left · Expires June 30, 2026
+                    <p className="text-sm font-semibold text-text-primary">{t("Monthly Plan")}</p>
+                    <p className="text-xs text-text-muted mt-0.5">
+                        {t("18 days left · Expires June 30, 2026")}
                     </p>
                 </div>
-                <span className="bg-[#E8683F] text-white text-xs font-semibold px-3 py-1 rounded-full">
-                    Active
+                <span className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full">
+                    {t("common.active", "Active")}
                 </span>
             </div>
             <Link href="/dashboard/provider/subscription">
-                <button className="mt-4 text-sm font-semibold text-[#1E3A8A] hover:underline">
-                    Manage →
+                <button className="mt-4 text-sm font-semibold text-primary hover:underline">
+                    {t("dashboard.manage", "Manage")} →
                 </button>
             </Link>
         </div>
@@ -551,15 +533,48 @@ function MonthlyPlanCard() {
 // ─────────────────────────────────────────────
 
 export default function ProviderDashboard() {
+    const [recentBookings, setRecentBookings] = useState<AppointmentSummary[]>([]);
+    const [activeBooking, setActiveBooking] = useState<AppointmentSummary | null>(null);
+    const [upcomingBookings, setUpcomingBookings] = useState<AppointmentSummary[]>([]);
+    const [referral, setReferral] = useState<ReferralSummary | null>(null);
+    const [dashboardLoading, setDashboardLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadDashboard() {
+            try {
+                const [recentResponse, activeResponse, upcomingResponse, referralResponse] = await Promise.all([
+                    api.get<PagedResponse<AppointmentSummary>>("/appointments/provider", { params: { page: 0, size: 5 } }),
+                    api.get<PagedResponse<AppointmentSummary>>("/appointments/provider", { params: { status: "IN_PROGRESS", page: 0, size: 1 } }),
+                    api.get<AppointmentSummary[]>("/appointments/provider/upcoming"),
+                    api.get<ReferralSummary>("/providers/me/referrals"),
+                ]);
+                if (cancelled) return;
+                setRecentBookings(recentResponse.data.content ?? []);
+                setActiveBooking(activeResponse.data.content?.[0] ?? null);
+                setUpcomingBookings(upcomingResponse.data);
+                setReferral(referralResponse.data);
+            } catch (error) {
+                console.error("Failed to load provider dashboard data", error);
+            } finally {
+                if (!cancelled) setDashboardLoading(false);
+            }
+        }
+
+        loadDashboard();
+        return () => { cancelled = true; };
+    }, []);
+
     return (
         <div className="flex flex-col gap-4 sm:gap-5 max-w-[1200px] mx-auto w-full">
             {/* 1. Active Job Banner */}
-            <ActiveJobBanner />
+            <ActiveJobBanner booking={activeBooking} />
 
             {/* 2. Score + Schedule */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
                 <ServiceLinkScore />
-                <TodaySchedule />
+                <TodaySchedule bookings={upcomingBookings} loading={dashboardLoading} />
             </div>
 
             {/* 3. Earnings */}
@@ -567,9 +582,9 @@ export default function ProviderDashboard() {
 
             {/* 4. Bookings + Right Column */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 sm:gap-5">
-                <RecentBookings />
+                <RecentBookings bookings={recentBookings} loading={dashboardLoading} />
                 <div className="flex flex-col gap-4 sm:gap-5">
-                    <ReferralsPanel />
+                    <ReferralsPanel referral={referral} loading={dashboardLoading} />
                     <MonthlyPlanCard />
                 </div>
             </div>

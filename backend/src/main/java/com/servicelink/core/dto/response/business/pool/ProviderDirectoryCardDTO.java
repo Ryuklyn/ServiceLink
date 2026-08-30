@@ -31,4 +31,6 @@ public class ProviderDirectoryCardDTO {
     private Integer totalJobs;
 
     private Boolean isVerified; // KYB
+
+    private Boolean alreadyInPool;
 }

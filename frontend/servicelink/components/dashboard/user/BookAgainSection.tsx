@@ -1,6 +1,7 @@
 "use client";
 
 import { Star, ChevronRight } from "lucide-react";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface BookAgainProvider {
   id: string;
@@ -17,6 +18,8 @@ interface BookAgainSectionProps {
 }
 
 export default function BookAgainSection({ providers }: BookAgainSectionProps) {
+  const { t } = useTranslation();
+
   const defaultProviders: BookAgainProvider[] = [
     {
       id: "1",
@@ -25,7 +28,7 @@ export default function BookAgainSection({ providers }: BookAgainSectionProps) {
       service: "AC Service",
       date: "May 18, 2026",
       rating: 4.5,
-      bgColor: "bg-[#1e3a8a]",
+      bgColor: "bg-primary",
     },
     {
       id: "2",
@@ -34,7 +37,7 @@ export default function BookAgainSection({ providers }: BookAgainSectionProps) {
       service: "Pipe Repair",
       date: "May 10, 2026",
       rating: 4.6,
-      bgColor: "bg-[#1e3a8a]",
+      bgColor: "bg-primary",
     },
   ];
 
@@ -46,10 +49,10 @@ export default function BookAgainSection({ providers }: BookAgainSectionProps) {
             key={i}
             className={`w-4 h-4 ${
                 i < Math.floor(rating)
-                    ? "fill-[#e8683f] text-[#e8683f]"
+                    ? "fill-primary text-primary"
                     : i < rating
-                        ? "fill-[#e8683f]/50 text-[#e8683f]/50"
-                        : "fill-gray-200 text-gray-200"
+                        ? "fill-primary/50 text-primary/50"
+                        : "fill-border text-border"
             }`}
         />
     ));
@@ -58,15 +61,15 @@ export default function BookAgainSection({ providers }: BookAgainSectionProps) {
   return (
       <section className="mb-8 sm:mb-12">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4 sm:mb-5">
+        <div className="flex items-start justify-between mb-4 sm:mb-5 text-text-primary">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Book Again</h2>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-              Based on your recent bookings
+            <h2 className="text-lg sm:text-xl font-bold">{t("dashboard.bookAgain")}</h2>
+            <p className="text-xs sm:text-sm text-text-secondary mt-0.5">
+              {t("dashboard.recentBookings")}
             </p>
           </div>
-          <button className="flex items-center gap-1 text-[#e8683f] text-xs sm:text-sm font-semibold hover:underline shrink-0 mt-1">
-            See All
+          <button className="flex items-center gap-1 text-primary text-xs sm:text-sm font-semibold hover:underline shrink-0 mt-1">
+            {t("dashboard.seeAll")}
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -76,39 +79,39 @@ export default function BookAgainSection({ providers }: BookAgainSectionProps) {
           {displayProviders.map((provider) => (
               <div
                   key={provider.id}
-                  className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden shrink-0 w-[240px] sm:w-[260px]"
+                  className="bg-surface border border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden shrink-0 w-[240px] sm:w-[260px]"
               >
                 <div className="p-4 sm:p-5">
                   <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
                     <div
-                        className={`${provider.bgColor} w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0`}
+                        className={`${provider.bgColor} text-primary-foreground w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0`}
                     >
                       {provider.initials}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="font-bold text-gray-900 text-sm leading-tight truncate">
-                        {provider.name}
+                      <h3 className="font-bold text-text-primary text-sm leading-tight truncate">
+                        {t(provider.name)}
                       </h3>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {provider.service}
+                      <p className="text-xs text-text-secondary mt-0.5">
+                        {t(provider.service)}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {provider.date}
+                      <p className="text-xs text-text-muted mt-0.5">
+                        {t(provider.date)}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 mb-4 sm:mb-5">
                     <div className="flex items-center gap-0.5">
-                      {renderStars(provider.rating)}
+                       {renderStars(provider.rating)}
                     </div>
-                    <span className="text-sm font-semibold text-gray-800">
+                    <span className="text-sm font-semibold text-text-primary">
                   {provider.rating}
                 </span>
                   </div>
 
-                  <button className="w-full bg-[#e8683f] hover:bg-[#d75930] text-white py-2.5 rounded-xl font-bold text-sm transition-colors">
-                    Book Again
+                  <button className="w-full bg-primary hover:bg-primary-hover text-primary-foreground py-2.5 rounded-xl font-bold text-sm transition-colors">
+                    {t("dashboard.bookAgain")}
                   </button>
                 </div>
               </div>

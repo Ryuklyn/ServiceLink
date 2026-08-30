@@ -27,7 +27,8 @@ public class ProJobTicket {
     private Long createdByUserId;
     @Column(nullable = false) private String title;
     @Column(nullable = false) private Integer workersRequired;
-    @Column(name = "scheduled_date", nullable = false) private LocalDate scheduledDate;
+    @Column(name = "scheduled_date", nullable = false) private LocalDate startDate;
+    @Column(name = "end_date", nullable = true) private LocalDate endDate;
     @Column(name = "start_time", nullable = false) private LocalTime startTime;
     @Column(name = "end_time", nullable = false) private LocalTime endTime;
     @Column(nullable = false, length = 512) private String location;

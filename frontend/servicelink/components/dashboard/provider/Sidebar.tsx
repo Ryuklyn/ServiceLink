@@ -11,7 +11,7 @@ import { clearUser } from "@/store/slices/userSlice";
 import { providerNavItems } from "@/lib/navigation/providerNavItems";
 import { getPlanBadgeLabelUpper } from "@/utils/subscriptionDisplay";
 import { fetchProviderSubscription } from "@/store/slices/providerSubscriptionSlice";
-import { useProviderTranslation } from "@/hooks/useProviderTranslation";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface SidebarProps {
     isOpen?: boolean;         // Control mobile visibility
@@ -21,7 +21,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen = false, onNavigate }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const { t } = useProviderTranslation();
+    const { t } = useTranslation();
 
     const dispatch = useAppDispatch();
     const { data: provider } = useAppSelector((state) => state.providerProfile);

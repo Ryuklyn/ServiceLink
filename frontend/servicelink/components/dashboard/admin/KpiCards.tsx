@@ -9,10 +9,10 @@ const DEFAULT_KPIS: KpiCard[] = [
         deltaTone: "positive",
     },
     {
-        id: "escrow",
-        label: "Active Escrow Balance",
-        value: "NPR 385,000",
-        sublabel: "42 Jobs Locked",
+        id: "pro-subscription",
+        label: "Active Pro Subscriptions",
+        value: "42 Active",
+        sublabel: "Starter & Growth",
         deltaTone: "neutral",
     },
     {

@@ -5,7 +5,7 @@ import { MeResponse } from "@/lib/api/authApi";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchUser, updateUserLocally } from "@/store/slices/userSlice";
 import { setUserTheme, setUserLanguage } from "@/store/slices/userPreferencesSlice";
-import { useUserTranslation } from "@/hooks/useUserTranslation";
+import { useTranslation } from "@/hooks/useTranslation";
 import AddPhoneModal from "@/components/dashboard/user/settings/AddPhoneModal";
 import EditProfileModal from "@/components/dashboard/user/settings/EditProfileModal";
 import AvatarMenu from "@/components/dashboard/user/settings/AvatarMenu";
@@ -141,7 +141,61 @@ export default function SettingsPage() {
   const [arrivalAlerts, setArrivalAlerts] = useState(true);
   const [defaultCity, setDefaultCity] = useState("Kathmandu");
 
-  const { t } = useUserTranslation();
+  interface AppointmentStats {
+    total: number;
+    pending: number;
+    confirmed: number;
+    inProgress: number;
+    completed: number;
+    cancelled: number;
+  }
+
+  interface NotificationPreferenceResponseDto {
+    category: string;
+    enabled: boolean;
+  }
+
+  const [stats, setStats] = useState<AppointmentStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<AppointmentStats>("/appointments/stats")
+      .then(({ data }) => setStats(data))
+      .catch((err) => console.error("Failed to fetch appointment stats:", err))
+      .finally(() => setStatsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    api.get<NotificationPreferenceResponseDto[]>("/notifications/preferences")
+      .then(({ data }) => {
+        const bookingPref = data.find((p) => p.category === "BOOKING");
+        if (bookingPref) setBookingUpdates(bookingPref.enabled);
+        const promoPref = data.find((p) => p.category === "PLATFORM");
+        if (promoPref) setPromotions(promoPref.enabled);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch notification preferences:", err);
+      });
+  }, []);
+
+  const togglePreference = async (
+    category: "BOOKING" | "PLATFORM",
+    currentVal: boolean,
+    setter: (val: boolean) => void
+  ) => {
+    const newVal = !currentVal;
+    setter(newVal);
+    try {
+      await api.put(`/notifications/preferences/${category}`, null, {
+        params: { enabled: newVal },
+      });
+    } catch (err) {
+      console.error(`Failed to update ${category} preference:`, err);
+      setter(currentVal);
+    }
+  };
+
+  const { t } = useTranslation();
   const { theme: appearance, language: reduxLang } = useAppSelector((state) => state.userPreferences);
   const language = reduxLang === "ne" ? "NEP" : "ENG";
 
@@ -455,8 +509,12 @@ export default function SettingsPage() {
                   Upcoming Bookings
                 </h4>
                 <span className="text-2xl font-black text-[#1e3a8a] block">
-                2
-              </span>
+                  {statsLoading ? (
+                    <span className="inline-block w-8 h-6 bg-[#dbe4ff] rounded animate-pulse align-middle" />
+                  ) : (
+                    (stats?.pending || 0) + (stats?.confirmed || 0) + (stats?.inProgress || 0)
+                  )}
+                </span>
               </div>
             </div>
 
@@ -469,8 +527,12 @@ export default function SettingsPage() {
                   Completed Services
                 </h4>
                 <span className="text-2xl font-black text-[#16a34a] block">
-                12
-              </span>
+                  {statsLoading ? (
+                    <span className="inline-block w-8 h-6 bg-[#dcfce7] rounded animate-pulse align-middle" />
+                  ) : (
+                    stats?.completed ?? 0
+                  )}
+                </span>
               </div>
             </div>
 
@@ -483,8 +545,12 @@ export default function SettingsPage() {
                   Cancelled Services
                 </h4>
                 <span className="text-2xl font-black text-[#e8683f] block">
-                1
-              </span>
+                  {statsLoading ? (
+                    <span className="inline-block w-8 h-6 bg-[#ffe3da] rounded animate-pulse align-middle" />
+                  ) : (
+                    stats?.cancelled ?? 0
+                  )}
+                </span>
               </div>
             </div>
 
@@ -497,8 +563,12 @@ export default function SettingsPage() {
                   Total Bookings
                 </h4>
                 <span className="text-2xl font-black text-[#1e293b] block">
-                15
-              </span>
+                  {statsLoading ? (
+                    <span className="inline-block w-8 h-6 bg-[#e2e8f0] rounded animate-pulse align-middle" />
+                  ) : (
+                    stats?.total ?? 0
+                  )}
+                </span>
               </div>
             </div>
           </div>
@@ -516,7 +586,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between py-3.5">
               <span className="text-text-primary">{t("settings.bookingUpdates")}</span>
               <button
-                  onClick={() => setBookingUpdates(!bookingUpdates)}
+                  onClick={() => togglePreference("BOOKING", bookingUpdates, setBookingUpdates)}
                   className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${bookingUpdates ? "bg-primary" : "bg-surface-hover"}`}
               >
                 <div
@@ -528,7 +598,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between py-3.5">
               <span className="text-text-primary">{t("settings.promotions")}</span>
               <button
-                  onClick={() => setPromotions(!promotions)}
+                  onClick={() => togglePreference("PLATFORM", promotions, setPromotions)}
                   className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${promotions ? "bg-primary" : "bg-surface-hover"}`}
               >
                 <div

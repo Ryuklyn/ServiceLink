@@ -15,18 +15,18 @@ import {
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchUser, clearUser } from "@/store/slices/userSlice";
-import { useUserTranslation } from "@/hooks/useUserTranslation";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const menuItems = [
-  { label: "Home", icon: Home, href: "/dashboard/user" },
-  { label: "Explore Services", icon: Search, href: "/dashboard/user/explore" },
+  { label: "navigation.home", icon: Home, href: "/dashboard/user" },
+  { label: "navigation.explore", icon: Search, href: "/dashboard/user/explore" },
   {
-    label: "My Bookings",
+    label: "navigation.bookings",
     icon: CalendarCheck,
     href: "/dashboard/user/bookings",
   },
-  { label: "Service Map", icon: MapPin, href: "/dashboard/user/map" },
-  { label: "Account", icon: CircleUser, href: "/dashboard/user/settings" },
+  { label: "navigation.map", icon: MapPin, href: "/dashboard/user/map" },
+  { label: "navigation.account", icon: CircleUser, href: "/dashboard/user/settings" },
 ];
 
 // ✅ Props interface थप्ने
@@ -38,7 +38,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const { t } = useUserTranslation();
+  const { t } = useTranslation();
 
   const dispatch = useAppDispatch();
   const { data: user } = useAppSelector((state) => state.user);

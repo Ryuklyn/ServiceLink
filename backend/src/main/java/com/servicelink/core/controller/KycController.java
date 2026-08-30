@@ -4,13 +4,16 @@ import com.servicelink.core.dto.request.KycSubmitRequestDTO;
 import com.servicelink.core.dto.response.KycStatusResponseDTO;
 import com.servicelink.core.dto.response.KycSubmitResponseDTO;
 import com.servicelink.core.dto.response.kyc.PublicKycStatusResponseDTO;
+import com.servicelink.core.dto.response.kyc.ProviderKycDetailDTO;
 import com.servicelink.core.security.JwtService;
 import com.servicelink.core.service.KycService;
+import com.servicelink.core.model.user.User;
 import lombok.RequiredArgsConstructor;
 import tools.jackson.databind.ObjectMapper;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -54,7 +57,7 @@ public class KycController {
         return ResponseEntity.ok(kycService.submit(dto, applicantIdentifier));
     }
 
-        @GetMapping("/status")
+    @GetMapping("/status")
         public ResponseEntity<KycStatusResponseDTO> status(
                 @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
                 Authentication auth) {
@@ -62,6 +65,12 @@ public class KycController {
             String identifier = resolveIdentifier(providerToken, auth, null); // status still requires auth
             return ResponseEntity.ok(kycService.getStatus(identifier));
         }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('PROVIDER')")
+    public ResponseEntity<ProviderKycDetailDTO> getMyKyc(Authentication auth) {
+        return ResponseEntity.ok(kycService.getProviderKycDetail(getEmailFromAuth(auth)));
+    }
 
     /**
      * Public, token-independent status lookup by reference number.
@@ -95,7 +104,7 @@ public class KycController {
 
         // 2. Authenticated session (existing user re-submitting)
         if (auth != null && auth.isAuthenticated()) {
-            return auth.getName();
+            return getEmailFromAuth(auth);
         }
 
         // 3. New provider registration — identifier comes directly from the form
@@ -105,5 +114,15 @@ public class KycController {
 
         throw new IllegalArgumentException(
                 "Applicant identifier is required. Provide a phone or email.");
+    }
+
+    private String getEmailFromAuth(Authentication auth) {
+        if (auth == null) {
+            return null;
+        }
+        if (auth.getPrincipal() instanceof User) {
+            return ((User) auth.getPrincipal()).getEmail();
+        }
+        return auth.getName();
     }
 }

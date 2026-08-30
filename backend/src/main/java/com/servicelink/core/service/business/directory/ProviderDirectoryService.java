@@ -30,9 +30,8 @@ public class ProviderDirectoryService {
 
         return candidates.stream()
                 .filter(providerPoolService::computeProOrdersEligible)
-                .filter(p -> !alreadyPooled.contains(p.getId()))
                 .filter(p -> matchesSearch(p, search))
-                .map(this::toCard)
+                .map(p -> toCard(p, alreadyPooled.contains(p.getId())))
                 .toList();
     }
 
@@ -44,7 +43,7 @@ public class ProviderDirectoryService {
                 || (p.getPrimaryCategoryName() != null && p.getPrimaryCategoryName().toLowerCase().contains(q));
     }
 
-    private ProviderDirectoryCardDTO toCard(Provider p) {
+    private ProviderDirectoryCardDTO toCard(Provider p, boolean alreadyInPool) {
         return ProviderDirectoryCardDTO.builder()
                 .providerId(p.getId())
                 .fullName(p.getFullName())
@@ -57,6 +56,7 @@ public class ProviderDirectoryService {
                 .location(p.getBaseDistrict() != null ? p.getBaseDistrict() : p.getServiceAreaText())
                 .totalJobs(p.getTotalJobs())
                 .isVerified(Boolean.TRUE.equals(p.getIsVerified()))
+                .alreadyInPool(alreadyInPool)
                 .build();
     }
 

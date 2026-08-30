@@ -340,12 +340,14 @@ function ProviderCard({
 
             <button
                 onClick={onAdd}
-                disabled={isAdding}
+                disabled={isAdding || provider.alreadyInPool}
                 className="mt-5 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ backgroundColor: NAVY }}
             >
                 {isAdding ? (
                     "Adding…"
+                ) : provider.alreadyInPool ? (
+                    "Already in Pool"
                 ) : (
                     <>
                         <Plus size={15} />

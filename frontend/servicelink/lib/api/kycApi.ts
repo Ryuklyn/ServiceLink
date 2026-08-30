@@ -101,6 +101,7 @@ function assertPublicKycStatusResponse(data: any): asserts data is PublicKycStat
 // ─── KYC API ──────────────────────────────────────────────────────────────────
 export interface KycSubmitPayload {
   applicantIdentifier?: string;
+  referralCode?: string;
   fullName?: string;
   dob?: string;
   gender?: string;
@@ -130,6 +131,10 @@ export interface KycSubmitPayload {
 }
 
 export const kycApi = {
+  verifyReferralCode: async (code: string): Promise<{ valid: boolean; providerName?: string; profilePictureUrl?: string; serviceCategory?: string }> => {
+    const { data } = await publicClient.get("/providers/referrals/verify", { params: { code } });
+    return data;
+  },
   // Was authClient — that has the 401 -> hard redirect to /login interceptor,
   // which silently wiped out submissions from applicants whose short-lived
   // provider token had expired while filling the form (no error shown, no

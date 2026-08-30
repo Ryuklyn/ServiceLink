@@ -49,6 +49,8 @@ public class AuthController {
     private final UserMapper userMapper;
     private final UserService userService;
     private final ProviderRepository providerRepository;
+    private final com.servicelink.core.repository.provider.pin.ProviderDevicePinRepository providerDevicePinRepository;
+    private final com.servicelink.core.service.SessionService sessionService;
 
     // ─── Standard registration / login ────────────────────────────────────────
 
@@ -91,14 +93,25 @@ public class AuthController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        if (user.getRole() == Role.PROVIDER && !sessionService.isSessionActive(user.getId(), jti)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
         // Rotate: revoke old, issue new
         refreshTokenService.revoke(email, jti);
 
-        String newAccessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
         String newRefreshToken = jwtService.generateRefreshToken(user.getEmail());
         String newJti = jwtService.extractJti(newRefreshToken);
+        String newAccessToken;
 
-        refreshTokenService.store(email, newJti, newRefreshToken, jwtService.getRefreshTokenExpirationMillis());
+        if (user.getRole() == Role.PROVIDER) {
+            newAccessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole(), newJti);
+            refreshTokenService.store(email, newJti, newRefreshToken, jwtService.getRefreshTokenExpirationMillis());
+            sessionService.registerSession(user.getId(), user.getEmail(), newJti, jwtService.getRefreshTokenExpirationMillis());
+        } else {
+            newAccessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
+            refreshTokenService.store(email, newJti, newRefreshToken, jwtService.getRefreshTokenExpirationMillis());
+        }
 
         return ResponseEntity.ok(AuthResponseDTO.builder()
                 .token(newAccessToken)
@@ -112,6 +125,9 @@ public class AuthController {
         if (auth != null && auth.isAuthenticated()) {
             User user = (User) auth.getPrincipal();
             refreshTokenService.revokeAllForUser(user.getEmail());
+            if (user.getRole() == Role.PROVIDER) {
+                sessionService.clearSession(user.getId());
+            }
         }
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
@@ -401,7 +417,7 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
      * (not a purpose-token like the KYC flow — this is a genuine login).
      */
     @PostMapping("/provider/verify-phone-otp")
-    public ResponseEntity<AuthResponseDTO> verifyProviderLoginByPhone(
+    public ResponseEntity<OtpVerifyResponseDTO> verifyProviderLoginByPhone(
             @RequestBody Map<String, String> body) {
 
         String phone = body.get("phone");
@@ -427,7 +443,20 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This provider account is inactive");
         }
 
-        return ResponseEntity.ok(issueSessionTokens(user));
+        String providerToken = jwtService.generatePurposeToken(
+                Map.of("type", "LOGIN_OTP_VERIFIED", "role", "PROVIDER"),
+                user.getEmail(),
+                900000L
+        );
+
+        boolean pinExists = providerDevicePinRepository.existsByProvider_Id(provider.getId());
+
+        return ResponseEntity.ok(OtpVerifyResponseDTO.builder()
+                .verified(true)
+                .message("Phone verified successfully")
+                .providerToken(providerToken)
+                .pinExists(pinExists)
+                .build());
     }
 
     /**
@@ -462,7 +491,7 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
      * specifically asked to use), and is active, before issuing a JWT.
      */
     @PostMapping("/provider/verify-email-otp")
-    public ResponseEntity<AuthResponseDTO> verifyProviderLoginByEmail(
+    public ResponseEntity<OtpVerifyResponseDTO> verifyProviderLoginByEmail(
             @RequestBody Map<String, String> body) {
 
         String email = body.get("email");
@@ -488,20 +517,35 @@ public ResponseEntity<UserResponseDTO> getMe(Authentication auth) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This provider account is inactive");
         }
 
-        return ResponseEntity.ok(issueSessionTokens(user));
+        String providerToken = jwtService.generatePurposeToken(
+                Map.of("type", "LOGIN_OTP_VERIFIED", "role", "PROVIDER"),
+                user.getEmail(),
+                900000L
+        );
+
+        boolean pinExists = providerDevicePinRepository.existsByProvider_Id(provider.getId());
+
+        return ResponseEntity.ok(OtpVerifyResponseDTO.builder()
+                .verified(true)
+                .message("Email verified successfully")
+                .providerToken(providerToken)
+                .pinExists(pinExists)
+                .build());
     }
 
-    /**
-     * Shared token-issuing logic — same pattern as /refresh-token, so login
-     * sessions behave identically to refreshed sessions (same claims, same
-     * refresh-token storage/rotation mechanics).
-     */
     private AuthResponseDTO issueSessionTokens(User user) {
-        String accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
         String refreshToken = jwtService.generateRefreshToken(user.getEmail());
         String jti = jwtService.extractJti(refreshToken);
+        String accessToken;
 
-        refreshTokenService.store(user.getEmail(), jti, refreshToken, jwtService.getRefreshTokenExpirationMillis());
+        if (user.getRole() == Role.PROVIDER) {
+            accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole(), jti);
+            refreshTokenService.store(user.getEmail(), jti, refreshToken, jwtService.getRefreshTokenExpirationMillis());
+            sessionService.registerSession(user.getId(), user.getEmail(), jti, jwtService.getRefreshTokenExpirationMillis());
+        } else {
+            accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
+            refreshTokenService.store(user.getEmail(), jti, refreshToken, jwtService.getRefreshTokenExpirationMillis());
+        }
 
         return AuthResponseDTO.builder()
                 .token(accessToken)

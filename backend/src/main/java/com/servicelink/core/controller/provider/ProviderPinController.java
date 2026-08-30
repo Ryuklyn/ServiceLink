@@ -24,6 +24,12 @@ public class ProviderPinController {
         return ResponseEntity.ok(pinService.checkDevice(req.getDeviceId()));
     }
 
+    @PostMapping("/check-account")
+    public ResponseEntity<CheckAccountResponseDTO> checkAccount(
+            @Valid @RequestBody CheckAccountRequestDTO req) {
+        return ResponseEntity.ok(pinService.checkAccount(req));
+    }
+
     /**
      * Called right after OTP verify. Auth is via the short-lived providerToken
      * in X-Provider-Token — same header pattern your statusClient/KycController
@@ -64,9 +70,19 @@ public class ProviderPinController {
     /** Public — the fast daily-login path. No providerToken needed at all. */
     @PostMapping("/verify-pin")
     public ResponseEntity<VerifyPinResponseDTO> verifyPin(
+            @RequestHeader(value = "X-Provider-Token", required = false) String providerToken,
             @Valid @RequestBody VerifyPinRequestDTO req) {
 
-        VerifyPinResponseDTO res = pinService.verifyPin(req.getDeviceId(), req.getPin());
+        String providerEmail = null;
+        if (providerToken != null && !providerToken.isBlank()) {
+            try {
+                providerEmail = jwtService.extractUsername(providerToken);
+            } catch (Exception e) {
+                // Ignore parse errors, act as if no token was passed
+            }
+        }
+
+        VerifyPinResponseDTO res = pinService.verifyPin(providerEmail, req);
 
         // Expired PIN — distinct from wrong-PIN, so frontend can route to OTP reset
         if (Boolean.TRUE.equals(res.getExpired())) {

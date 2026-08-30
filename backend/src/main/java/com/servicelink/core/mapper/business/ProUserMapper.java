@@ -42,6 +42,7 @@ public class ProUserMapper {
         return ProUserResponse.builder()
                 .id(proUser.getId())
                 .workspaceId(proUser.getWorkspace().getId())
+                .organizationId(proUser.getWorkspace().getOrganization() != null ? proUser.getWorkspace().getOrganization().getId() : null)
                 .fullName(proUser.getFullName())
                 .createdAt(proUser.getCreatedAt())
                 .updatedAt(proUser.getUpdatedAt())

@@ -12,7 +12,7 @@ import {
     uploadProviderPicture,
 } from "@/store/slices/providerProfileSlice";
 import { setProviderTheme, setProviderLanguage } from "@/store/slices/providerPreferencesSlice";
-import { useProviderTranslation } from "@/hooks/useProviderTranslation";
+import { useTranslation } from "@/hooks/useTranslation";
 
 import dynamic from "next/dynamic";
 
@@ -49,7 +49,7 @@ export default function AccountTab() {
         (state) => state.providerProfile,
     );
 
-    const { t } = useProviderTranslation();
+    const { t } = useTranslation();
     const { theme, language } = useAppSelector((state) => state.providerPreferences);
 
     const setThemeState = (themeVal: Theme) => {
@@ -444,27 +444,27 @@ export default function AccountTab() {
                     )}
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-slate-900">{t("Preferences")}</h3>
-                    <p className="mb-2 text-xs font-medium text-slate-500">{t("Theme")}</p>
+                <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+                    <h3 className="mb-4 text-sm font-semibold text-text-primary">{t("settings.preferences")}</h3>
+                    <p className="mb-2 text-xs font-medium text-text-secondary">{t("settings.theme")}</p>
                     <div className="mb-5 grid grid-cols-3 gap-2">
-                        <button onClick={() => setThemeState("system")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "system" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-                            <Monitor className="h-3.5 w-3.5" /> {t("System")}
+                        <button onClick={() => setThemeState("system")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "system" ? "border-primary bg-primary text-primary-foreground" : "border-border text-text-muted hover:bg-surface-hover"}`}>
+                            <Monitor className="h-3.5 w-3.5" /> {t("settings.system")}
                         </button>
-                        <button onClick={() => setThemeState("light")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "light" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-                            <Sun className="h-3.5 w-3.5" /> {t("Light")}
+                        <button onClick={() => setThemeState("light")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "light" ? "border-primary bg-primary text-primary-foreground" : "border-border text-text-muted hover:bg-surface-hover"}`}>
+                            <Sun className="h-3.5 w-3.5" /> {t("settings.light")}
                         </button>
-                        <button onClick={() => setThemeState("dark")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "dark" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-                            <Moon className="h-3.5 w-3.5" /> {t("Dark")}
+                        <button onClick={() => setThemeState("dark")} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${theme === "dark" ? "border-primary bg-primary text-primary-foreground" : "border-border text-text-muted hover:bg-surface-hover"}`}>
+                            <Moon className="h-3.5 w-3.5" /> {t("settings.dark")}
                         </button>
                     </div>
-                    <p className="mb-2 text-xs font-medium text-slate-500">{t("Language")}</p>
+                    <p className="mb-2 text-xs font-medium text-text-secondary">{t("settings.language")}</p>
                     <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => setLanguageState("en")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "en" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                            {t("English")}
+                        <button onClick={() => setLanguageState("en")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "en" ? "border-primary bg-primary text-primary-foreground" : "border-border text-text-secondary hover:bg-surface-hover"}`}>
+                            {t("settings.english")}
                         </button>
-                        <button onClick={() => setLanguageState("ne")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "ne" ? "border-[#1e3a8a] bg-[#1e3a8a] text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                            {t("Nepali")}
+                        <button onClick={() => setLanguageState("ne")} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${language === "ne" ? "border-primary bg-primary text-primary-foreground" : "border-border text-text-secondary hover:bg-surface-hover"}`}>
+                            {t("settings.nepali")}
                         </button>
                     </div>
                 </div>

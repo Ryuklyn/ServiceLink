@@ -16,6 +16,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.servicelink.core.service.SessionService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,10 +27,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final SessionService sessionService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository, SessionService sessionService) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.sessionService = sessionService;
     }
 
     @Override
@@ -74,6 +77,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     if (maybeUser.isPresent()) {
                         User user = maybeUser.get();
+
+                        if (user.getRole() == Role.PROVIDER) {
+                            String jti = jwtService.extractJti(token);
+                            if (!sessionService.isSessionActive(user.getId(), jti)) {
+                                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                response.setContentType("application/json");
+                                response.getWriter().write("{\"error\":\"SESSION_REVOKED\",\"message\":\"Your session has been revoked because you logged in from another device.\"}");
+                                return;
+                            }
+                        }
 
                         List<GrantedAuthority> authorities = new ArrayList<>();
                         String roleStr = user.getRole().name();

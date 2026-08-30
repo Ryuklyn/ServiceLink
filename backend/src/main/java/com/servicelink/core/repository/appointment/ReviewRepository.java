@@ -42,6 +42,12 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             @Param("providerId") Long providerId,
             @Param("limit") int limit);
 
+    @Query("SELECT r FROM Review r WHERE r.provider.id = :providerId AND r.createdAt >= :startDate AND r.createdAt <= :endDate")
+    List<Review> findByProviderIdAndDateRange(
+            @Param("providerId") Long providerId,
+            @Param("startDate") java.time.Instant startDate,
+            @Param("endDate") java.time.Instant endDate);
+
     /**
      * Check whether the customer has already reviewed a specific appointment.
      * Prevents duplicate reviews per appointment.

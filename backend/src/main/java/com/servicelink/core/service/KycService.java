@@ -7,6 +7,8 @@ import com.servicelink.core.dto.response.KycSubmitResponseDTO;
 import com.servicelink.core.dto.response.admin.KycAdminDetailDTO;
 import com.servicelink.core.dto.response.admin.KycAdminListItemDTO;
 import com.servicelink.core.dto.response.kyc.PublicKycStatusResponseDTO;
+import com.servicelink.core.dto.response.kyc.KycDocumentDTO;
+import com.servicelink.core.dto.response.kyc.ProviderKycDetailDTO;
 import com.servicelink.core.mapper.KycMapper;
 import com.servicelink.core.mapper.admin.KycAdminMapper;
 import com.servicelink.core.model.auth.AuthProvider;
@@ -33,6 +35,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -199,6 +202,15 @@ public class KycService {
 
         provider.setIsVerified(true);
         provider.setIsActive(true);
+
+        // Referral code is only captured during submission. Resolve its owner here
+        // when the applicant becomes a real provider; never trust a client-supplied id.
+        if (submission.getReferralCode() != null && !submission.getReferralCode().isBlank()) {
+            providerRepository.findByReferralCode(submission.getReferralCode().trim().toUpperCase())
+                    .filter(referrer -> Boolean.TRUE.equals(referrer.getIsActive()) && Boolean.TRUE.equals(referrer.getIsVerified()))
+                    .filter(referrer -> !referrer.getUser().getId().equals(user.getId()))
+                    .ifPresent(provider::setReferredBy);
+        }
 
         providerRepository.save(provider);
 
@@ -373,6 +385,45 @@ public class KycService {
                 .fullName(submission.getFullName())
                 .email(submission.getEmail())
                 .build();
+    }
+
+    /** Returns only the authenticated provider's own KYC submission. */
+    @Transactional(readOnly = true)
+    public ProviderKycDetailDTO getProviderKycDetail(String authenticatedEmail) {
+        // A provider may have submitted KYC using phone OTP, meaning
+        // applicantIdentifier holds their phone while their active JWT subject
+        // is their email. The Provider -> KYC relationship is authoritative.
+        KycSubmission submission = userRepository.findByEmail(authenticatedEmail)
+                .flatMap(user -> providerRepository.findByUser_Id(user.getId())
+                        .map(Provider::getKycSubmission))
+                .or(() -> kycRepository.findByEmail(authenticatedEmail))
+                .or(() -> kycRepository.findByApplicantIdentifier(authenticatedEmail))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No KYC submission is linked to this provider account."));
+        List<KycDocumentDTO> documents = new ArrayList<>();
+        addDocument(documents, "Citizenship Certificate — Front", submission.getCitizenshipFrontPath());
+        addDocument(documents, "Citizenship Certificate — Back", submission.getCitizenshipBackPath());
+        addDocument(documents, "KYC Profile Photo", submission.getPhotoPath());
+        addDocument(documents, "PAN Card", submission.getPanPath());
+
+        List<String> certificates = kycMapper.fromJson(submission.getProfessionalCertPaths());
+        for (int index = 0; index < certificates.size(); index++) {
+            addDocument(documents, "Professional Certificate " + (index + 1), certificates.get(index));
+        }
+
+        return ProviderKycDetailDTO.builder()
+                .status(submission.getStatus().name())
+                .submittedAt(submission.getSubmittedAt())
+                .reviewedAt(submission.getReviewedAt())
+                .reviewNotes(submission.getReviewNotes())
+                .documents(documents)
+                .build();
+    }
+
+    private void addDocument(List<KycDocumentDTO> documents, String name, String url) {
+        if (url != null && !url.isBlank()) {
+            documents.add(KycDocumentDTO.builder().name(name).url(url).build());
+        }
     }
 
     public PublicKycStatusResponseDTO getStatusByReferenceNumber(String referenceNumber) {
