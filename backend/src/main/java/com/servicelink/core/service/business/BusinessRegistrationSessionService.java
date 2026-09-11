@@ -23,7 +23,10 @@ public class BusinessRegistrationSessionService {
     private static final Duration TTL = Duration.ofHours(24);
 
     public void updateStep(Long organizationId, String step, Long workspaceId, Long proUserId, Long kybId) {
-        RegistrationSession session = getSession(organizationId).orElse(new RegistrationSession());
+        RegistrationSession session = getSession(organizationId).orElse(null);
+        if (session == null) {
+            session = new RegistrationSession();
+        }
         session.setOrganizationId(organizationId);
         session.setLastCompletedStep(step);
         if (workspaceId != null) session.setWorkspaceId(workspaceId);
@@ -44,17 +47,22 @@ public class BusinessRegistrationSessionService {
     }
 
     public Optional<RegistrationSession> getSession(Long organizationId) {
-        String json = redisTemplate.opsForValue().get(KEY_PREFIX + organizationId);
-        if (json == null) return Optional.empty();
         try {
-            return Optional.of(objectMapper.readValue(json, RegistrationSession.class));
+            String json = redisTemplate.opsForValue().get(KEY_PREFIX + organizationId);
+            if (json == null) return Optional.empty();
+            return Optional.ofNullable(objectMapper.readValue(json, RegistrationSession.class));
         } catch (Exception e) {
+            log.warn("Failed to get registration session from Redis for org {}", organizationId, e);
             return Optional.empty();
         }
     }
 
     public void clearSession(Long organizationId) {
-        redisTemplate.delete(KEY_PREFIX + organizationId);
+        try {
+            redisTemplate.delete(KEY_PREFIX + organizationId);
+        } catch (Exception e) {
+            log.warn("Failed to clear registration session from Redis for org {}", organizationId, e);
+        }
     }
 
 }

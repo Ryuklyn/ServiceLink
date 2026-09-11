@@ -30,8 +30,7 @@ export default function RatingsBreakdown({ provider }: RatingsBreakdownProps) {
           >
         ).map((key) => {
           const score = breakdown[key];
-          // Converts 0-5 metric smoothly into an exact 100% scale representation
-          const pct = Math.round((score / 5) * 100);
+          const pct = Math.min(100, Math.max(0, Math.round(score <= 5 ? score * 20 : score)));
 
           return (
             <div key={key} className="flex flex-col gap-2">

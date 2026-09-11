@@ -26,6 +26,7 @@ public class ProUserService {
     private final ProUserMapper proUserMapper;
     private final PasswordEncoder passwordEncoder;
     private final BusinessRegistrationSessionService businessRegistrationSessionService;
+    private final TeamMemberService teamMemberService;
 
     @Transactional
     public ProUserResponse create(ProUserRequest request) {
@@ -75,6 +76,10 @@ public class ProUserService {
                 .build();
 
         ProUser saved = proUserRepository.save(proUser);
+
+        // Persist the owner's organization role as part of the same transaction,
+        // so every admin-only endpoint works immediately after registration.
+        teamMemberService.createAdminMemberForNewWorkspace(saved, savedUser);
 
         businessRegistrationSessionService.updateStep(
                 workspace.getOrganization().getId(), "ADMIN", workspace.getId(), saved.getId(), null);

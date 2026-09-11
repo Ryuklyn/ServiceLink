@@ -5,17 +5,6 @@ import { GitBranch } from "lucide-react";
 import api from "@/utils/axios";
 import { toast } from "react-toastify";
 
-const SERVICES = [
-  "HVAC",
-  "Electrical",
-  "Plumbing",
-  "Cleaning",
-  "Security",
-  "Landscaping",
-  "IT_SUPPORT",
-  "PEST_CONTROL",
-];
-
 interface WorkspaceStepProps {
   onContinue: (workspaceId: string, workspaceName: string) => void;
   onBack: () => void;
@@ -43,6 +32,35 @@ export default function WorkspaceStep({
                                       }: WorkspaceStepProps) {
   const [formData, setFormData] = useState<WorkspaceFormData>(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState<boolean>(true);
+
+  // Fetch active categories from the database
+  useEffect(() => {
+    api
+        .get<Array<{ name: string }>>("/providers/categories")
+        .then((res) => {
+            const catNames = res.data.map((c) => c.name);
+            setCategories(catNames);
+        })
+        .catch((err) => {
+            console.error("Failed to load categories:", err);
+            // Fallback to static list if API request fails to avoid blocking registration
+            setCategories([
+                "HVAC",
+                "Electrical",
+                "Plumbing",
+                "Cleaning",
+                "Security",
+                "Landscaping",
+                "IT_SUPPORT",
+                "PEST_CONTROL",
+            ]);
+        })
+        .finally(() => {
+            setLoadingCategories(false);
+        });
+  }, []);
 
   // Resume: prefill from the DB if this workspace already exists
   useEffect(() => {
@@ -114,10 +132,11 @@ export default function WorkspaceStep({
       }
 
       onContinue(String(response.data.id), formData.workspaceName.trim());
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Create Workspace Error:", error);
+      const err = error as { response?: { data?: { message?: string } } };
       toast.error(
-          error?.response?.data?.message ?? "Failed to create workspace",
+          err?.response?.data?.message ?? "Failed to create workspace",
       );
     } finally {
       setLoading(false);
@@ -181,25 +200,31 @@ export default function WorkspaceStep({
             <p className="text-sm text-gray-500 mb-3">
               Pick the categories you manage most often.
             </p>
-            <div className="flex flex-wrap gap-2">
-              {SERVICES.map((service) => {
-                const isSelected = formData.preferredServices.includes(service);
-                return (
-                    <button
-                        key={service}
-                        type="button"
-                        onClick={() => toggleService(service)}
-                        className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
-                            isSelected
-                                ? "bg-[#1e3a8a] text-white border-[#1e3a8a]"
-                                : "bg-white text-[#1e3a8a] border-gray-300 hover:border-[#1e3a8a]/60"
-                        }`}
-                    >
-                      {service.replace("_", " ")}
-                    </button>
-                );
-              })}
-            </div>
+            {loadingCategories ? (
+              <p className="text-xs text-gray-400">Loading services...</p>
+            ) : categories.length === 0 ? (
+              <p className="text-xs text-gray-400">No services available.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {categories.map((service) => {
+                  const isSelected = formData.preferredServices.includes(service);
+                  return (
+                      <button
+                          key={service}
+                          type="button"
+                          onClick={() => toggleService(service)}
+                          className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                              isSelected
+                                  ? "bg-[#1e3a8a] text-white border-[#1e3a8a]"
+                                  : "bg-white text-[#1e3a8a] border-gray-300 hover:border-[#1e3a8a]/60"
+                          }`}
+                      >
+                        {service.replace("_", " ")}
+                      </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

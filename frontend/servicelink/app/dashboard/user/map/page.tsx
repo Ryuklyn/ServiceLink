@@ -8,6 +8,7 @@ import api from "@/utils/axios";
 import { getCategories } from "@/lib/api/providersApi";
 import Link from "next/link";
 import WhatsAppButton from "@/components/shared/WhatsAppButton";
+import L from "leaflet";
 
 // Safely lazy load React-Leaflet tracking nodes dynamically outside the Next SSR compilation cycle
 const MapContainer = dynamic(
@@ -41,10 +42,96 @@ interface MapProvider {
   avatarUrl: string | null;
   initials: string;
   markerColor: string;
+  locationIsApproximate: boolean;
+}
+
+interface ProviderMapResponse {
+  id: number;
+  fullName?: string | null;
+  businessName?: string | null;
+  primaryCategoryName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  averageRating?: number | null;
+  isVerified?: boolean | null;
+  isOnline?: boolean | null;
+  phone?: string | null;
+  profilePictureUrl?: string | null;
+  kycMapAddress?: string | null;
+}
+
+type GeocodeCache = Record<string, { lat: number; lng: number }>;
+const GEOCODE_CACHE_KEY = "servicelink:kyc-origin-geocodes:v1";
+const GEOCODING_URL = process.env.NEXT_PUBLIC_GEOCODING_URL ?? "https://nominatim.openstreetmap.org/search";
+const USER_LOCATION: [number, number] = [27.6915, 85.342];
+
+function addressCacheKey(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index++) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function readGeocodeCache(): GeocodeCache {
+  try {
+    return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) ?? "{}") as GeocodeCache;
+  } catch {
+    return {};
+  }
+}
+
+async function geocodeKycOrigin(address: string, cache: GeocodeCache) {
+  const key = addressCacheKey(address);
+  if (cache[key]) return cache[key];
+
+  try {
+    const params = new URLSearchParams({
+      q: address,
+      format: "jsonv2",
+      limit: "1",
+      countrycodes: "np",
+      addressdetails: "0",
+    });
+    const response = await fetch(`${GEOCODING_URL}?${params.toString()}`, {
+      headers: { "Accept-Language": "en" },
+    });
+    if (!response.ok) return null;
+
+    const matches = await response.json() as Array<{ lat: string; lon: string }>;
+    const lat = Number(matches[0]?.lat);
+    const lng = Number(matches[0]?.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+    cache[key] = { lat, lng };
+    localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache));
+    return cache[key];
+  } catch {
+    return null;
+  }
 }
 
 function getInitials(name: string): string {
   return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function approximateCoordinates(provider: ProviderMapResponse) {
+  const seed = Number.parseInt(
+    addressCacheKey(`${provider.id}:${provider.kycMapAddress ?? "provider"}`),
+    36,
+  );
+  const angle = ((seed % 360) * Math.PI) / 180;
+  const distanceKm = 0.8 + ((seed >>> 8) % 2200) / 1000;
+  const latitudeOffset = (distanceKm / 111) * Math.cos(angle);
+  const longitudeOffset =
+    (distanceKm / (111 * Math.cos((USER_LOCATION[0] * Math.PI) / 180))) *
+    Math.sin(angle);
+
+  return {
+    lat: USER_LOCATION[0] + latitudeOffset,
+    lng: USER_LOCATION[1] + longitudeOffset,
+  };
 }
 
 export default function ServiceMapPage() {
@@ -54,9 +141,7 @@ export default function ServiceMapPage() {
   const [providers, setProviders] = useState<MapProvider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<MapProvider | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Bounded geolocation mock references mapping core fields near Kathmandu coordinates
-  const userLocation: [number, number] = [27.6915, 85.342]; // Centered close to Baneshwor, Kathmandu
+  const [approximateCount, setApproximateCount] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
@@ -68,27 +153,49 @@ export default function ServiceMapPage() {
         setCategories(["All", "Verified", "Available Now", ...activeCats]);
 
         // Load providers
-        const { data } = await api.get("/providers", { params: { size: 100 } });
-        const mapped = (data.content || []).map((p: any, idx: number) => {
-          // If lat/lng are missing or 0, jitter around center
-          const lat = p.latitude && p.latitude !== 0 ? p.latitude : 27.6915 + Math.sin(idx + 1) * 0.02;
-          const lng = p.longitude && p.longitude !== 0 ? p.longitude : 85.342 + Math.cos(idx + 1) * 0.02;
+        const { data } = await api.get<{ content?: ProviderMapResponse[] }>("/providers", { params: { size: 100 } });
+        const cache = readGeocodeCache();
+        const mapped: MapProvider[] = [];
+        let approximate = 0;
 
-          return {
+        for (const p of data.content ?? []) {
+          const wasGeocodeCached = Boolean(
+            p.kycMapAddress && cache[addressCacheKey(p.kycMapAddress)],
+          );
+          let coordinates = p.kycMapAddress
+            ? await geocodeKycOrigin(p.kycMapAddress, cache)
+            : null;
+          let locationIsApproximate = false;
+          if (p.kycMapAddress && !wasGeocodeCached) {
+            await new Promise((resolve) => setTimeout(resolve, 1100));
+          }
+
+          if (!coordinates && p.latitude && p.longitude && p.latitude !== 0 && p.longitude !== 0) {
+            coordinates = { lat: p.latitude, lng: p.longitude };
+          }
+          if (!coordinates) {
+            coordinates = approximateCoordinates(p);
+            locationIsApproximate = true;
+            approximate += 1;
+          }
+
+          mapped.push({
             id: String(p.id),
-            name: p.businessName || p.fullName,
+            name: p.businessName || p.fullName || "Provider",
             category: p.primaryCategoryName || "General",
-            lat,
-            lng,
+            lat: coordinates.lat,
+            lng: coordinates.lng,
             rating: p.averageRating || 5.0,
             isVerified: p.isVerified || false,
             phone: p.phone || "",
             avatarUrl: p.profilePictureUrl?.trim() ? p.profilePictureUrl : null,
             initials: getInitials(p.fullName || ""),
-            markerColor: p.isVerified ? "#16a34a" : "#1e3a8a"
-          };
-        });
+            markerColor: p.isVerified ? "#16a34a" : "#1e3a8a",
+            locationIsApproximate,
+          });
+        }
         setProviders(mapped);
+        setApproximateCount(approximate);
       } catch (err) {
         console.error("Error loading map data:", err);
       } finally {
@@ -122,8 +229,8 @@ export default function ServiceMapPage() {
   const filteredProviders = useMemo(() => {
     return providers.filter((provider) => {
       const distance = calculateDistance(
-        userLocation[0],
-        userLocation[1],
+        USER_LOCATION[0],
+        USER_LOCATION[1],
         provider.lat,
         provider.lng,
       );
@@ -139,7 +246,6 @@ export default function ServiceMapPage() {
   // Leaflet Marker Icon Generators inject inline HTML vector properties mapping theme color arrays
   const createCustomIcon = (avatarUrl: string | null, initials: string) => {
     if (typeof window === "undefined") return null;
-    const L = require("leaflet");
     const avatarHtml = avatarUrl
       ? `<img src="${avatarUrl}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" />`
       : `<div style="background-color: #1e3a8a; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold;">${initials}</div>`;
@@ -154,7 +260,6 @@ export default function ServiceMapPage() {
 
   const createUserMarkerIcon = () => {
     if (typeof window === "undefined") return null;
-    const L = require("leaflet");
     return new L.DivIcon({
       html: `<div style="background-color: #e8683f; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(232,104,63,0.4);" class="pulse-user-node"></div>`,
       className: "user-location-marker-node",
@@ -223,12 +328,17 @@ export default function ServiceMapPage() {
             className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#e8683f] focus:outline-none transition-all"
           />
         </div>
+        {approximateCount > 0 && (
+          <p className="text-[10px] text-slate-400">
+            {approximateCount} provider{approximateCount === 1 ? " has" : "s have"} an approximate marker because an exact KYC-origin coordinate is not saved yet.
+          </p>
+        )}
       </div>
 
       {/* Map Display Container Wrapper */}
       <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm relative group z-15">
         <MapContainer
-          center={userLocation}
+          center={USER_LOCATION}
           zoom={13}
           style={{ height: "100%", width: "100%" }}
           className="z-10"
@@ -241,7 +351,7 @@ export default function ServiceMapPage() {
 
           {/* Spatial Proximity Radius Visual Reference Rings */}
           <Circle
-            center={userLocation}
+            center={USER_LOCATION}
             radius={rangeRadius * 1000}
             pathOptions={{
               color: "#e8683f",
@@ -254,7 +364,7 @@ export default function ServiceMapPage() {
 
           {/* User Fixed Core Centered Anchor Node */}
           {createUserMarkerIcon() && (
-            <Marker position={userLocation} icon={createUserMarkerIcon()!}>
+            <Marker position={USER_LOCATION} icon={createUserMarkerIcon()!}>
               <Popup className="custom-leaflet-popup">
                 <div className="p-1 font-sans">
                   <p className="text-xs font-bold text-gray-900">
@@ -288,6 +398,11 @@ export default function ServiceMapPage() {
                     <p className="text-[9px] text-[#e8683f] font-semibold">
                       {provider.category}
                     </p>
+                    {provider.locationIsApproximate && (
+                      <p className="mt-1 text-[9px] text-slate-500">
+                        Approximate KYC origin
+                      </p>
+                    )}
                   </div>
                 </Popup>
               </Marker>
@@ -337,6 +452,9 @@ export default function ServiceMapPage() {
               <p className="text-xs text-[#e8683f] font-semibold">
                 {selectedProvider.category}
               </p>
+              {selectedProvider.locationIsApproximate && (
+                <p className="text-[10px] text-slate-500">Approximate KYC origin</p>
+              )}
               <div className="flex items-center gap-1 mt-1 text-xs text-amber-500 font-bold">
                 ★ {selectedProvider.rating.toFixed(1)}
               </div>

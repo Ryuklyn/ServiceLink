@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useTransition, Suspense } from "react";
+import React, { useEffect, useRef, useState, useTransition, Suspense } from "react";
 import { toast } from "react-toastify";
 import {
   Briefcase,
@@ -31,7 +31,7 @@ import {
   ProEligibleProviderResponse
 } from "@/services/proJobService";
 import dynamic from "next/dynamic";
-import api from "@/utils/axios";
+import api, { ApiError } from "@/utils/axios";
 
 const MapPicker = dynamic(() => import("@/components/business/jobs/MapPicker"), { ssr: false });
 
@@ -72,6 +72,8 @@ function JobTicketsPageContent() {
 
   // Create Job Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveInProgressRef = useRef(false);
   const [catalogs, setCatalogs] = useState<{ id: number; categoryName: string; subServiceName: string }[]>([]);
   const [activeCategories, setActiveCategories] = useState<{ id: number; name: string }[]>([]);
   const [workforceRequirements, setWorkforceRequirements] = useState<{
@@ -88,7 +90,7 @@ function JobTicketsPageContent() {
 
   const [createForm, setCreateForm] = useState({
     title: "",
-    serviceCatalogId: 1, // Default fallback id
+    serviceCatalogId: 0,
     category: "Electrical",
     service: "",
     workersRequired: 1,
@@ -114,11 +116,24 @@ function JobTicketsPageContent() {
       ]);
       const mapped = catalogRes.data.map((item: any) => ({
         id: item.id,
-        categoryName: item.category?.name ?? "",
+        categoryName: item.categoryName ?? "",
         subServiceName: item.subServiceName ?? "",
       }));
       setCatalogs(mapped);
       setActiveCategories(categoryRes.data);
+      const firstCatalog = mapped[0];
+      if (firstCatalog) {
+        setCreateForm((previous) => {
+          const selectedCatalog = mapped.find((catalog) => catalog.id === previous.serviceCatalogId);
+          if (selectedCatalog) return previous;
+          return {
+            ...previous,
+            serviceCatalogId: firstCatalog.id,
+            category: firstCatalog.categoryName,
+            service: firstCatalog.subServiceName,
+          };
+        });
+      }
     } catch (err) {
       console.error("Failed to load catalog/category items:", err);
     }
@@ -265,7 +280,7 @@ function JobTicketsPageContent() {
 
     setCreateForm({
       title: job.title,
-      serviceCatalogId: job.serviceCatalogId || 1,
+      serviceCatalogId: job.serviceCatalogId || 0,
       category: isMulti ? "Multiple Services" : (parsed.requirements[0]?.skill || job.category),
       service: job.service || "",
       workersRequired: job.workersRequired || 1,
@@ -316,15 +331,25 @@ function JobTicketsPageContent() {
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saveInProgressRef.current) return;
+    saveInProgressRef.current = true;
     try {
+      setIsSaving(true);
       const firstSkill = createForm.category === "Multiple Services"
         ? (workforceRequirements[0]?.skill ?? "Electrical")
         : createForm.category;
 
-      const matchedCatalog = catalogs.find(
-        (c) => c.categoryName.toLowerCase() === firstSkill.toLowerCase()
+      const selectedCatalog = catalogs.find(
+        (catalog) => catalog.id === createForm.serviceCatalogId
+          && catalog.categoryName.toLowerCase() === firstSkill.toLowerCase()
       );
-      const catalogId = matchedCatalog ? matchedCatalog.id : 1;
+      const matchedCatalog = selectedCatalog ?? catalogs.find(
+        (catalog) => catalog.categoryName.toLowerCase() === firstSkill.toLowerCase()
+      );
+      if (!matchedCatalog) {
+        toast.error(`No active service is configured for ${firstSkill}.`);
+        return;
+      }
 
       const totalWorkers = createForm.category === "Multiple Services"
         ? workforceRequirements.reduce((sum, req) => sum + req.workersRequired, 0)
@@ -353,7 +378,7 @@ function JobTicketsPageContent() {
         : parseFloat(createForm.businessPrice) || 0;
 
       const payload = {
-        serviceCatalogId: catalogId,
+        serviceCatalogId: matchedCatalog.id,
         title: createForm.title,
         workersRequired: totalWorkers,
         startDate: createForm.startDate,
@@ -382,12 +407,13 @@ function JobTicketsPageContent() {
       loadJobs();
 
       // Reset form
-      const defaultCategory = activeCategories[0]?.name || "Electrical";
+      const defaultCatalog = catalogs[0];
+      const defaultCategory = defaultCatalog?.categoryName || activeCategories[0]?.name || "Electrical";
       setCreateForm({
         title: "",
-        serviceCatalogId: 1,
+        serviceCatalogId: defaultCatalog?.id ?? 0,
         category: defaultCategory,
-        service: "",
+        service: defaultCatalog?.subServiceName ?? "",
         workersRequired: 1,
         startDate: "",
         endDate: "",
@@ -401,8 +427,11 @@ function JobTicketsPageContent() {
       setWorkforceRequirements([{ skill: defaultCategory, workersRequired: 1, pricingModel: "PER_JOB", price: 1000 }]);
       setShowMap(false);
       setMapCenter([27.7172, 85.3240]);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to save job ticket.");
+    } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to save job ticket.");
+    } finally {
+      saveInProgressRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -867,8 +896,14 @@ function JobTicketsPageContent() {
                     <button
                       type="button"
                       onClick={() => {
-                        const defaultCat = activeCategories[0]?.name || "Electrical";
-                        setCreateForm({ ...createForm, category: defaultCat });
+                        const defaultCatalog = catalogs[0];
+                        const defaultCat = defaultCatalog?.categoryName || activeCategories[0]?.name || "Electrical";
+                        setCreateForm({
+                          ...createForm,
+                          category: defaultCat,
+                          serviceCatalogId: defaultCatalog?.id ?? 0,
+                          service: defaultCatalog?.subServiceName ?? "",
+                        });
                         setWorkforceRequirements([{ skill: defaultCat, workersRequired: createForm.workersRequired, pricingModel: createForm.pricingModel, price: parseFloat(createForm.businessPrice) || 0 }]);
                       }}
                       className={`w-1/2 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -899,7 +934,13 @@ function JobTicketsPageContent() {
                         value={createForm.category}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setCreateForm({ ...createForm, category: val });
+                          const firstCatalog = catalogs.find((catalog) => catalog.categoryName === val);
+                          setCreateForm({
+                            ...createForm,
+                            category: val,
+                            serviceCatalogId: firstCatalog?.id ?? 0,
+                            service: firstCatalog?.subServiceName ?? "",
+                          });
                           setWorkforceRequirements([{ skill: val, workersRequired: createForm.workersRequired, pricingModel: createForm.pricingModel, price: parseFloat(createForm.businessPrice) || 0 }]);
                         }}
                         className="w-full border border-gray-200 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a] text-gray-900 font-medium"
@@ -1009,6 +1050,33 @@ function JobTicketsPageContent() {
                     </div>
                   )}
                 </div>
+
+                {createForm.category !== "Multiple Services" && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Select Service</label>
+                    <select
+                      required
+                      value={createForm.serviceCatalogId || ""}
+                      onChange={(e) => {
+                        const catalogId = Number(e.target.value);
+                        const catalog = catalogs.find((item) => item.id === catalogId);
+                        setCreateForm({
+                          ...createForm,
+                          serviceCatalogId: catalogId,
+                          service: catalog?.subServiceName ?? "",
+                        });
+                      }}
+                      className="w-full border border-gray-200 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a] text-gray-900 font-medium"
+                    >
+                      <option value="" disabled>Select an active service</option>
+                      {catalogs
+                        .filter((catalog) => catalog.categoryName === createForm.category)
+                        .map((catalog) => (
+                          <option key={catalog.id} value={catalog.id}>{catalog.subServiceName}</option>
+                        ))}
+                    </select>
+                  </div>
+                )}
 
                 {createForm.category !== "Multiple Services" && (
                   <div>
@@ -1186,10 +1254,11 @@ function JobTicketsPageContent() {
                 </button>
                 <button
                   type="submit"
+                  disabled={isSaving || catalogs.length === 0}
                   style={{ backgroundColor: NAVY }}
-                  className="w-1/2 text-white py-3 rounded-xl font-extrabold shadow-lg hover:opacity-90 transition-opacity"
+                  className="w-1/2 text-white py-3 rounded-xl font-extrabold shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingJobId ? "Save Changes" : "Publish Ticket"}
+                  {isSaving ? "Saving..." : editingJobId ? "Save Changes" : "Publish Ticket"}
                 </button>
               </div>
             </form>

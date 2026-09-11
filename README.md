@@ -102,3 +102,12 @@ Run:
 ## 📄 License
 
 MIT License — see [LICENSE](LICENSE) for details.
+# Service booking lifecycle (MVP)
+
+For standard customer bookings, the backend is the source of truth for the lifecycle:
+
+`PENDING → CONFIRMED → IN_PROGRESS → COMPLETED`
+
+The provider accepts the request, taps **Start Job**, performs the work, then taps **Complete Service**. Completion records the actual final amount independently from the original estimate, together with `PAID` or `PENDING` and, for paid work, `CASH` or `QR_MOBILE`.
+
+Customer booking tabs map directly from persisted status: pending/confirmed bookings are Upcoming, in-progress bookings are Active, and completed/cancelled bookings are History. Provider earnings count only completed bookings whose payment status is `PAID`; completed bookings with pending payment remain in the pending total.

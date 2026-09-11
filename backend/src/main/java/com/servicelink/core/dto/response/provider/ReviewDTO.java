@@ -10,7 +10,8 @@ import java.time.Instant;
 public class ReviewDTO {
 
     private Long    id;
-    private String  customerName;     // from User.fullName / username
+    private String  customerName;     // from UserProfile/User full name
+    private String  customerProfileImage;
     private Integer rating;
     private String  comment;
     private String  serviceName;

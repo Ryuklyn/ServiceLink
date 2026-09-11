@@ -21,6 +21,7 @@ import {
   Loader2,
 } from "lucide-react";
 import api from "@/utils/axios";
+import { toast } from "react-toastify";
 
 type Step =
     | "select"
@@ -38,6 +39,7 @@ interface ReschedulingModalProps {
     id: string;
     providerId: number;
     date: string;
+    appointmentDate?: string;
     time: string;
     provider: string;
   };
@@ -182,6 +184,7 @@ export default function ReschedulingModal({
       setViewMonth(today.getMonth());
       setSubmitError(null);
       setIsSubmitting(false);
+      setSlotsByDate({});
     }
   }, [isOpen, today]);
 
@@ -282,8 +285,9 @@ export default function ReschedulingModal({
         newTimeSlot: PERIOD_TO_BACKEND[selectedPeriod],
         reason: reason || undefined,
       });
+      toast.success("Rescheduled successfully!");
       onRescheduled?.();
-      setStep("success");
+      onClose();
     } catch (err: any) {
       setSubmitError(extractErrorMessage(err, "Could not reschedule. Please try again."));
     } finally {
@@ -301,8 +305,9 @@ export default function ReschedulingModal({
         newTimeSlot: PERIOD_TO_BACKEND[selectedPeriod],
         reason: reason || undefined,
       });
+      toast.success("Rescheduled successfully using a token!");
       onRescheduled?.();
-      setStep("success");
+      onClose();
     } catch (err: any) {
       setSubmitError(extractErrorMessage(err, "Could not use token. Please try again."));
       setStep("select");
@@ -380,6 +385,8 @@ export default function ReschedulingModal({
           </div>
       ) : null;
 
+  const dotColors = ["#10b981", "#3b82f6", "#f59e0b"];
+
   const renderCalendar = (compact: boolean) => (
       <div className={`border border-gray-200 rounded-xl bg-white ${compact ? "p-2" : "p-2.5"}`}>
         <div className="flex items-center justify-between mb-2 px-1">
@@ -403,12 +410,12 @@ export default function ReschedulingModal({
             const past = isDateInPast(day);
             const todayFlag = isToday(day);
             const selected = selectedDate === day;
+            const cellDate = new Date(viewYear, viewMonth, day);
+            const cellDateISO = isoKey(cellDate);
+            const isCurrentAppointmentDate = cellDateISO === currentBooking.appointmentDate;
             const daySlots = getSlotsForDate(day);
-            // A day still counts as having an open slot only if at least one
-            // of its periods is both available AND not already elapsed (for today).
-            const hasOpenSlot = daySlots.some(
-                (s) => s.available && !isPeriodElapsed(day, timePeriods.find((p) => p.id === s.period)!.endHour)
-            );
+            const availSlots = daySlots.filter((s) => s.available && !isPeriodElapsed(day, timePeriods.find((p) => p.id === s.period)!.endHour));
+            const hasOpenSlot = availSlots.length > 0;
             const disabled = past || !hasOpenSlot;
 
             return (
@@ -424,20 +431,45 @@ export default function ReschedulingModal({
                       disabled
                           ? "text-gray-300 cursor-not-allowed"
                           : selected
-                              ? "bg-blue-600 text-white"
-                              : todayFlag
-                                  ? "border border-[#1e3a8a] text-[#1e3a8a]"
-                                  : "text-gray-700 hover:bg-gray-100"
+                              ? "bg-[#1e3a8a] text-white"
+                              : isCurrentAppointmentDate
+                                  ? "border-2 border-dashed border-[#e8683f] text-[#e8683f]"
+                                  : todayFlag
+                                      ? "border border-[#1e3a8a] text-[#1e3a8a]"
+                                      : "text-gray-700 hover:bg-gray-100"
                   }`}
               >
                 {day}
               </span>
-                  {!past && (
-                      <span className={`w-1 h-1 rounded-full ${hasOpenSlot ? "bg-emerald-500" : "bg-red-300"}`} />
+                  {hasOpenSlot && !past && (
+                      <div className="flex items-center gap-0.5 mt-0.5 justify-center">
+                        {availSlots.map((slot, idx) => (
+                            <span
+                                key={slot.period}
+                                className="w-1 h-1 rounded-full"
+                                style={{
+                                  backgroundColor: selected
+                                      ? "rgba(255,255,255,0.7)"
+                                      : dotColors[slot.period === "morning" ? 0 : slot.period === "afternoon" ? 1 : 2],
+                                }}
+                            />
+                        ))}
+                      </div>
                   )}
                 </button>
             );
           })}
+        </div>
+        {/* Legend */}
+        <div className="flex items-center justify-center gap-4 mt-3 pt-2 border-t border-gray-100 text-[9px] text-gray-500 font-medium">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-[#e8683f]" />
+            <span>Current Date</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+            <span>Slots Available</span>
+          </div>
         </div>
       </div>
   );
@@ -469,7 +501,7 @@ export default function ReschedulingModal({
                             disabled
                                 ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
                                 : isActive
-                                    ? "border-blue-600 bg-blue-600 text-white font-bold"
+                                    ? "border-[#1e3a8a] bg-[#1e3a8a] text-white font-bold"
                                     : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                         }`}
                     >

@@ -20,6 +20,9 @@ const STATUS_OPTIONS: { value: TransactionStatus | "ALL"; label: string }[] = [
     { value: "SUCCESS", label: "Success" },
     { value: "FAILED", label: "Failed" },
     { value: "INITIATED", label: "Initiated" },
+    { value: "PENDING", label: "Pending" },
+    { value: "CANCELLED", label: "Cancelled" },
+    { value: "REFUNDED", label: "Refunded" },
 ];
 
 export default function PaymentAuditLogTable() {
@@ -97,18 +100,20 @@ export default function PaymentAuditLogTable() {
                     <thead>
                     <tr className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100">
                         <th className="px-4 py-3">Reference ID</th>
-                        <th className="px-4 py-3">Provider Name</th>
+                        <th className="px-4 py-3">Provider</th>
+                        <th className="px-4 py-3">Gateway Transaction</th>
+                        <th className="px-4 py-3">Plan</th>
                         <th className="px-4 py-3">Gateway</th>
                         <th className="px-4 py-3">Amount</th>
                         <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Timestamp</th>
+                        <th className="px-4 py-3">Initiated / Completed</th>
                     </tr>
                     </thead>
                     <tbody>
                     {isLoading &&
                         Array.from({ length: filters.size }).map((_, i) => (
                             <tr key={i} className="border-b border-slate-50 animate-pulse">
-                                <td className="px-4 py-4" colSpan={6}>
+                                <td className="px-4 py-4" colSpan={8}>
                                     <div className="h-4 bg-slate-100 rounded w-full" />
                                 </td>
                             </tr>
@@ -116,7 +121,7 @@ export default function PaymentAuditLogTable() {
 
                     {!isLoading && status === "failed" && (
                         <tr>
-                            <td colSpan={6} className="px-4 py-8 text-center text-red-500">
+                            <td colSpan={8} className="px-4 py-8 text-center text-red-500">
                                 {error}
                             </td>
                         </tr>
@@ -124,7 +129,7 @@ export default function PaymentAuditLogTable() {
 
                     {!isLoading && status === "succeeded" && rows.length === 0 && (
                         <tr>
-                            <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                            <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
                                 No transactions match these filters.
                             </td>
                         </tr>
@@ -137,16 +142,27 @@ export default function PaymentAuditLogTable() {
                                 <td className="px-4 py-3 font-semibold text-blue-600">{tx.referenceId}</td>
                                 <td className="px-4 py-3">
                                     <p className="font-medium text-slate-800">{tx.providerName}</p>
+                                    <p className="text-[11px] text-slate-400">{tx.providerEmail}</p>
+                                    <p className="text-[10px] text-slate-400">Provider #{tx.providerId}</p>
+                                </td>
+                                <td className="px-4 py-3 font-mono text-[11px] text-slate-600">
+                                    {tx.gatewayTransactionId ?? "—"}
+                                </td>
+                                <td className="px-4 py-3 text-slate-600">
+                                    {tx.purchasedPlanType?.replace("_", " ") ?? "—"}
                                 </td>
                                 <td className="px-4 py-3">
                                     <GatewayBadge gateway={tx.gateway} />
                                 </td>
-                                <td className="px-4 py-3 text-slate-700 font-medium">{formatCurrency(tx.amount)}</td>
+                                <td className="px-4 py-3 text-slate-700 font-medium">{formatCurrency(tx.amountNpr)}</td>
                                 <td className="px-4 py-3">
                                     <TransactionStatusBadge status={tx.status} />
                                 </td>
                                 <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
-                                    {formatDateTime(tx.createdAt)}
+                                    <p>{formatDateTime(tx.initiatedAt)}</p>
+                                    <p className="text-[10px] text-slate-400">
+                                        {tx.completedAt ? `Completed ${formatDateTime(tx.completedAt)}` : "Not completed"}
+                                    </p>
                                 </td>
                             </tr>
                         ))}

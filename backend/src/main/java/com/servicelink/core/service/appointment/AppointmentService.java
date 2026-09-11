@@ -1,5 +1,8 @@
 package com.servicelink.core.service.appointment;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.servicelink.core.dto.request.appointment.AppointmentRequestDTO;
 import com.servicelink.core.dto.request.appointment.AppointmentStatusUpdateDTO;
 import com.servicelink.core.dto.response.appointment.AppointmentResponseDTO;
@@ -11,6 +14,7 @@ import com.servicelink.core.exception.ResourceNotFoundException;
 import com.servicelink.core.mapper.appointment.AppointmentMapper;
 import com.servicelink.core.model.appointment.Appointment;
 import com.servicelink.core.model.appointment.AppointmentStatus;
+import com.servicelink.core.model.appointment.AppointmentPaymentStatus;
 import com.servicelink.core.model.notification.NotificationCategory;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.ProviderService;
@@ -39,6 +43,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 @Slf4j
 @Service
@@ -54,6 +60,7 @@ public class AppointmentService {
     private final UserRepository userRepo;
     private final NotificationService notificationService;
     private final JobAssignmentRepository jobAssignmentRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ─────────────────────────────────────────────────────────────────────────
     // CUSTOMER-FACING
@@ -100,7 +107,37 @@ public class AppointmentService {
             throw new ConflictException("The provider is booked for a ServiceLink Pro job during this time slot.", "PRO_JOB_CONFLICT");
         }
 
-        int calculatedPrice = pricingService.calculateTotalPrice(providerService, req);
+        List<AppointmentRequestDTO.ServiceSelectionDTO> selections = req.getSelectedServices();
+        if (selections == null || selections.isEmpty()) {
+            AppointmentRequestDTO.ServiceSelectionDTO selection = new AppointmentRequestDTO.ServiceSelectionDTO();
+            selection.setServiceCatalogId(req.getServiceCatalogId());
+            selection.setAreaSqFt(req.getAreaSqFt());
+            selection.setWallCount(req.getWallCount());
+            selection.setItemCount(req.getItemCount());
+            selection.setHours(req.getHours());
+            selections = List.of(selection);
+        }
+
+        List<Map<String, Object>> selectedServiceSnapshot = new ArrayList<>();
+        int calculatedPrice = 0;
+        for (AppointmentRequestDTO.ServiceSelectionDTO selection : selections) {
+            ServiceCatalog selectedCatalog = catalogRepo.findByIdAndIsActiveTrue(selection.getServiceCatalogId())
+                    .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", selection.getServiceCatalogId()));
+            ProviderService selectedProviderService = providerServiceRepo
+                    .findAvailableByProviderAndCatalog(req.getProviderId(), selection.getServiceCatalogId())
+                    .orElseThrow(() -> new BusinessException(
+                            "Provider does not offer selected service: " + selectedCatalog.getSubServiceName(),
+                            "SERVICE_UNAVAILABLE"));
+            AppointmentRequestDTO priceRequest = requestForSelection(req, selection);
+            int serviceEstimate = pricingService.calculateTotalPrice(selectedProviderService, priceRequest);
+            calculatedPrice += serviceEstimate;
+
+            Map<String, Object> snapshot = new LinkedHashMap<>();
+            snapshot.put("serviceCatalogId", selectedCatalog.getId());
+            snapshot.put("subServiceName", selectedCatalog.getSubServiceName());
+            snapshot.put("estimatedAmount", serviceEstimate);
+            selectedServiceSnapshot.add(snapshot);
+        }
         Appointment appointment = Appointment.builder()
                 .provider(provider)
                 .serviceCatalog(catalog)
@@ -122,6 +159,7 @@ public class AppointmentService {
                 .pricingUnit(catalog.getPricingUnit())
                 .estimatedAmount(calculatedPrice)
                 .totalPrice(calculatedPrice)
+                .selectedServicesJson(writeSelectedServices(selectedServiceSnapshot))
                 .status(AppointmentStatus.PENDING)
                 .build();
 
@@ -134,7 +172,7 @@ public class AppointmentService {
                 Role.PROVIDER,
                 NotificationCategory.BOOKING,
                 "New Appointment Request",
-                "New booking request: " + catalog.getCategory() + " – " + catalog.getSubServiceName()
+                "New booking request: " + catalog.getCategory().getName() + " – " + catalog.getSubServiceName()
                         + " on " + req.getAppointmentDate(),
                 "/dashboard/provider/appointments/" + saved.getId()
         );
@@ -317,23 +355,7 @@ public class AppointmentService {
         }
 
         if (currentStatus == AppointmentStatus.CONFIRMED) {
-            if (nextStatus == AppointmentStatus.CONFIRMED) {
-                if ("CONFIRMED".equals(currentOpStatus)) {
-                    if (!"ON_THE_WAY".equals(nextOpStatus)) {
-                        throw new BusinessException("From CONFIRMED, the next operational status must be ON_THE_WAY", "INVALID_STATUS_TRANSITION");
-                    }
-                } else if ("ON_THE_WAY".equals(currentOpStatus)) {
-                    if (!"ARRIVED".equals(nextOpStatus)) {
-                        throw new BusinessException("From ON_THE_WAY, the next operational status must be ARRIVED", "INVALID_STATUS_TRANSITION");
-                    }
-                } else {
-                    throw new BusinessException("Cannot transition within CONFIRMED when status is already " + currentOpStatus, "INVALID_STATUS_TRANSITION");
-                }
-            } else if (nextStatus == AppointmentStatus.IN_PROGRESS) {
-                if (!"ARRIVED".equals(currentOpStatus)) {
-                    throw new BusinessException("Cannot start job before arriving", "INVALID_STATUS_TRANSITION");
-                }
-            } else {
+            if (nextStatus != AppointmentStatus.IN_PROGRESS) {
                 throw new BusinessException("Invalid status transition from CONFIRMED to " + nextStatus, "INVALID_STATUS_TRANSITION");
             }
             return;
@@ -381,15 +403,50 @@ public class AppointmentService {
                         "/dashboard/user/bookings"
                 );
             }
-            case IN_PROGRESS -> appointment.setStartedAt(LocalDateTime.now());
+            case IN_PROGRESS -> {
+                appointment.setStartedAt(LocalDateTime.now());
+                notificationService.sendPrivateNotification(
+                        appointment.getCustomerId(),
+                        Role.CUSTOMER,
+                        NotificationCategory.BOOKING,
+                        "Service Started",
+                        "Your service has started.",
+                        "/dashboard/user/bookings"
+                );
+            }
             case COMPLETED -> {
-                appointment.setCompletedAt(LocalDateTime.now());
-                if (req.getFinalAmount() != null) {
-                    appointment.setFinalAmount(req.getFinalAmount());
-                    appointment.setTotalPrice(req.getFinalAmount());
-                } else {
-                    appointment.setFinalAmount(appointment.getTotalPrice());
+                if (req.getCompletedServices() != null && !req.getCompletedServices().isEmpty()) {
+                    List<Long> bookedServiceIds = selectedServiceIds(appointment);
+                    List<Long> completedServiceIds = req.getCompletedServices().stream()
+                            .map(AppointmentStatusUpdateDTO.ServiceCompletionDTO::getServiceCatalogId)
+                            .distinct()
+                            .toList();
+                    if (completedServiceIds.size() != req.getCompletedServices().size()
+                            || !bookedServiceIds.equals(completedServiceIds)) {
+                        throw new BusinessException(
+                                "Final amounts must be provided once for every booked service",
+                                "SERVICE_COMPLETION_MISMATCH");
+                    }
+                    int serviceTotal = req.getCompletedServices().stream()
+                            .mapToInt(AppointmentStatusUpdateDTO.ServiceCompletionDTO::getFinalAmount)
+                            .sum();
+                    req.setFinalAmount(serviceTotal);
+                    appointment.setCompletedServicesJson(writeCompletedServices(req.getCompletedServices()));
                 }
+                if (req.getFinalAmount() == null) {
+                    throw new BusinessException("Final amount is required to complete the service", "FINAL_AMOUNT_REQUIRED");
+                }
+                if (req.getPaymentStatus() == null) {
+                    throw new BusinessException("Payment status is required to complete the service", "PAYMENT_STATUS_REQUIRED");
+                }
+                if (req.getPaymentStatus() == AppointmentPaymentStatus.PAID && req.getPaymentMethod() == null) {
+                    throw new BusinessException("Payment method is required when payment is received", "PAYMENT_METHOD_REQUIRED");
+                }
+                appointment.setCompletedAt(LocalDateTime.now());
+                appointment.setFinalAmount(req.getFinalAmount());
+                appointment.setPaymentStatus(req.getPaymentStatus());
+                appointment.setPaymentMethod(req.getPaymentStatus() == AppointmentPaymentStatus.PAID ? req.getPaymentMethod() : null);
+                appointment.setCompletionNote(req.getCompletionNote());
                 if (req.getMeasuredQuantity() != null && appointment.getPricingUnit() != null) {
                     int qty = req.getMeasuredQuantity();
                     switch (appointment.getPricingUnit()) {
@@ -398,11 +455,6 @@ public class AppointmentService {
                         case PER_ITEM -> appointment.setItemCount(qty);
                         case PER_HOUR -> appointment.setHours(qty);
                         default -> {}
-                    }
-                    if (req.getFinalAmount() == null && appointment.getProviderRate() != null) {
-                        int finalAmt = appointment.getProviderRate() * qty;
-                        appointment.setFinalAmount(finalAmt);
-                        appointment.setTotalPrice(finalAmt);
                     }
                 }
                 incrementProviderJobCount(appointment.getProvider());
@@ -473,9 +525,36 @@ public class AppointmentService {
         appointment.setProviderRate(providerService.getCustomPrice());
         appointment.setPricingUnit(catalog.getPricingUnit());
 
-        int calculatedPrice = pricingService.calculateTotalPrice(providerService, req);
+        int calculatedPrice = 0;
+        List<Map<String, Object>> selectedServiceSnapshot = new ArrayList<>();
+        List<AppointmentRequestDTO.ServiceSelectionDTO> selections = req.getSelectedServices();
+        if (selections == null || selections.isEmpty()) {
+            AppointmentRequestDTO.ServiceSelectionDTO selection = new AppointmentRequestDTO.ServiceSelectionDTO();
+            selection.setServiceCatalogId(req.getServiceCatalogId());
+            selection.setAreaSqFt(req.getAreaSqFt());
+            selection.setWallCount(req.getWallCount());
+            selection.setItemCount(req.getItemCount());
+            selection.setHours(req.getHours());
+            selections = List.of(selection);
+        }
+        for (AppointmentRequestDTO.ServiceSelectionDTO selection : selections) {
+            ServiceCatalog selectedCatalog = catalogRepo.findByIdAndIsActiveTrue(selection.getServiceCatalogId())
+                    .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", selection.getServiceCatalogId()));
+            ProviderService selectedProviderService = providerServiceRepo
+                    .findAvailableByProviderAndCatalog(req.getProviderId(), selection.getServiceCatalogId())
+                    .orElseThrow(() -> new BusinessException("Provider does not offer selected service", "SERVICE_UNAVAILABLE"));
+            int serviceEstimate = pricingService.calculateTotalPrice(
+                    selectedProviderService, requestForSelection(req, selection));
+            calculatedPrice += serviceEstimate;
+            Map<String, Object> snapshot = new LinkedHashMap<>();
+            snapshot.put("serviceCatalogId", selectedCatalog.getId());
+            snapshot.put("subServiceName", selectedCatalog.getSubServiceName());
+            snapshot.put("estimatedAmount", serviceEstimate);
+            selectedServiceSnapshot.add(snapshot);
+        }
         appointment.setEstimatedAmount(calculatedPrice);
         appointment.setTotalPrice(calculatedPrice);
+        appointment.setSelectedServicesJson(writeSelectedServices(selectedServiceSnapshot));
 
         Appointment saved = appointmentRepo.save(appointment);
         User customer = userRepo.findById(customerId).orElse(null);
@@ -505,6 +584,7 @@ public class AppointmentService {
 
         return Map.of(
             "appointmentId", appointment.getId(),
+            "estimatedAmount", appointment.getEstimatedAmount() != null ? appointment.getEstimatedAmount() : 0,
             "finalAmount", finalAmt != null ? finalAmt : 0,
             "measuredQuantity", qty != null ? qty : 0,
             "confirmedAt", appointment.getCompletedAt() != null ? appointment.getCompletedAt().toString() : LocalDateTime.now().toString()
@@ -531,5 +611,47 @@ public class AppointmentService {
                 .map(Provider::getId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Active provider profile not found for user id: " + userId));
+    }
+
+    private AppointmentRequestDTO requestForSelection(
+            AppointmentRequestDTO original,
+            AppointmentRequestDTO.ServiceSelectionDTO selection) {
+        AppointmentRequestDTO request = new AppointmentRequestDTO();
+        request.setAreaSqFt(selection.getAreaSqFt());
+        request.setWallCount(selection.getWallCount());
+        request.setItemCount(selection.getItemCount());
+        request.setHours(selection.getHours());
+        return request;
+    }
+
+    private String writeSelectedServices(List<Map<String, Object>> services) {
+        try {
+            return objectMapper.writeValueAsString(services);
+        } catch (JsonProcessingException exception) {
+            throw new BusinessException("Could not save selected services", "SELECTED_SERVICES_INVALID");
+        }
+    }
+
+    private List<Long> selectedServiceIds(Appointment appointment) {
+        if (appointment.getSelectedServicesJson() == null || appointment.getSelectedServicesJson().isBlank()) {
+            return List.of(appointment.getServiceCatalog().getId());
+        }
+        try {
+            List<Map<String, Object>> rows = objectMapper.readValue(
+                    appointment.getSelectedServicesJson(), new TypeReference<>() {});
+            return rows.stream()
+                    .map(row -> ((Number) row.get("serviceCatalogId")).longValue())
+                    .toList();
+        } catch (JsonProcessingException exception) {
+            throw new BusinessException("Booked service data is invalid", "SELECTED_SERVICES_INVALID");
+        }
+    }
+
+    private String writeCompletedServices(List<AppointmentStatusUpdateDTO.ServiceCompletionDTO> services) {
+        try {
+            return objectMapper.writeValueAsString(services);
+        } catch (JsonProcessingException exception) {
+            throw new BusinessException("Could not save service completion amounts", "SERVICE_COMPLETION_INVALID");
+        }
     }
 }

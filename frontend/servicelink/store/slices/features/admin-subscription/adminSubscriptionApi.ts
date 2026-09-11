@@ -33,7 +33,7 @@
 // adminAccessToken instead of the regular user accessToken, with its own
 // refresh-token queue and redirect to /admin/login on a failed refresh.
 // Renamed to apiClient on import only for local readability.
-import apiClient, { ApiError } from "@/lib/api/client";
+import apiClient from "@/lib/api/client";
 import type {
     AuditLogFilters,
     ExtendSubscriptionPayload,

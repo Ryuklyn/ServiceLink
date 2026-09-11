@@ -59,6 +59,16 @@ public class Appointment {
     @Column(name = "scheduled_at", nullable = false, updatable = false)
     private LocalDateTime scheduledAt;
 
+    @Column(name = "previous_appointment_date")
+    private LocalDate previousAppointmentDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "previous_time_slot", length = 20)
+    private TimeSlot previousTimeSlot;
+
+    @Column(name = "rescheduled_at")
+    private LocalDateTime rescheduledAt;
+
     @Column(name = "estimated_start_time")
     private LocalTime estimatedStartTime;
 
@@ -115,6 +125,25 @@ public class Appointment {
 
     @Column(name = "final_amount")
     private Integer finalAmount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "service_payment_status", length = 20)
+    private AppointmentPaymentStatus paymentStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "service_payment_method", length = 20)
+    private AppointmentPaymentMethod paymentMethod;
+
+    @Column(name = "completion_note", columnDefinition = "TEXT")
+    private String completionNote;
+
+    /** JSON snapshot of every selected sub-service and its calculated estimate. */
+    @Column(name = "selected_services_json", columnDefinition = "TEXT")
+    private String selectedServicesJson;
+
+    /** JSON snapshot of per-service final amounts recorded at completion. */
+    @Column(name = "completed_services_json", columnDefinition = "TEXT")
+    private String completedServicesJson;
 
     @Column(name = "provider_rate")
     private Integer providerRate;

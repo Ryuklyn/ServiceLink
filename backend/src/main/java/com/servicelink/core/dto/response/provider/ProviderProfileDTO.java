@@ -54,6 +54,8 @@ public class ProviderProfileDTO {
     private Double  latitude;
     private Double  longitude;
     private Integer travelRadiusKm;
+    /** Administrative KYC origin used for map geocoding; intentionally excludes tole/house detail. */
+    private String  kycMapAddress;
 
     // Performance
     private Double  averageRating;

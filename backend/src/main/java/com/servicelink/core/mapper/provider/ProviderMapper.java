@@ -54,6 +54,7 @@ public class ProviderMapper {
                 .latitude(p.getLatitude())
                 .longitude(p.getLongitude())
                 .travelRadiusKm(p.getTravelRadiusKm())
+                .kycMapAddress(toSafeKycMapAddress(p))
                 .averageRating(p.getAverageRating())
                 .totalReviews(p.getTotalReviews())
                 .totalJobs(p.getTotalJobs())
@@ -71,6 +72,21 @@ public class ProviderMapper {
                 .build();
     }
 
+    private String toSafeKycMapAddress(Provider provider) {
+        var kyc = provider.getKycSubmission();
+        if (kyc == null) return null;
+
+        return java.util.stream.Stream.of(
+                        kyc.getMunicipality(),
+                        kyc.getWard() == null || kyc.getWard().isBlank() ? null : "Ward " + kyc.getWard(),
+                        kyc.getDistrict(),
+                        kyc.getProvince(),
+                        "Nepal")
+                .filter(value -> value != null && !value.isBlank())
+                .distinct()
+                .collect(java.util.stream.Collectors.joining(", "));
+    }
+
     // ── Portfolio ─────────────────────────────────────────────────────────────
 
     public PortfolioResponseDTO toPortfolioDTO(Portfolio portfolio) {
@@ -81,12 +97,19 @@ public class ProviderMapper {
 
     public ReviewDTO toReviewDTO(Review review) {
         User customer = review.getCustomer();
-        // Use username or full name depending on your User model fields
-        String displayName = customer != null ? customer.getFullName() : "Anonymous";
+        String profileName = customer != null && customer.getProfile() != null
+                ? customer.getProfile().getFullName() : null;
+        String displayName = profileName != null && !profileName.isBlank()
+                ? profileName
+                : customer != null && customer.getFullName() != null && !customer.getFullName().isBlank()
+                    ? customer.getFullName() : "Customer";
+        String profileImage = customer != null && customer.getProfile() != null
+                ? customer.getProfile().getProfileImage() : null;
 
         return ReviewDTO.builder()
                 .id(review.getId())
                 .customerName(displayName)
+                .customerProfileImage(profileImage)
                 .rating(review.getRating())
                 .comment(review.getComment())
                 .serviceName(review.getServiceName())

@@ -1,10 +1,13 @@
 package com.servicelink.core.service.provider;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.servicelink.core.dto.response.provider.ProviderAnalyticsResponseDTO;
 import com.servicelink.core.dto.response.provider.ProviderEarningsResponseDTO;
 import com.servicelink.core.exception.ResourceNotFoundException;
 import com.servicelink.core.model.appointment.Appointment;
 import com.servicelink.core.model.appointment.AppointmentStatus;
+import com.servicelink.core.model.appointment.AppointmentPaymentStatus;
 import com.servicelink.core.model.business.Organization;
 import com.servicelink.core.model.business.job.JobAssignment;
 import com.servicelink.core.model.business.job.ProJobStatus;
@@ -45,6 +48,7 @@ public class ProviderInsightsService {
     private final ReviewRepository reviewRepo;
     private final UserRepository userRepo;
     private final OrganizationRepository organizationRepo;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final ZoneId NEPAL_ZONE = ZoneId.of("Asia/Kathmandu");
     private static final List<String> COLORS = List.of("#e8683f", "#1e3a8a", "#3b6fd4", "#f4a27a", "#10b981", "#6366f1", "#f59e0b");
@@ -97,7 +101,7 @@ public class ProviderInsightsService {
                 .filter(a -> a.getConfirmedAt() != null)
                 .mapToLong(a -> Duration.between(a.getScheduledAt(), a.getConfirmedAt()).toMinutes())
                 .average()
-                .orElse(4.0); // fallback default response time
+                .orElse(0.0);
 
         ProviderAnalyticsResponseDTO.Summary summary = ProviderAnalyticsResponseDTO.Summary.builder()
                 .totalBookings(totalBookings)
@@ -116,7 +120,7 @@ public class ProviderInsightsService {
         List<List<Integer>> peakHours = generatePeakHoursHeatmap(appointments, assignments);
 
         // 6. Ratings
-        double avgRating = reviews.stream().mapToInt(Review::getRating).average().orElse(5.0);
+        double avgRating = reviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
         int totalReviews = reviews.size();
         List<ProviderAnalyticsResponseDTO.RatingItem> distribution = new ArrayList<>();
         for (int star = 5; star >= 1; star--) {
@@ -133,6 +137,18 @@ public class ProviderInsightsService {
 
         // 7. Coverage map
         List<ProviderAnalyticsResponseDTO.CoverageItem> coverage = generateCoverageMap(provider, appointments, assignments);
+        List<String> coverageDistricts = provider.getCoveredDistricts() == null
+                ? Collections.emptyList()
+                : Arrays.stream(provider.getCoveredDistricts().split(","))
+                        .map(String::trim)
+                        .filter(value -> !value.isBlank())
+                        .toList();
+        ProviderAnalyticsResponseDTO.CoverageArea coverageArea = ProviderAnalyticsResponseDTO.CoverageArea.builder()
+                .latitude(provider.getLatitude())
+                .longitude(provider.getLongitude())
+                .radiusKm(provider.getTravelRadiusKm())
+                .districts(coverageDistricts)
+                .build();
 
         return ProviderAnalyticsResponseDTO.builder()
                 .summary(summary)
@@ -141,6 +157,7 @@ public class ProviderInsightsService {
                 .peakHours(peakHours)
                 .ratings(ratingsDto)
                 .coverage(coverage)
+                .coverageArea(coverageArea)
                 .build();
     }
 
@@ -153,13 +170,14 @@ public class ProviderInsightsService {
         LocalDate startDate = dates[0];
         LocalDate endDate = dates[1];
 
-        List<Appointment> appointments = appointmentRepo.findByProviderIdAndDateRange(providerId, startDate, endDate);
+        List<Appointment> appointments = appointmentRepo.findCompletedByProviderIdAndCompletedAtRange(
+                providerId, startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay());
         List<JobAssignment> assignments = jobAssignmentRepo.findByProviderIdAndDateRange(providerId, startDate, endDate);
 
         // 1. Calculate Summary Metrics
         long completedB2cEarnings = appointments.stream()
-                .filter(a -> a.getStatus() == AppointmentStatus.COMPLETED)
-                .mapToLong(a -> a.getFinalAmount() != null ? a.getFinalAmount() : (a.getTotalPrice() != null ? a.getTotalPrice() : 0L))
+                .filter(a -> a.getStatus() == AppointmentStatus.COMPLETED && a.getPaymentStatus() == AppointmentPaymentStatus.PAID)
+                .mapToLong(a -> a.getFinalAmount() != null ? a.getFinalAmount() : 0L)
                 .sum();
 
         long completedB2bEarnings = assignments.stream()
@@ -177,8 +195,8 @@ public class ProviderInsightsService {
 
         // Pending amount
         long pendingB2c = appointments.stream()
-                .filter(a -> a.getStatus() != AppointmentStatus.COMPLETED && a.getStatus() != AppointmentStatus.CANCELLED)
-                .mapToLong(a -> a.getFinalAmount() != null ? a.getFinalAmount() : (a.getTotalPrice() != null ? a.getTotalPrice() : 0L))
+                .filter(a -> a.getStatus() == AppointmentStatus.COMPLETED && a.getPaymentStatus() == AppointmentPaymentStatus.PENDING)
+                .mapToLong(a -> a.getFinalAmount() != null ? a.getFinalAmount() : 0L)
                 .sum();
 
         long pendingB2b = assignments.stream()
@@ -400,11 +418,6 @@ public class ProviderInsightsService {
             Provider provider, List<Appointment> appointments, List<JobAssignment> assignments) {
 
         List<ProviderAnalyticsResponseDTO.CoverageItem> items = new ArrayList<>();
-        double baseLat = provider.getLatitude() != null ? provider.getLatitude() : 27.7172;
-        double baseLng = provider.getLongitude() != null ? provider.getLongitude() : 85.324;
-
-        Random rand = new Random(provider.getId());
-
         // B2B jobs have real coordinates
         for (JobAssignment a : assignments) {
             Double lat = a.getJobTicket().getLatitude();
@@ -412,17 +425,6 @@ public class ProviderInsightsService {
             if (lat != null && lng != null) {
                 items.add(new ProviderAnalyticsResponseDTO.CoverageItem(lat, lng, a.getJobTicket().getTitle()));
             }
-        }
-
-        // B2C appointments have only address, generate secure minor randomized offset markers centered on base
-        for (Appointment a : appointments) {
-            double offsetLat = (rand.nextDouble() - 0.5) * 0.03;
-            double offsetLng = (rand.nextDouble() - 0.5) * 0.03;
-            items.add(new ProviderAnalyticsResponseDTO.CoverageItem(
-                    baseLat + offsetLat,
-                    baseLng + offsetLng,
-                    a.getServiceCatalog().getSubServiceName() + " (" + a.getAddress() + ")"
-            ));
         }
 
         return items;
@@ -439,8 +441,8 @@ public class ProviderInsightsService {
             days.forEach(d -> trendMap.put(d, 0L));
 
             for (Appointment a : appointments) {
-                if (a.getStatus() == AppointmentStatus.COMPLETED) {
-                    String dayLabel = getDayLabel(a.getAppointmentDate());
+                if (a.getStatus() == AppointmentStatus.COMPLETED && a.getPaymentStatus() == AppointmentPaymentStatus.PAID) {
+                    String dayLabel = getDayLabel(a.getCompletedAt().toLocalDate());
                     long amt = a.getFinalAmount() != null ? a.getFinalAmount() : (a.getTotalPrice() != null ? a.getTotalPrice() : 0);
                     trendMap.put(dayLabel, trendMap.getOrDefault(dayLabel, 0L) + amt);
                 }
@@ -458,8 +460,8 @@ public class ProviderInsightsService {
                 trendMap.put(String.valueOf(i), 0L);
             }
             for (Appointment a : appointments) {
-                if (a.getStatus() == AppointmentStatus.COMPLETED) {
-                    String dayStr = String.valueOf(a.getAppointmentDate().getDayOfMonth());
+                if (a.getStatus() == AppointmentStatus.COMPLETED && a.getPaymentStatus() == AppointmentPaymentStatus.PAID) {
+                    String dayStr = String.valueOf(a.getCompletedAt().getDayOfMonth());
                     long amt = a.getFinalAmount() != null ? a.getFinalAmount() : (a.getTotalPrice() != null ? a.getTotalPrice() : 0);
                     trendMap.put(dayStr, trendMap.getOrDefault(dayStr, 0L) + amt);
                 }
@@ -475,16 +477,14 @@ public class ProviderInsightsService {
             LocalDate m1 = startDate;
             LocalDate m2 = startDate.plusMonths(1);
             LocalDate m3 = startDate.plusMonths(2);
-            LocalDate m4 = startDate.plusMonths(3);
 
             trendMap.put(m1.getMonth().name().substring(0, 3), 0L);
             trendMap.put(m2.getMonth().name().substring(0, 3), 0L);
             trendMap.put(m3.getMonth().name().substring(0, 3), 0L);
-            trendMap.put(m4.getMonth().name().substring(0, 3), 0L);
 
             for (Appointment a : appointments) {
-                if (a.getStatus() == AppointmentStatus.COMPLETED) {
-                    String monthLabel = a.getAppointmentDate().getMonth().name().substring(0, 3);
+                if (a.getStatus() == AppointmentStatus.COMPLETED && a.getPaymentStatus() == AppointmentPaymentStatus.PAID) {
+                    String monthLabel = a.getCompletedAt().getMonth().name().substring(0, 3);
                     long amt = a.getFinalAmount() != null ? a.getFinalAmount() : (a.getTotalPrice() != null ? a.getTotalPrice() : 0);
                     trendMap.put(monthLabel, trendMap.getOrDefault(monthLabel, 0L) + amt);
                 }
@@ -501,8 +501,8 @@ public class ProviderInsightsService {
             months.forEach(m -> trendMap.put(m, 0L));
 
             for (Appointment a : appointments) {
-                if (a.getStatus() == AppointmentStatus.COMPLETED) {
-                    String monthLabel = months.get(a.getAppointmentDate().getMonthValue() - 1);
+                if (a.getStatus() == AppointmentStatus.COMPLETED && a.getPaymentStatus() == AppointmentPaymentStatus.PAID) {
+                    String monthLabel = months.get(a.getCompletedAt().getMonthValue() - 1);
                     long amt = a.getFinalAmount() != null ? a.getFinalAmount() : (a.getTotalPrice() != null ? a.getTotalPrice() : 0);
                     trendMap.put(monthLabel, trendMap.getOrDefault(monthLabel, 0L) + amt);
                 }
@@ -527,10 +527,16 @@ public class ProviderInsightsService {
         Map<String, Long> serviceRevenue = new HashMap<>();
 
         for (Appointment a : appointments) {
-            if (a.getStatus() == AppointmentStatus.COMPLETED) {
-                String subservice = a.getServiceCatalog().getSubServiceName();
-                long amt = a.getFinalAmount() != null ? a.getFinalAmount() : (a.getTotalPrice() != null ? a.getTotalPrice() : 0);
-                serviceRevenue.put(subservice, serviceRevenue.getOrDefault(subservice, 0L) + amt);
+            if (a.getStatus() == AppointmentStatus.COMPLETED && a.getPaymentStatus() == AppointmentPaymentStatus.PAID) {
+                List<CompletedServiceAmount> completedServices = readCompletedServices(a);
+                if (completedServices.isEmpty()) {
+                    String subservice = a.getServiceCatalog().getSubServiceName();
+                    long amount = a.getFinalAmount() != null ? a.getFinalAmount() : 0L;
+                    serviceRevenue.merge(subservice, amount, Long::sum);
+                } else {
+                    completedServices.forEach(service ->
+                            serviceRevenue.merge(service.subServiceName(), service.finalAmount(), Long::sum));
+                }
             }
         }
 
@@ -577,19 +583,27 @@ public class ProviderInsightsService {
             long amt = a.getFinalAmount() != null ? a.getFinalAmount() : (a.getTotalPrice() != null ? a.getTotalPrice() : 0);
 
             String status = "Pending";
-            if (a.getStatus() == AppointmentStatus.COMPLETED) {
+            if (a.getStatus() == AppointmentStatus.COMPLETED && a.getPaymentStatus() == AppointmentPaymentStatus.PAID) {
                 status = "Paid";
             } else if (a.getStatus() == AppointmentStatus.CANCELLED) {
                 status = "Refunded";
             }
 
+            List<CompletedServiceAmount> completedServices = readCompletedServices(a);
+            String serviceNames = completedServices.isEmpty()
+                    ? a.getServiceCatalog().getSubServiceName()
+                    : completedServices.stream()
+                            .map(CompletedServiceAmount::subServiceName)
+                            .collect(Collectors.joining(", "));
+
             list.add(ProviderEarningsResponseDTO.PaymentItem.builder()
                     .id("BK-2026-" + String.format("%03d", a.getId() % 1000))
                     .customer(cName)
-                    .service(a.getServiceCatalog().getSubServiceName())
-                    .date(a.getAppointmentDate().toString())
+                    .service(serviceNames)
+                    .date((a.getCompletedAt() != null ? a.getCompletedAt().toLocalDate() : a.getAppointmentDate()).toString())
                     .amount("Rs. " + amt)
                     .status(status)
+                    .paymentMethod(a.getPaymentMethod() != null ? a.getPaymentMethod().name() : null)
                     .build());
         }
 
@@ -619,4 +633,24 @@ public class ProviderInsightsService {
         list.sort(Comparator.comparing(ProviderEarningsResponseDTO.PaymentItem::getDate).reversed());
         return list;
     }
+
+    private List<CompletedServiceAmount> readCompletedServices(Appointment appointment) {
+        if (appointment.getCompletedServicesJson() == null || appointment.getCompletedServicesJson().isBlank()) {
+            return Collections.emptyList();
+        }
+        try {
+            List<Map<String, Object>> rows = objectMapper.readValue(
+                    appointment.getCompletedServicesJson(), new TypeReference<>() {});
+            return rows.stream()
+                    .map(row -> new CompletedServiceAmount(
+                            String.valueOf(row.getOrDefault("subServiceName", "Service")),
+                            ((Number) row.getOrDefault("finalAmount", 0)).longValue()))
+                    .toList();
+        } catch (Exception exception) {
+            log.warn("Could not parse completed service amounts for appointment {}", appointment.getId(), exception);
+            return Collections.emptyList();
+        }
+    }
+
+    private record CompletedServiceAmount(String subServiceName, long finalAmount) {}
 }

@@ -59,6 +59,7 @@
 package com.servicelink.core.model.business;
 
 import com.servicelink.core.model.provider.subscription.ProviderSubscription;
+import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -96,6 +97,11 @@ public class PaymentTransaction {
 
     @Column(nullable = false)
     private Long amountNpr;
+
+    /** The plan purchased by this transaction; independent of the current subscription plan. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purchased_plan_type")
+    private SubscriptionPlanType purchasedPlanType;
 
     /** Raw response from gateway stored as JSON string for audit */
     @Column(columnDefinition = "TEXT")

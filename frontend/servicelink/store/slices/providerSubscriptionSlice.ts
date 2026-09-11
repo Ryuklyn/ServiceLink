@@ -36,6 +36,15 @@ const initialState: ProviderSubscriptionState = {
     pendingCheckout: null,
 };
 
+function paymentErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error) return error.message;
+    if (error && typeof error === "object" && "message" in error) {
+        const message = (error as { message?: unknown }).message;
+        if (typeof message === "string") return message;
+    }
+    return fallback;
+}
+
 // ─── Thunks ───────────────────────────────────────────────────────────────────
 
 export const fetchProviderSubscription = createAsyncThunk<
@@ -45,10 +54,8 @@ SubscriptionStatusDTO,
 >("providerSubscription/fetchMe", async (_, { rejectWithValue }) => {
     try {
         return await subscriptionApi.getMySubscription();
-    } catch (err: any) {
-        return rejectWithValue(
-            err?.response?.data?.message ?? err?.message ?? "Failed to load subscription",
-        );
+    } catch (err: unknown) {
+        return rejectWithValue(paymentErrorMessage(err, "Failed to load subscription"));
     }
 });
 
@@ -59,10 +66,8 @@ BillingRecord[],
 >("providerSubscription/fetchTransactions", async (_, { rejectWithValue }) => {
     try {
         return await subscriptionApi.getTransactions();
-    } catch (err: any) {
-        return rejectWithValue(
-            err?.response?.data?.message ?? err?.message ?? "Failed to load billing history",
-        );
+    } catch (err: unknown) {
+        return rejectWithValue(paymentErrorMessage(err, "Failed to load billing history"));
     }
 });
 
@@ -73,24 +78,20 @@ CheckoutResponse,
 >("providerSubscription/checkout", async ({ planType, gateway }, { rejectWithValue }) => {
     try {
         return await subscriptionApi.checkout(planType, gateway);
-    } catch (err: any) {
-        return rejectWithValue(
-            err?.response?.data?.message ?? err?.message ?? "Failed to start checkout",
-        );
+    } catch (err: unknown) {
+        return rejectWithValue(paymentErrorMessage(err, "Failed to start checkout"));
     }
 });
 
 export const verifyPayment = createAsyncThunk<
-{ paymentStatus: string },
+BillingRecord,
 VerifyPaymentPayload,
 { rejectValue: string }
 >("providerSubscription/verify", async (payload, { rejectWithValue }) => {
     try {
         return await subscriptionApi.verify(payload);
-    } catch (err: any) {
-        return rejectWithValue(
-            err?.response?.data?.message ?? err?.message ?? "Payment verification failed",
-        );
+    } catch (err: unknown) {
+        return rejectWithValue(paymentErrorMessage(err, "Payment verification failed"));
     }
 });
 

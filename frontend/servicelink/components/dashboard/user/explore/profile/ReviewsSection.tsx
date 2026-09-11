@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { ProviderData } from "./types";
+import Image from "next/image";
 
 interface ReviewsSectionProps {
   provider: ProviderData;
@@ -61,12 +62,20 @@ export default function ReviewsSection({ provider }: ReviewsSectionProps) {
         {filtered.map((review) => (
           <div key={review.id} className="flex gap-4">
             {/* Avatar */}
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-              style={{ backgroundColor: "#1e3a8a" }}
-            >
-              {review.initials}
-            </div>
+            {review.avatarUrl ? (
+              <Image
+                src={review.avatarUrl}
+                alt={review.name}
+                width={40}
+                height={40}
+                unoptimized
+                className="h-10 w-10 shrink-0 rounded-full border border-slate-200 object-cover"
+              />
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1e3a8a] text-sm font-bold text-white">
+                {review.initials}
+              </div>
+            )}
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">

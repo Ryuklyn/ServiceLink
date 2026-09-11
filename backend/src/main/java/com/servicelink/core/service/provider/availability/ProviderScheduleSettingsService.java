@@ -33,7 +33,6 @@ public class ProviderScheduleSettingsService {
             return repo.findById(providerId).orElseGet(() ->
                     repo.saveAndFlush(ProviderScheduleSettings.builder()
                             .provider(provider)
-                            .providerId(providerId)
                             .build()));
         });
     }

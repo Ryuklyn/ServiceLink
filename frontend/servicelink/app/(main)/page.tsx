@@ -12,7 +12,6 @@ export default function Home() {
 
   return (
     <div className="font-sans antialiased text-gray-900 bg-white min-h-screen flex flex-col">
-      {/*<Navbar />*/}
 
       <main className="flex-grow">
         <Hero />

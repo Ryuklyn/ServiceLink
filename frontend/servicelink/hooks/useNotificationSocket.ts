@@ -24,6 +24,11 @@ export function useNotificationSocket() {
               return;
             }
             dispatch(receiveRealtimeNotification(payload));
+            if (payload?.category === "BOOKING") {
+              window.dispatchEvent(new CustomEvent("servicelink:booking-updated", {
+                detail: payload,
+              }));
+            }
           } catch (e) {
             console.error("Failed to parse WebSocket message body", e);
           }

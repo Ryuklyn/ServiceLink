@@ -191,7 +191,7 @@ export default function SubscriptionPage() {
     const pathStatus = params?.status?.[0]; // "success" | "failure" | undefined
     if (!pathStatus) return;
 
-    setPaymentModal("verifying");
+    Promise.resolve().then(() => setPaymentModal("verifying"));
 
     const run = async () => {
       const pendingRaw = sessionStorage.getItem("sl_pending_payment");
@@ -240,11 +240,10 @@ export default function SubscriptionPage() {
         dispatch(fetchProviderSubscription());
         dispatch(fetchBillingHistory());
         setPaymentModal("success");
-      } catch (err: any) {
+      } catch (err: unknown) {
         setPaymentModal("failure");
-        setModalMessage(
-          typeof err === "string" ? err : "We couldn't verify this payment. Please check Billing History or contact support.",
-        );
+        const errMsg = typeof err === "string" ? err : (err as { message?: string })?.message ?? "We couldn't verify this payment. Please check Billing History or contact support.";
+        setModalMessage(errMsg);
       }
     };
 
@@ -256,13 +255,17 @@ export default function SubscriptionPage() {
     router.replace("/dashboard/provider/subscription");
   }, [router]);
 
-  const handlePayNow = useCallback(() => {
-    dispatch(
-      startCheckout({
+  const handlePayNow = useCallback(async () => {
+    try {
+      await dispatch(startCheckout({
         planType: PLAN_DISPLAY[selectedPlan].enumValue,
         gateway: selectedPayment,
-      }),
-    );
+      })).unwrap();
+    } catch {
+      // The backend records gateway-initiation failures as transactions.
+      // Refresh immediately so the failed attempt is visible to the provider.
+      dispatch(fetchBillingHistory());
+    }
   }, [dispatch, selectedPlan, selectedPayment]);
 
   // Days remaining calculation
@@ -270,7 +273,7 @@ export default function SubscriptionPage() {
     if (!status?.endDate) return 0;
     const diff = new Date(status.endDate).getTime() - now;
     return Math.max(0, Math.ceil(diff / MS_PER_DAY));
-  }, [status?.endDate, now]);
+  }, [status, now]);
 
   // Dynamic cycle span calculation
   const cycleLength = useMemo(() => {
@@ -281,7 +284,7 @@ export default function SubscriptionPage() {
       if (span > 0) return span;
     }
     return status?.planType === "YEARLY" ? 365 : status?.planType === "QUARTERLY" ? 90 : 30;
-  }, [status?.startDate, status?.endDate, status?.planType]);
+  }, [status]);
 
   const progressPct = Math.max(0, Math.min(100, (1 - daysRemaining / cycleLength) * 100));
 
@@ -328,7 +331,7 @@ export default function SubscriptionPage() {
 
     // Add upcoming renewal or expiry event
     if (status?.endDate) {
-      const isPast = new Date(status.endDate).getTime() < Date.now();
+      const isPast = new Date(status.endDate).getTime() < now;
       events.push({
         type: isPast ? "EXPIRED" : "RENEWAL_UPCOMING",
         title: isPast ? "Subscription Expired" : "Upcoming Renewal Due",
@@ -342,7 +345,7 @@ export default function SubscriptionPage() {
 
     // Sort events by date descending
     return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [status, transactions]);
+  }, [status, transactions, now]);
 
   return (
     <div className="relative flex flex-col gap-6 max-w-[1200px] mx-auto p-2 sm:p-4">
@@ -426,10 +429,17 @@ export default function SubscriptionPage() {
           
           {/* Current Subscription Status Card */}
           <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            {loading || !status ? (
+            {loading ? (
               <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
                 <Loader2 className="w-6 h-6 animate-spin text-[#1e3a8a]" aria-hidden />
                 <span className="text-xs font-semibold">Retrieving subscription properties...</span>
+              </div>
+            ) : error || !status ? (
+              <div className="flex flex-col items-center justify-center py-10 text-slate-500 gap-2">
+                <Info className="w-8 h-8 text-slate-400" />
+                <span className="text-xs font-semibold text-center">
+                  {error ?? "No active subscription found. Select a plan below to subscribe."}
+                </span>
               </div>
             ) : (
               <div className="space-y-4">
@@ -704,7 +714,7 @@ export default function SubscriptionPage() {
                         </div>
 
                         <div className="flex justify-between items-center text-[9px] font-semibold text-slate-400">
-                          <span>Gateway: {tx.gateway}</span>
+                          <span>{tx.purchasedPlanType ? `${planLabel(tx.purchasedPlanType)} · ` : ""}Gateway: {tx.gateway}</span>
                           {tx.gatewayTransactionId && (
                             <span className="font-mono">Pidx: {tx.gatewayTransactionId}</span>
                           )}

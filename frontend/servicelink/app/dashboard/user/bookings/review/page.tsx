@@ -66,18 +66,19 @@ function ReviewFeedbackPageInner() {
         appointmentId,
         rating: overallRating,
         comment: reviewText.trim() || null,
-        punctualityScore: subRatings.punctuality * 20,
-        qualityScore: subRatings.quality * 20,
-        communicationScore: subRatings.communication * 20,
-        valueScore: subRatings.value * 20,
+        punctualityScore: subRatings.punctuality ? subRatings.punctuality * 20 : null,
+        qualityScore: subRatings.quality ? subRatings.quality * 20 : null,
+        communicationScore: subRatings.communication ? subRatings.communication * 20 : null,
+        valueScore: subRatings.value ? subRatings.value * 20 : null,
       };
 
       await api.post("/providers/reviews", payload);
       toast.success("Thank you for your feedback!");
       router.push("/dashboard/user/bookings");
     } catch (err: any) {
-      console.error(err);
-      const msg = err?.response?.data?.message || "Failed to submit review.";
+      const msg = err?.message === "Network Error"
+        ? "Could not reach ServiceLink. Check that the backend is running, then try again."
+        : err?.message || err?.response?.data?.message || "Failed to submit review.";
       toast.error(msg);
     } finally {
       setSubmitting(false);

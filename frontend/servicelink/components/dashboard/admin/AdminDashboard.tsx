@@ -46,7 +46,7 @@ export default function AdminDashboard() {
                     return {
                         id: String(item.id),
                         name: item.fullName,
-                        email: item.email || item.applicantIdentifier,
+                        email: item.email || item.applicantIdentifier || "",
                         initials: initials,
                         avatarUrl: item.photoUrl ?? null,
                         roleOrService: `Technician (${item.primaryService || "—"})`,

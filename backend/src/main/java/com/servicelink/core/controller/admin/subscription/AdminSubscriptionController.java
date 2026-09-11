@@ -6,6 +6,9 @@ import com.servicelink.core.dto.response.admin.subscription.AdminSubscriptionRow
 import com.servicelink.core.dto.response.admin.subscription.PagedResponseDTO;
 import com.servicelink.core.dto.response.admin.subscription.SubscriptionHistoryDTO;
 import com.servicelink.core.dto.response.admin.subscription.SubscriptionStatsDTO;
+import com.servicelink.core.dto.response.admin.subscription.PaymentAuditRowDTO;
+import com.servicelink.core.model.business.PaymentGateway;
+import com.servicelink.core.model.business.PaymentStatus;
 import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import com.servicelink.core.model.provider.subscription.SubscriptionStatus;
 import com.servicelink.core.service.provider.subscription.ProviderSubscriptionService;
@@ -61,6 +64,19 @@ public class AdminSubscriptionController {
         return ResponseEntity.ok(subscriptionService.adminGetHistory(providerId));
     }
 
+    @GetMapping("/transactions")
+    public ResponseEntity<PagedResponseDTO<PaymentAuditRowDTO>> listTransactions(
+            @RequestParam(required = false) PaymentGateway gateway,
+            @RequestParam(required = false) PaymentStatus status,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size
+    ) {
+        return ResponseEntity.ok(
+                subscriptionService.adminSearchTransactions(gateway, status, search, page, size)
+        );
+    }
+
     @PostMapping("/{providerId}/extend")
     public ResponseEntity<AdminSubscriptionRowDTO> extend(
             @PathVariable Long providerId,
@@ -105,12 +121,4 @@ public class AdminSubscriptionController {
         return ResponseEntity.ok(proSubscriptionService.extendProSubscription(workspaceId, days));
     }
 
-    // NOTE: no /transactions endpoint wired up yet — the frontend's Payment
-    // Audit Log tab (adminSubscriptionApi.listTransactions) needs an
-    // admin-wide, paged, filterable transaction list, which means either a
-    // new PaymentTransactionRepository query or a new method on whatever
-    // PaymentService already backs ProviderSubscriptionController's
-    // getTransactions(). I don't have that class's source, so I've left this
-    // endpoint out rather than guess its shape. Paste PaymentService (or
-    // PaymentTransactionRepository) and I'll wire it in properly.
 }

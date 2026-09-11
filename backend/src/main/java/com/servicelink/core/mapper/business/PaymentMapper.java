@@ -14,6 +14,7 @@ public class PaymentMapper {
                 .gateway(paymentTransaction.getPaymentGateway())
                 .status(paymentTransaction.getPaymentStatus())
                 .amountNpr(paymentTransaction.getAmountNpr())
+                .purchasedPlanType(paymentTransaction.getPurchasedPlanType())
                 .initiatedAt(paymentTransaction.getInitiatedAt())
                 .completedAt(paymentTransaction.getCompletedAt())
                 .build();

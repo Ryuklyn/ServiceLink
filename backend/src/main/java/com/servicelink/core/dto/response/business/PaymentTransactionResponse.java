@@ -2,6 +2,7 @@ package com.servicelink.core.dto.response.business;
 
 import com.servicelink.core.model.business.PaymentGateway;
 import com.servicelink.core.model.business.PaymentStatus;
+import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,6 +17,7 @@ public class PaymentTransactionResponse {
     private PaymentGateway gateway;
     private PaymentStatus status;
     private Long amountNpr;
+    private SubscriptionPlanType purchasedPlanType;
     private LocalDateTime initiatedAt;
     private LocalDateTime completedAt;
 

@@ -19,6 +19,7 @@ public class ProviderAnalyticsResponseDTO {
     private List<List<Integer>> peakHours; // 7x11 grid matrix
     private Ratings ratings;
     private List<CoverageItem> coverage;
+    private CoverageArea coverageArea;
 
     @Data
     @Builder
@@ -77,5 +78,16 @@ public class ProviderAnalyticsResponseDTO {
         private Double lat;
         private Double lng;
         private String label;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CoverageArea {
+        private Double latitude;
+        private Double longitude;
+        private Integer radiusKm;
+        private List<String> districts;
     }
 }

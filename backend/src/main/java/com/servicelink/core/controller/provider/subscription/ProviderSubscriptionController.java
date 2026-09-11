@@ -35,10 +35,10 @@ public class ProviderSubscriptionController {
     @GetMapping
     @PreAuthorize("hasRole('PROVIDER')")
     public ResponseEntity<SubscriptionStatusDTO> getMySubscription(@AuthenticationPrincipal User user) {
-        Long providerId = providerRepo.findByUser_Id(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Provider for user", user.getId()))
-                .getId();
-        return ResponseEntity.ok(subscriptionService.getStatus(providerId));
+        var provider = providerRepo.findByUser_Id(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Provider for user", user.getId()));
+        subscriptionService.issueTrialIfEligible(provider);
+        return ResponseEntity.ok(subscriptionService.getStatus(provider.getId()));
     }
 
     @GetMapping("/transactions")

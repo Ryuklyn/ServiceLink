@@ -103,6 +103,9 @@ const TX_STATUS_STYLES: Record<TransactionStatus, string> = {
     SUCCESS: "bg-emerald-50 text-emerald-700",
     FAILED: "bg-red-50 text-red-600",
     INITIATED: "bg-amber-50 text-amber-700",
+    PENDING: "bg-blue-50 text-blue-700",
+    CANCELLED: "bg-slate-100 text-slate-600",
+    REFUNDED: "bg-violet-50 text-violet-700",
 };
 
 export function TransactionStatusBadge({ status }: { status: TransactionStatus }) {

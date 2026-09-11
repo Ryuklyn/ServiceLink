@@ -99,6 +99,24 @@ interface TeamMemberResponse {
     lastActiveAt: string | null;
 }
 
+interface MeUserResponse {
+    id: number;
+    email: string;
+    is2FAEnabled: boolean;
+}
+
+interface SubscriptionTx {
+    id: number;
+    createdAt: string;
+    amountNpr: number;
+    referenceId: string;
+    status: string;
+}
+
+interface HistoryLogsResponse {
+    transactions: SubscriptionTx[];
+}
+
 const roleDisplay: Record<ApiTeamRole, string> = { ADMIN: "Admin", MANAGER: "Manager", STAFF: "Staff", FINANCE: "Finance" };
 const inviteStatusDisplay: Record<ApiInviteStatus, string> = { PENDING: "Pending", ACCEPTED: "Accepted" };
 
@@ -154,6 +172,7 @@ export default function SettingsPage() {
 }
 
 function SettingsPageContent() {
+    const [now] = useState(() => Date.now());
     const [activeTab, setActiveTab] = useState("profile");
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -181,10 +200,10 @@ function SettingsPageContent() {
         if (currentRole) {
             const hasActiveTab = filteredTabs.some((t) => t.key === activeTab);
             if (!hasActiveTab && filteredTabs.length > 0) {
-                setActiveTab(filteredTabs[0].key);
+                Promise.resolve().then(() => setActiveTab(filteredTabs[0].key));
             }
         }
-    }, [currentRole, activeTab]);
+    }, [currentRole, activeTab, filteredTabs]);
 
     // ===================== ORGANIZATION PROFILE =====================
     const [org, setOrg] = useState<OrganizationResponse | null>(null);
@@ -197,6 +216,19 @@ function SettingsPageContent() {
     const [draftServices, setDraftServices] = useState<string[]>([]);
     const [newService, setNewService] = useState("");
     const [showServiceInput, setShowServiceInput] = useState(false);
+    const [serviceOptions, setServiceOptions] = useState<string[]>([
+        "HVAC", "Electrical", "Cleaning", "Plumbing", "Security", "Pest Control"
+    ]);
+
+    useEffect(() => {
+        api.get<Array<{ name: string }>>("/providers/categories")
+            .then((res) => {
+                setServiceOptions(res.data.map((c) => c.name));
+            })
+            .catch((err) => {
+                console.error("Failed to fetch categories:", err);
+            });
+    }, []);
 
     const effectiveOrgId = organizationId || org?.id || workspace?.organizationId;
 
@@ -230,7 +262,7 @@ function SettingsPageContent() {
         }
     }, [organizationId, workspaceId]);
 
-    useEffect(() => { if (activeTab === "profile" && !org) fetchProfile(); }, [activeTab, org, fetchProfile]);
+    useEffect(() => { if (activeTab === "profile" && !org) Promise.resolve().then(() => fetchProfile()); }, [activeTab, org, fetchProfile]);
 
     const handleLogoUpload = async (file: File) => {
         if (!effectiveOrgId || !isAdmin) return;
@@ -295,7 +327,7 @@ function SettingsPageContent() {
         }
     }, []);
 
-    useEffect(() => { if (activeTab === "team") fetchTeamMembers(); }, [activeTab, fetchTeamMembers]);
+    useEffect(() => { if (activeTab === "team") Promise.resolve().then(() => fetchTeamMembers()); }, [activeTab, fetchTeamMembers]);
 
     const openInviteModal = () => { setEditingMember(null); setInviteForm({ email: "", name: "", role: "Manager" }); setIsInviteOpen(true); };
     const openEditModal = (member: TeamMemberResponse) => {
@@ -373,7 +405,7 @@ function SettingsPageContent() {
     const [paymentBanner, setPaymentBanner] = useState<{ type: "success" | "failed"; message: string } | null>(null);
     const paymentCheckStarted = useRef(false);
 
-    const [historyLogs, setHistoryLogs] = useState<any>(null);
+    const [historyLogs, setHistoryLogs] = useState<HistoryLogsResponse | null>(null);
     const [loadingHistory, setLoadingHistory] = useState(false);
 
     const fetchSubscription = useCallback(async () => {
@@ -399,11 +431,11 @@ function SettingsPageContent() {
         }
     }, [workspaceId]);
 
-    useEffect(() => { if (activeTab === "subscription" && !subscription) fetchSubscription(); }, [activeTab, subscription, fetchSubscription]);
+    useEffect(() => { if (activeTab === "subscription" && !subscription) Promise.resolve().then(() => fetchSubscription()); }, [activeTab, subscription, fetchSubscription]);
 
     useEffect(() => {
         const tabParam = searchParams.get("tab");
-        if (tabParam) setActiveTab(tabParam);
+        if (tabParam) Promise.resolve().then(() => setActiveTab(tabParam));
 
         const result = searchParams.get("paymentResult");
         if (!result || paymentCheckStarted.current) return;
@@ -438,7 +470,7 @@ function SettingsPageContent() {
     const isTrialing = effectiveStatus === "TRIAL";
 
     const daysRemaining = effectiveTrialEndsAt
-        ? Math.max(0, Math.ceil((new Date(effectiveTrialEndsAt).getTime() - Date.now()) / 86_400_000))
+        ? Math.max(0, Math.ceil((new Date(effectiveTrialEndsAt).getTime() - now) / 86_400_000))
         : null;
 
     const selectTier = (tier: "starter" | "growth" | "enterprise") => {
@@ -450,7 +482,7 @@ function SettingsPageContent() {
     };
 
     // ===================== SECURITY (2FA) =====================
-    const [meUser, setMeUser] = useState<any>(null);
+    const [meUser, setMeUser] = useState<MeUserResponse | null>(null);
     const [loadingMe, setLoadingMe] = useState(false);
 
     const [is2faSetupOpen, setIs2faSetupOpen] = useState(false);
@@ -484,7 +516,7 @@ function SettingsPageContent() {
 
     useEffect(() => {
         if (activeTab === "security" && !meUser) {
-            fetchMe();
+            Promise.resolve().then(() => fetchMe());
         }
     }, [activeTab, meUser, fetchMe]);
 
@@ -694,7 +726,7 @@ function SettingsPageContent() {
                                                         className="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-semibold focus:outline-none focus:border-[#1e3a8a]"
                                                     >
                                                         <option value="">Select service...</option>
-                                                        {ALL_SERVICE_OPTIONS.filter((s) => !draftServices.includes(s)).map((s) => (
+                                                        {serviceOptions.filter((s) => !draftServices.includes(s)).map((s) => (
                                                             <option key={s} value={s}>{s}</option>
                                                         ))}
                                                     </select>
@@ -1037,7 +1069,7 @@ function SettingsPageContent() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {historyLogs.transactions.map((tx: any) => (
+                                                {historyLogs.transactions.map((tx: SubscriptionTx) => (
                                                     <tr key={tx.id} className="border-b border-gray-50 text-slate-700 font-medium">
                                                         <td className="py-3">{new Date(tx.createdAt).toLocaleDateString()}</td>
                                                         <td className="py-3">NPR {tx.amountNpr.toLocaleString()}</td>
@@ -1241,7 +1273,7 @@ function SettingsPageContent() {
                                 <p className="text-sm text-slate-500 mb-4">Scan the QR code below using your authenticator app (Google Authenticator, Authy, etc.).</p>
                                 <div className="flex justify-center mb-4">
                                     {setupQrCode && (
-                                        <Image src={`data:image/png;base64,${setupQrCode}`} alt="2FA QR Code" width={192} height={192} className="border border-gray-100 rounded-xl" unoptimized />
+                                        <Image src={setupQrCode} alt="2FA QR Code" width={192} height={192} className="border border-gray-100 rounded-xl" unoptimized />
                                     )}
                                 </div>
                                 <p className="text-xs text-slate-500 mb-1">Or enter manual key:</p>

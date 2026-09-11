@@ -143,7 +143,7 @@ export default function SubscriptionHistoryModal({ row, onClose }: Props) {
                                 <th className="py-2 pr-3">Gateway</th>
                                 <th className="py-2 pr-3">Amount</th>
                                 <th className="py-2 pr-3">Status</th>
-                                <th className="py-2">Description</th>
+                                <th className="py-2">Gateway Transaction / Plan</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -157,17 +157,22 @@ export default function SubscriptionHistoryModal({ row, onClose }: Props) {
                             {history?.transactions.map((tx) => (
                                 <tr key={tx.id} className="border-b border-slate-50">
                                     <td className="py-2.5 pr-3 whitespace-nowrap text-slate-500">
-                                        {formatDateTime(tx.createdAt)}
+                                        {formatDateTime(tx.initiatedAt)}
                                     </td>
                                     <td className="py-2.5 pr-3 font-semibold text-[#1e3a8a]">{tx.referenceId}</td>
                                     <td className="py-2.5 pr-3">
                                         <GatewayBadge gateway={tx.gateway} />
                                     </td>
-                                    <td className="py-2.5 pr-3 font-medium text-slate-700">Rs. {tx.amount}</td>
+                                    <td className="py-2.5 pr-3 font-medium text-slate-700">Rs. {tx.amountNpr}</td>
                                     <td className="py-2.5 pr-3">
                                         <TransactionStatusBadge status={tx.status} />
                                     </td>
-                                    <td className="py-2.5 text-slate-500">{tx.description}</td>
+                                    <td className="py-2.5 text-slate-500">
+                                        <p className="font-mono text-[11px]">{tx.gatewayTransactionId ?? "—"}</p>
+                                        <p className="text-[10px] text-slate-400">
+                                            {tx.purchasedPlanType?.replace("_", " ") ?? "Plan unavailable"}
+                                        </p>
+                                    </td>
                                 </tr>
                             ))}
                             </tbody>

@@ -7,11 +7,16 @@ export interface AppointmentSummary {
     providerId: number;
     providerProfilePicture: string | null;
     subServiceName: string;
+    selectedServiceNames: string[];
     appointmentDate: string;
     timeSlot: "MORNING" | "AFTERNOON" | "EVENING";
     estimatedStartTime: string;
     status: "PENDING" | "CONFIRMED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
     totalPrice: number;
+    estimatedAmount: number | null;
+    finalAmount: number | null;
+    paymentStatus: "PAID" | "PENDING" | null;
+    paymentMethod: "CASH" | "QR_MOBILE" | null;
     address: string;
 }
 

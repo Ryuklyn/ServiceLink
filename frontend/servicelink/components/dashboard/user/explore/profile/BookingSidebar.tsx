@@ -378,6 +378,12 @@ export default function BookingSidebar({
             const payload = {
                 providerId:       Number(provider.id),
                 serviceCatalogId: firstService.catalogId,
+                selectedServices: services
+                    .filter((service) => service.catalogId)
+                    .map((service) => ({
+                        serviceCatalogId: service.catalogId,
+                        ...buildQuantityFields(service.pricingUnit, service.quantity),
+                    })),
                 appointmentDate:  formatDateForBackend(localDate),
                 timeSlot:         mapPeriodToTimeSlot(localPeriod!),
                 address:          address.trim(),

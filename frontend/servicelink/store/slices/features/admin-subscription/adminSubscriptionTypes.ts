@@ -11,7 +11,7 @@ export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 
 export type PaymentGateway = "ESEWA" | "KHALTI" | "BANK_TRANSFER";
 
-export type TransactionStatus = "INITIATED" | "SUCCESS" | "FAILED";
+export type TransactionStatus = "INITIATED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED" | "REFUNDED";
 
 export interface ProviderSubscriptionRow {
     providerId: string;
@@ -43,13 +43,16 @@ export interface SubscriptionStats {
 export interface PaymentTransactionRow {
     id: string;
     referenceId: string; // SLP-{year}-{6 digits}
-    providerId: string;
-    providerName: string;
+    providerId?: string;
+    providerName?: string;
+    providerEmail?: string;
+    gatewayTransactionId: string | null;
+    purchasedPlanType: PlanType | null;
     gateway: PaymentGateway;
-    amount: number;
+    amountNpr: number;
     status: TransactionStatus;
-    description: string;
-    createdAt: string;
+    initiatedAt: string;
+    completedAt: string | null;
 }
 
 export interface SystemEventRow {

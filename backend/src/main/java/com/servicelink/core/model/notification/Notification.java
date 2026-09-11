@@ -26,7 +26,11 @@ public class Notification {
     private Role recipientRole;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    // Keep this as VARCHAR instead of MySQL's native ENUM. Hibernate's schema
+    // update does not reliably add newly introduced Java enum constants to an
+    // existing MySQL ENUM, which made JOB_TICKET notifications roll back the
+    // surrounding job creation transaction.
+    @Column(nullable = false, length = 32, columnDefinition = "varchar(32)")
     @Builder.Default
     private NotificationCategory category = NotificationCategory.PLATFORM;
 

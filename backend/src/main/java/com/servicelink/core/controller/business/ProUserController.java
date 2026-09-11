@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.servicelink.core.model.business.Workspace;
 import com.servicelink.core.model.business.Subscription;
+import com.servicelink.core.model.business.TeamRole;
 import com.servicelink.core.repository.business.WorkspaceRepository;
 import com.servicelink.core.repository.business.SubscriptionRepository;
 import java.util.Map;
@@ -67,17 +68,15 @@ public class ProUserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        String role = teamMemberRepository.findByUser_Id(user.getId())
-                .map(tm -> tm.getRole().name())
-                .orElse(null);
-
         ProUserResponse resp = null;
         Optional<ProUserResponse> ownerResponse = proUserRepository.findByUser_Id(user.getId())
                 .map(proUserMapper::toResponse);
 
         if (ownerResponse.isPresent()) {
             resp = ownerResponse.get();
-            resp.setRole(role); // owner's TeamMember row is always ADMIN
+            // ProUser is the workspace owner. Its admin authority must not depend
+            // on whether the derived TeamMember row has already been created.
+            resp.setRole(TeamRole.ADMIN.name());
         } else {
             var memberOpt = teamMemberRepository.findByUser_Id(user.getId());
             if (memberOpt.isPresent()) {

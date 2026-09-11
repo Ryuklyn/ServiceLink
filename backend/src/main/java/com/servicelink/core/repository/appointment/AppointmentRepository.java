@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -128,6 +129,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("providerId") Long providerId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT a FROM Appointment a " +
+           "JOIN FETCH a.serviceCatalog sc " +
+           "WHERE a.provider.id = :providerId " +
+           "AND a.status = 'COMPLETED' " +
+           "AND a.completedAt >= :start " +
+           "AND a.completedAt < :end")
+    List<Appointment> findCompletedByProviderIdAndCompletedAtRange(
+            @Param("providerId") Long providerId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 
     @Query("""
             SELECT a FROM Appointment a

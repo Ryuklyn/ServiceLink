@@ -3,9 +3,11 @@ package com.servicelink.core.dto.request.appointment;
 
 import com.servicelink.core.model.common.TimeSlot;
 import jakarta.validation.constraints.*;
+import jakarta.validation.Valid;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class AppointmentRequestDTO {
@@ -54,4 +56,18 @@ public class AppointmentRequestDTO {
     /** Required when pricingUnit = PER_HOUR */
     @Min(value = 1, message = "Hours must be at least 1")
     private Integer hours;
+
+    /** All services selected for this booking. Kept optional for backward compatibility. */
+    @Valid
+    private List<ServiceSelectionDTO> selectedServices;
+
+    @Data
+    public static class ServiceSelectionDTO {
+        @NotNull(message = "Selected service is required")
+        private Long serviceCatalogId;
+        @Min(1) private Integer areaSqFt;
+        @Min(1) private Integer wallCount;
+        @Min(1) private Integer itemCount;
+        @Min(1) private Integer hours;
+    }
 }

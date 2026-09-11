@@ -7,21 +7,19 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import { toast } from "react-toastify";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import Link from "next/link";
-import api from "@/utils/axios";
+import api, { normalizeError } from "@/utils/axios";
 
 function VerifyPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // ✅ FIX: derive email immediately (no empty render)
-  const initialEmail =
+  const email =
     searchParams.get("email") ||
     (typeof window !== "undefined"
       ? localStorage.getItem("reset_email")
       : "") ||
     "";
-
-  const [email, setEmail] = useState(initialEmail);
 
   const [otp, setOtp] = useState(Array(6).fill(""));
   const [loading, setLoading] = useState(false);
@@ -33,16 +31,13 @@ function VerifyPageInner() {
 
   // ================= EMAIL SYNC =================
   useEffect(() => {
-    const e = searchParams.get("email");
-
-    if (e && e !== email) {
-      setEmail(e);
-      localStorage.setItem("reset_email", e);
-    }
-  }, [searchParams]);
+    if (email) localStorage.setItem("reset_email", email);
+  }, [email]);
 
   // ================= TIMER =================
   useEffect(() => {
+    if (canResend) return;
+
     const interval = setInterval(() => {
       setTimer((prev) => {
         if (prev <= 1) {
@@ -55,7 +50,7 @@ function VerifyPageInner() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [canResend]);
 
   // ================= AUTO FOCUS =================
   useEffect(() => {
@@ -135,8 +130,8 @@ function VerifyPageInner() {
       router.push(
         `/login/user/reset?email=${encodeURIComponent(email.trim())}`,
       );
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Invalid OTP");
+    } catch (error: unknown) {
+      toast.error(normalizeError(error).message || "Invalid OTP");
     } finally {
       setLoading(false);
     }
@@ -156,16 +151,16 @@ function VerifyPageInner() {
       setLoading(true);
       setCanResend(false);
 
-      console.log("Resending OTP to:", email);
-
-      await api.post("/auth/send-otp", {
+      await api.post("/auth/send-email-otp", {
         email: email.trim(),
       });
 
       toast.success("OTP resent successfully");
+      setOtp(Array(6).fill(""));
       setTimer(59);
-    } catch (err: any) {
-      toast.error("Failed to resend OTP");
+      inputsRef.current[0]?.focus();
+    } catch (error: unknown) {
+      toast.error(normalizeError(error).message || "Failed to resend OTP");
       setCanResend(true);
     } finally {
       setLoading(false);

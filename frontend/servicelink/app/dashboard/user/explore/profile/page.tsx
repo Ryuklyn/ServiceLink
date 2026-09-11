@@ -36,23 +36,21 @@ function mapBackendToProviderData(data: any): ProviderData {
     name: data.businessName ?? data.fullName,
     specialty: data.primaryCategoryName ?? "General",
     category: data.primaryCategoryName ?? "General",
-    rating: data.averageRating ?? 5.0,
+    rating: data.totalReviews > 0 ? (data.averageRating ?? 0) : 0,
     reviews: data.totalReviews ?? 0,
     experience: data.experienceYears ?? 0,
     distance: 5,
     eta: "Within 1 hour",
     verified: data.isVerified ?? false,
     available: data.isOnline ?? false,
-    areas: data.coveredDistricts
-        ? data.coveredDistricts.split(",").map((d: string) => d.trim())
-        : [data.baseDistrict ?? "Kathmandu"],
+    areas: parseCoveredDistricts(data.coveredDistricts, data.baseDistrict),
     phone: data.phone ?? "",
-    location: `${data.baseDistrict ?? "Kathmandu"}, Nepal`,
+    location: data.baseDistrict ? `${data.baseDistrict}, Nepal` : "Nepal",
     categories: [data.primaryCategoryName ?? "General"],
     avatarUrl: data.profilePictureUrl ?? "",
     verificationId: data.kycReferenceNumber ?? `VER-${data.id}`,   // ← single, correct source
     registeredName: data.businessName ?? data.fullName,
-    primaryDistrict: data.baseDistrict ?? "Kathmandu",
+    primaryDistrict: data.baseDistrict ?? "Not specified",
     skills: data.services?.map((s: any) => s.subServiceName) ?? [],
     certificateCount: 0,
     identityVerifiedDate: "",
@@ -62,16 +60,17 @@ function mapBackendToProviderData(data: any): ProviderData {
     jobsCompleted: data.totalJobs ?? 0,
     about: data.bio ?? "",
     ratingsBreakdown: {
-      punctuality: data.punctualityScore ?? data.averageRating ?? 5,
-      quality: data.qualityScore ?? data.averageRating ?? 5,
-      communication: data.communicationScore ?? data.averageRating ?? 5,
-      value: data.valueScore ?? data.averageRating ?? 5,
+      punctuality: data.punctualityScore ?? 0,
+      quality: data.qualityScore ?? 0,
+      communication: data.communicationScore ?? 0,
+      value: data.valueScore ?? 0,
     },
-    coverageRadius: data.travelRadiusKm ?? 10,
+    coverageRadius: data.travelRadiusKm ?? 0,
     coverageCenter: {
       lat: data.latitude ?? 27.7172,
       lng: data.longitude ?? 85.324,
     },
+    hasCoverageLocation: Number.isFinite(data.latitude) && Number.isFinite(data.longitude),
     services:
         data.services?.map((s: any) => {
           const pricingUnit = normalizePricingUnit(s.pricingUnit);
@@ -100,6 +99,7 @@ function mapBackendToProviderData(data: any): ProviderData {
           rating: r.rating,
           text: r.comment ?? "",
           date: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "",
+          avatarUrl: r.customerProfileImage ?? undefined,
         })) ?? [],
     portfolio: data.portfolio ?? [],
   };
@@ -267,15 +267,28 @@ export default function ProviderPage() {
           />
 
           <AboutSection provider={provider} />
-          <RatingsBreakdown provider={provider} />
+          {provider.reviews > 0 && <RatingsBreakdown provider={provider} />}
 
           {/* Wrapper layout for map injection safety handles overflow constraints */}
-          <div className="w-full overflow-hidden rounded-xl">
-            <CoverageMap
-                center={provider.coverageCenter}
-                radiusKm={provider.coverageRadius}
-            />
-          </div>
+          {provider.hasCoverageLocation ? (
+              <div className="w-full overflow-hidden rounded-xl">
+                <CoverageMap
+                    center={provider.coverageCenter}
+                    radiusKm={provider.coverageRadius}
+                    areas={provider.areas}
+                />
+              </div>
+          ) : provider.areas.length > 0 ? (
+              <div className="rounded-2xl border border-gray-100 bg-white p-6">
+                <h2 className="text-lg font-bold text-gray-900">Service Areas</h2>
+                <p className="mt-1 text-sm text-gray-500">Map location has not been set by this provider yet.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {provider.areas.map((area) => (
+                    <span key={area} className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800">{area}</span>
+                  ))}
+                </div>
+              </div>
+          ) : null}
           {provider.providerReviews?.length > 0 && (
               <ReviewsSection provider={provider} />
           )}
@@ -304,4 +317,13 @@ export default function ProviderPage() {
         </div>
       </div>
   );
+}
+
+function parseCoveredDistricts(value: unknown, baseDistrict?: string): string[] {
+  if (Array.isArray(value)) return value.map(String).map((item) => item.trim()).filter(Boolean);
+  if (typeof value === "string" && value.trim()) {
+    const cleaned = value.trim().replace(/^\[/, "").replace(/\]$/, "");
+    return cleaned.split(",").map((item) => item.replaceAll('"', "").trim()).filter(Boolean);
+  }
+  return baseDistrict ? [baseDistrict] : [];
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   AlertTriangle,
@@ -13,7 +13,10 @@ import {
   CircleAlert,
   BadgeCheck,
   Ticket,
+  Loader2,
 } from "lucide-react";
+import api from "@/utils/axios";
+import { toast } from "react-toastify";
 
 interface BookingData {
   id: string;
@@ -29,9 +32,8 @@ interface CancellationModalProps {
   isOpen: boolean;
   onClose: () => void;
   isLate?: boolean;
-  cancellationTokensRemaining?: number;
   bookingData?: BookingData;
-  onConfirmCancel?: (reason: string) => void;
+  onCancelled?: () => void;
 }
 
 type Step = "select" | "confirm" | "payment" | "confirm-payment" | "success";
@@ -119,11 +121,13 @@ function FreeCancelStep({
                           onClose,
                           onConfirm,
                           onReasonChange,
+                          isSubmitting = false,
                         }: {
   bookingData: BookingData;
   onClose: () => void;
   onConfirm: () => void;
   onReasonChange: (reason: string) => void;
+  isSubmitting?: boolean;
 }) {
   const [reason, setReason] = useState("");
 
@@ -194,14 +198,17 @@ function FreeCancelStep({
         <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-3">
           <button
               onClick={onClose}
-              className="flex-1 py-2.5 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors disabled:opacity-50"
           >
             Keep booking
           </button>
           <button
               onClick={onConfirm}
-              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
+            {isSubmitting && <Loader2 size={12} className="animate-spin" />}
             Confirm cancel
           </button>
         </div>
@@ -279,6 +286,7 @@ function LateCancelStep({
                           onClose,
                           onProceed,
                           onReasonChange,
+                          isSubmitting = false,
                         }: {
   bookingData: BookingData;
   tokensRemaining: number;
@@ -287,6 +295,7 @@ function LateCancelStep({
   onClose: () => void;
   onProceed: () => void;
   onReasonChange: (reason: string) => void;
+  isSubmitting?: boolean;
 }) {
   const [reason, setReason] = useState("");
   const hasTokens = tokensRemaining > 0;
@@ -471,20 +480,22 @@ function LateCancelStep({
         <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-3">
           <button
               onClick={onClose}
-              className="flex-1 py-2.5 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors disabled:opacity-50"
           >
             Keep booking
           </button>
           <button
-              disabled={!canProceed}
+              disabled={!canProceed || isSubmitting}
               onClick={onProceed}
               style={
                 canProceed && paymentMethod === "fee"
                     ? { backgroundColor: "#e8683f" }
                     : {}
               }
-              className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 ${ctaBg}`}
+              className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 ${ctaBg}`}
           >
+            {isSubmitting && <Loader2 size={12} className="animate-spin" />}
             {ctaLabel()}
           </button>
         </div>
@@ -496,10 +507,12 @@ function ConfirmTokenStep({
                             tokensRemaining,
                             onBack,
                             onConfirm,
+                            isSubmitting = false,
                           }: {
   tokensRemaining: number;
   onBack: () => void;
   onConfirm: () => void;
+  isSubmitting?: boolean;
 }) {
   return (
       <>
@@ -530,12 +543,12 @@ function ConfirmTokenStep({
             </span>
               <div className="flex gap-1">
                 {[0, 1].map((i) => (
-                    <div
-                        key={i}
-                        className={`w-4 h-4 rounded-full transition-colors ${
-                            i < tokensRemaining - 1 ? "bg-[#1e3a8a]" : "bg-gray-200"
-                        }`}
-                    />
+                     <div
+                         key={i}
+                         className={`w-4 h-4 rounded-full transition-colors ${
+                             i < tokensRemaining - 1 ? "bg-[#1e3a8a]" : "bg-gray-200"
+                         }`}
+                     />
                 ))}
               </div>
             </div>
@@ -551,14 +564,17 @@ function ConfirmTokenStep({
         <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-3">
           <button
               onClick={onBack}
-              className="flex-1 py-2.5 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors disabled:opacity-50"
           >
             Go back
           </button>
           <button
               onClick={onConfirm}
-              className="flex-1 py-2.5 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
+            {isSubmitting && <Loader2 size={12} className="animate-spin" />}
             <Coins size={13} /> Yes, use token
           </button>
         </div>
@@ -683,15 +699,16 @@ function PaymentStep({
       </>
   );
 }
-
-function ConfirmPaymentStep({
+function ConfirmPaymentStep({
                               selectedWallet,
                               onBack,
                               onConfirm,
+                              isSubmitting = false,
                             }: {
   selectedWallet: DigitalWallet;
   onBack: () => void;
   onConfirm: () => void;
+  isSubmitting?: boolean;
 }) {
   const isEsewa = selectedWallet === "esewa";
   // const walletName = isEsewa ? "eSewa" : "Khalti";
@@ -762,15 +779,18 @@ function ConfirmPaymentStep({
         <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-3">
           <button
               onClick={onBack}
-              className="flex-1 py-2.5 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-bold text-xs rounded-xl transition-colors disabled:opacity-50"
           >
             Go back
           </button>
           <button
               onClick={onConfirm}
+              disabled={isSubmitting}
               style={{ backgroundColor: "#e8683f" }}
-              className="flex-1 py-2.5 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 hover:opacity-90"
+              className="flex-1 py-2.5 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 hover:opacity-90 disabled:opacity-50"
           >
+            {isSubmitting && <Loader2 size={12} className="animate-spin" />}
             <Wallet size={13} /> Yes, pay Rs. {LATE_FEE}
           </button>
         </div>
@@ -877,7 +897,6 @@ export default function CancellationModal({
                                             isOpen,
                                             onClose,
                                             isLate = false,
-                                            cancellationTokensRemaining = 2,
                                             bookingData = {
                                               id: "0",
                                               providerName: "Service Provider",
@@ -887,12 +906,27 @@ export default function CancellationModal({
                                               locationDisplay: "Kathmandu",
                                               price: 0,
                                             },
-                                            onConfirmCancel,
+                                            onCancelled,
                                           }: CancellationModalProps) {
   const [step, setStep] = useState<Step>("select");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [selectedWallet, setSelectedWallet] = useState<DigitalWallet>(null);
   const [selectedReason, setSelectedReason] = useState<string>("");
+  const [tokenBalance, setTokenBalance] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const extractErrorMessage = (err: any, fallback: string) => {
+    return err?.response?.data?.message || err?.message || fallback;
+  };
+
+  useEffect(() => {
+    if (!isOpen || !isLate) return;
+    api
+        .get("/appointments/cancellation-tokens/me")
+        .then(({ data }) => setTokenBalance(data))
+        .catch(() => setTokenBalance(null));
+  }, [isOpen, isLate]);
 
   if (!isOpen) return null;
 
@@ -901,12 +935,26 @@ export default function CancellationModal({
     setPaymentMethod(null);
     setSelectedWallet(null);
     setSelectedReason("");
+    setSubmitError(null);
+    setIsSubmitting(false);
     onClose();
   };
 
-  const handleFreeConfirm = () => {
-    onConfirmCancel?.(selectedReason);
-    setStep("success");
+  const handleFreeConfirm = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await api.patch(`/appointments/${bookingData.id}/cancel`, null, {
+        params: { reason: selectedReason || undefined },
+      });
+      toast.success("Appointment cancelled successfully.");
+      onCancelled?.();
+      setStep("success");
+    } catch (err: any) {
+      setSubmitError(extractErrorMessage(err, "Could not cancel appointment."));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleLateProceed = () => {
@@ -917,19 +965,75 @@ export default function CancellationModal({
     }
   };
 
-  const handleTokenConfirm = () => {
-    onConfirmCancel?.(selectedReason);
-    setStep("success");
+  const handleTokenConfirm = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await api.patch(`/appointments/${bookingData.id}/cancel/token`, null, {
+        params: { reason: selectedReason || undefined },
+      });
+      toast.success("Appointment cancelled successfully using token.");
+      onCancelled?.();
+      setStep("success");
+    } catch (err: any) {
+      setSubmitError(extractErrorMessage(err, "Could not cancel with token."));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handlePaymentNext = () => setStep("confirm-payment");
 
-  const handlePaymentConfirm = () => {
-    onConfirmCancel?.(selectedReason);
-    setStep("success");
+  const handlePaymentConfirm = async () => {
+    if (!selectedWallet) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const origin = window.location.origin;
+      const successUrl = `${origin}/dashboard/user/bookings/cancel-callback/${bookingData.id}/${selectedWallet}`;
+      const failureUrl = `${origin}/dashboard/user/bookings`;
+
+      const { data } = await api.post(`/appointments/${bookingData.id}/cancel/payment/initiate`, {
+        paymentGateway: selectedWallet.toUpperCase(),
+        successUrl,
+        failureUrl,
+        reason: selectedReason || undefined,
+      });
+
+      if (selectedWallet === "esewa") {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = data.gatewayRedirectUrl;
+
+        Object.entries(data.gatewayFormFields).forEach(([k, v]) => {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = k;
+          input.value = v as string;
+          form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+      } else {
+        window.location.href = data.gatewayRedirectUrl;
+      }
+    } catch (err: any) {
+      setSubmitError(extractErrorMessage(err, "Could not initiate payment."));
+      setIsSubmitting(false);
+    }
   };
 
+  const renderErrorBanner = () =>
+      submitError ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 mx-5 mt-4 flex items-start gap-2 text-[11px] text-red-700 font-medium">
+            <CircleAlert size={13} className="shrink-0 mt-0.5" />
+            <span>{submitError}</span>
+          </div>
+      ) : null;
+
   const showHeader = step !== "success";
+  const tokensRemaining = tokenBalance?.tokensRemaining ?? 2;
 
   return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -942,32 +1046,37 @@ export default function CancellationModal({
               />
           )}
 
+          {renderErrorBanner()}
+
           {step === "select" && !isLate && (
               <FreeCancelStep
                   bookingData={bookingData}
                   onClose={handleClose}
                   onConfirm={handleFreeConfirm}
                   onReasonChange={setSelectedReason}
+                  isSubmitting={isSubmitting}
               />
           )}
 
           {step === "select" && isLate && (
               <LateCancelStep
                   bookingData={bookingData}
-                  tokensRemaining={cancellationTokensRemaining}
+                  tokensRemaining={tokensRemaining}
                   paymentMethod={paymentMethod}
                   setPaymentMethod={setPaymentMethod}
                   onClose={handleClose}
                   onProceed={handleLateProceed}
                   onReasonChange={setSelectedReason}
+                  isSubmitting={isSubmitting}
               />
           )}
 
           {step === "confirm" && (
               <ConfirmTokenStep
-                  tokensRemaining={cancellationTokensRemaining}
+                  tokensRemaining={tokensRemaining}
                   onBack={() => setStep("select")}
                   onConfirm={handleTokenConfirm}
+                  isSubmitting={isSubmitting}
               />
           )}
 
@@ -986,6 +1095,7 @@ export default function CancellationModal({
                   selectedWallet={selectedWallet}
                   onBack={() => setStep("payment")}
                   onConfirm={handlePaymentConfirm}
+                  isSubmitting={isSubmitting}
               />
           )}
 

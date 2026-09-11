@@ -32,6 +32,7 @@ export default function OrganizationStep({
                                            onBack,
                                            organizationId,
                                          }: OrganizationStepProps) {
+  const [isValidOrg, setIsValidOrg] = useState(true);
   const [formData, setFormData] = useState<OrganizationFormData>(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
 
@@ -48,9 +49,11 @@ export default function OrganizationStep({
             workEmail: res.data.workEmail ?? "",
             contactNumber: res.data.contactNumber ?? "",
           });
+          setIsValidOrg(true);
         })
         .catch(() => {
           // resume lookup failed — non-fatal, form just stays blank
+          setIsValidOrg(false);
         });
   }, [organizationId]);
 
@@ -73,7 +76,7 @@ export default function OrganizationStep({
 
     // Already created in a previous pass through this step (Back button or
     // resume) — nothing new to submit, just move forward.
-    if (organizationId) {
+    if (organizationId && isValidOrg) {
       onContinue(organizationId, formData.companyName.trim());
       return;
     }
@@ -88,10 +91,11 @@ export default function OrganizationStep({
       }
 
       onContinue(String(response.data.id), formData.companyName.trim());
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Create Organization Error:", error);
+      const err = error as { response?: { data?: { message?: string } } };
       toast.error(
-          error?.response?.data?.message ?? "Failed to create organization",
+          err?.response?.data?.message ?? "Failed to create organization",
       );
     } finally {
       setLoading(false);

@@ -28,6 +28,7 @@ export interface BillingRecord {
     gateway: PaymentGateway;
     status: string;
     amountNpr: number;
+    purchasedPlanType: SubscriptionPlanType | null;
     initiatedAt: string | null;
     completedAt: string | null;
 }
@@ -70,8 +71,8 @@ export const subscriptionApi = {
         return data;
     },
 
-    verify: async (payload: VerifyPaymentPayload): Promise<{ paymentStatus: string }> => {
-        const { data } = await api.post<{ paymentStatus: string }>(
+    verify: async (payload: VerifyPaymentPayload): Promise<BillingRecord> => {
+        const { data } = await api.post<BillingRecord>(
             "/providers/me/subscription/verify",
             payload,
         );

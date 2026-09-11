@@ -55,6 +55,7 @@ export interface ProviderReview {
   rating: number;
   text: string;
   date: string;
+  avatarUrl?: string;
 }
 
 export interface ProviderData {
@@ -94,6 +95,7 @@ export interface ProviderData {
   };
   coverageRadius: number;
   coverageCenter: { lat: number; lng: number };
+  hasCoverageLocation: boolean;
   services: ProviderService[];
   providerReviews: ProviderReview[];
   portfolio: PortfolioProject[];

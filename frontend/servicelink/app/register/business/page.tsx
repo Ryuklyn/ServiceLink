@@ -44,7 +44,7 @@ function BusinessRegisterContent() {
   useEffect(() => {
     const savedOrgId = localStorage.getItem(RESUME_KEY);
     if (!savedOrgId) {
-      setResuming(false);
+      Promise.resolve().then(() => setResuming(false));
       return;
     }
 
@@ -65,6 +65,7 @@ function BusinessRegisterContent() {
         .catch(() => {
           // Session expired (24h TTL) or never existed — start fresh.
           localStorage.removeItem(RESUME_KEY);
+          resetSetup();
         })
         .finally(() => setResuming(false));
     // Intentionally run once on mount only.

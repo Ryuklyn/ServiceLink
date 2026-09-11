@@ -13,19 +13,20 @@ import { appointmentService, AppointmentSummary } from "@/services/appointmentSe
 import WhatsAppButton from "@/components/shared/WhatsAppButton";
 
 // Map backend status to frontend tab
-type FrontendTab = "Active" | "Upcoming" | "History";
+type FrontendTab = "Active" | "Upcoming" | "Completed" | "Cancelled";
 
 function getTab(status: string): FrontendTab {
   if (status === "IN_PROGRESS") return "Active";
   if (status === "PENDING" || status === "CONFIRMED") return "Upcoming";
-  return "History"; // COMPLETED, CANCELLED
+  if (status === "COMPLETED") return "Completed";
+  return "Cancelled";
 }
 
 function getStatusLabel(status: string): string {
   const map: Record<string, string> = {
     PENDING:     "Awaiting Confirmation",
     CONFIRMED:   "Confirmed",
-    IN_PROGRESS: "On the Way",
+    IN_PROGRESS: "Service in progress",
     COMPLETED:   "Completed",
     CANCELLED:   "Cancelled",
   };
@@ -64,6 +65,7 @@ interface SelectedBooking {
   providerName: string;
   serviceName: string;
   dateDisplay: string;
+  appointmentDate: string;
   timeDisplay: string;
   address: string;
   price: number;
@@ -81,9 +83,9 @@ export default function BookingsPage() {
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  const fetchAllAppointments = useCallback(async () => {
+  const fetchAllAppointments = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
 
       // Fetch all statuses in parallel
@@ -108,12 +110,31 @@ export default function BookingsPage() {
       console.error("Failed to fetch appointments:", err);
       setError("Failed to load bookings. Please try again.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchAllAppointments();
+  }, [fetchAllAppointments]);
+
+  useEffect(() => {
+    const refresh = () => void fetchAllAppointments(true);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    window.addEventListener("focus", refresh);
+    window.addEventListener("servicelink:booking-updated", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const intervalId = window.setInterval(refreshWhenVisible, 15000);
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("servicelink:booking-updated", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.clearInterval(intervalId);
+    };
   }, [fetchAllAppointments]);
 
   const handleCancelConfirm = async (reason: string) => {
@@ -131,11 +152,13 @@ export default function BookingsPage() {
 
   const activeList    = allAppointments.filter((a) => getTab(a.status) === "Active");
   const upcomingList  = allAppointments.filter((a) => getTab(a.status) === "Upcoming");
-  const historyList   = allAppointments.filter((a) => getTab(a.status) === "History");
+  const completedList = allAppointments.filter((a) => getTab(a.status) === "Completed");
+  const cancelledList = allAppointments.filter((a) => getTab(a.status) === "Cancelled");
 
   const filteredList =
-      activeTab === "Active"   ? activeList :
-          activeTab === "Upcoming" ? upcomingList : historyList;
+      activeTab === "Active" ? activeList :
+          activeTab === "Upcoming" ? upcomingList :
+              activeTab === "Completed" ? completedList : cancelledList;
 
   if (loading) {
     return (
@@ -150,7 +173,7 @@ export default function BookingsPage() {
     return (
         <div className="text-center py-20 text-red-400">
           <p>{error}</p>
-          <button onClick={fetchAllAppointments} className="mt-4 text-sm text-blue-600 underline">
+          <button onClick={() => void fetchAllAppointments()} className="mt-4 text-sm text-blue-600 underline">
             Try again
           </button>
         </div>
@@ -160,17 +183,19 @@ export default function BookingsPage() {
   const borderColors: Record<FrontendTab, string> = {
     Active:   "border-l-[#e8683f]",
     Upcoming: "border-l-[#1e3a8a]",
-    History:  "border-l-emerald-600",
+    Completed: "border-l-emerald-600",
+    Cancelled: "border-l-red-500",
   };
 
   return (
       <div className="space-y-6 mx-auto p-2 sm:p-4 max-w-7xl">
         {/* Tabs - Horizontal scrolling enabled for small mobile viewports */}
         <div className="flex items-center gap-2 border-b border-gray-100 pb-3 overflow-x-auto no-scrollbar scroll-smooth -mx-2 px-2 sm:mx-0 sm:px-0">
-          {(["Active", "Upcoming", "History"] as const).map((tab) => {
+          {(["Active", "Upcoming", "Completed", "Cancelled"] as const).map((tab) => {
             const count =
                 tab === "Active"   ? activeList.length :
-                    tab === "Upcoming" ? upcomingList.length : historyList.length;
+                    tab === "Upcoming" ? upcomingList.length :
+                        tab === "Completed" ? completedList.length : cancelledList.length;
             const isSelected = activeTab === tab;
             return (
                 <button
@@ -227,7 +252,7 @@ export default function BookingsPage() {
                 const isLocked     = appt.status === "IN_PROGRESS";
 
                 const openDetailModal = () => {
-                  setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                  setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, appointmentDate: appt.appointmentDate, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
                   setIsDetailModalOpen(true);
                 };
 
@@ -258,7 +283,7 @@ export default function BookingsPage() {
                               {appt.providerName}
                             </h3>
                             <p className="text-xs text-gray-500 mt-0.5 font-medium truncate">
-                              {appt.subServiceName}
+                              {(appt.selectedServiceNames?.length ? appt.selectedServiceNames : [appt.subServiceName]).join(" · ")}
                             </p>
                             <div className="mt-2">
                               {tab === "Active" && (
@@ -273,9 +298,13 @@ export default function BookingsPage() {
                                     {statusLabel}
                           </span>
                               )}
-                              {tab === "History" && (
-                                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-200 uppercase tracking-wide">
-                            ✓ {statusLabel}
+                              {(tab === "Completed" || tab === "Cancelled") && (
+                                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wide ${
+                                    tab === "Completed"
+                                        ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                        : "bg-red-50 text-red-700 border-red-200"
+                                  }`}>
+                            {tab === "Completed" ? "✓" : "×"} {statusLabel}
                           </span>
                               )}
                             </div>
@@ -285,10 +314,10 @@ export default function BookingsPage() {
                         {/* Price Display */}
                         <div className="sm:text-right w-full sm:w-auto shrink-0 bg-gray-50/60 p-2.5 rounded-xl border border-gray-100 sm:min-w-[120px] flex sm:flex-col justify-between items-center sm:items-end gap-1">
                           <p className="text-base font-black text-[#1e3a8a]">
-                            Rs. {(appt.totalPrice ?? 0).toLocaleString()}
+                            Rs. {((appt.status === "COMPLETED" ? appt.finalAmount : appt.estimatedAmount) ?? appt.totalPrice ?? 0).toLocaleString()}
                           </p>
                           <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">
-                      {appt.status === "COMPLETED" ? "Paid" : "Pay after service"}
+                      {appt.status === "COMPLETED" ? `Final amount · ${appt.paymentStatus === "PAID" ? "Paid" : "Payment pending"}` : "Estimated amount"}
                     </span>
                         </div>
                       </div>
@@ -318,7 +347,7 @@ export default function BookingsPage() {
 
                           {isLocked && (
                               <p className="text-xs text-amber-600 font-semibold flex items-center gap-1 bg-amber-50/50 p-2 rounded-lg border border-amber-100 w-fit">
-                                ✕ Modifications locked — provider is on the way
+                                Service is in progress — changes are locked
                               </p>
                           )}
 
@@ -363,12 +392,9 @@ export default function BookingsPage() {
 
                           {tab === "Active" && (
                               <div className="flex flex-col gap-2 w-full">
-                                <Link
-                                    href="/dashboard/user/bookings/track"
-                                    className="w-full px-4 py-2.5 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm text-center"
-                                >
-                                  <MapPin size={13} /> Track Order
-                                </Link>
+                                <div className="w-full px-4 py-2.5 bg-blue-50 text-[#1e3a8a] font-bold text-xs rounded-xl text-center border border-blue-100">
+                                  Service in progress
+                                </div>
                                 <div className="flex flex-row gap-2 w-full">
                                   <button
                                       onClick={openDetailModal}
@@ -391,21 +417,11 @@ export default function BookingsPage() {
                           {tab === "Upcoming" && (
                               <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full">
                                 <div className="flex gap-2 flex-1 w-full">
-                                  {appt.status === "PENDING" ? (
-                                      <button
-                                          onClick={() => {
-                                            setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
-                                            setIsCancelModalOpen(true);
-                                          }}
-                                          className="flex-1 px-2 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
-                                      >
-                                        Cancel
-                                      </button>
-                                  ) : isLateWindow ? (
+                                  {isLateWindow ? (
                                       <>
                                         <button
                                             onClick={() => {
-                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, appointmentDate: appt.appointmentDate, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
                                               setIsRescheduleModalOpen(true);
                                             }}
                                             className="flex-1 px-2 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center whitespace-nowrap"
@@ -414,7 +430,7 @@ export default function BookingsPage() {
                                         </button>
                                         <button
                                             onClick={() => {
-                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, appointmentDate: appt.appointmentDate, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
                                               setIsCancelModalOpen(true);
                                             }}
                                             className="flex-1 px-2 py-2.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center whitespace-nowrap"
@@ -426,7 +442,7 @@ export default function BookingsPage() {
                                       <>
                                         <button
                                             onClick={() => {
-                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, appointmentDate: appt.appointmentDate, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
                                               setIsRescheduleModalOpen(true);
                                             }}
                                             className="flex-1 px-2 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
@@ -435,7 +451,7 @@ export default function BookingsPage() {
                                         </button>
                                         <button
                                             onClick={() => {
-                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
+                                              setSelectedBooking({ id: String(appt.id), providerId: appt.providerId, providerName: appt.providerName, serviceName: appt.subServiceName, dateDisplay, appointmentDate: appt.appointmentDate, timeDisplay, address: appt.address, price: appt.totalPrice, hoursRemaining, status: appt.status });
                                               setIsCancelModalOpen(true);
                                             }}
                                             className="flex-1 px-2 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold text-[11px] sm:text-xs rounded-xl transition-colors text-center"
@@ -464,7 +480,7 @@ export default function BookingsPage() {
                               </div>
                           )}
 
-                          {tab === "History" && (
+                          {(tab === "Completed" || tab === "Cancelled") && (
                               <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full">
                                 {appt.status === "COMPLETED" ? (
                                     <Link
@@ -503,6 +519,7 @@ export default function BookingsPage() {
                   id: selectedBooking.id,
                   providerId: selectedBooking.providerId,
                   date: selectedBooking.dateDisplay,
+                  appointmentDate: selectedBooking.appointmentDate,
                   time: selectedBooking.timeDisplay,
                   provider: selectedBooking.providerName,
                 }}
@@ -525,7 +542,7 @@ export default function BookingsPage() {
                   locationDisplay: selectedBooking.address,
                   price: selectedBooking.price,
                 }}
-                onConfirmCancel={handleCancelConfirm}
+                onCancelled={fetchAllAppointments}
             />
         )}
 

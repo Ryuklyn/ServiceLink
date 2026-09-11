@@ -2,6 +2,7 @@ package com.servicelink.core.service.business;
 
 import com.servicelink.core.dto.request.business.KybRequest;
 import com.servicelink.core.dto.response.business.KybResponse;
+import com.servicelink.core.exception.ResourceNotFoundException;
 import com.servicelink.core.mapper.business.KybMapper;
 import com.servicelink.core.model.business.KybStatus;
 import com.servicelink.core.model.business.KybVerification;
@@ -56,11 +57,11 @@ public class KybService {
           return kMapper.toResponse(saved);
      }
 
-     public KybResponse getKybByOrganization(Long oragnizationId){
+     public KybResponse getKybByOrganization(Long organizationId){
           return kMapper.toResponse(
-                  kRepo.findByOrganizationId(oragnizationId)
+                  kRepo.findByOrganizationId(organizationId)
                           .orElseThrow(() ->
-                                  new RuntimeException("Kyb is not found for this organization id" + oragnizationId))
+                                  new ResourceNotFoundException("KYB for organization", organizationId))
 
           );
      }

@@ -3,18 +3,24 @@ package com.servicelink.core.service.provider.subscription;
 import com.servicelink.core.dto.request.admin.subscription.ExtendSubscriptionRequest;
 import com.servicelink.core.dto.request.admin.subscription.RevokeSubscriptionRequest;
 import com.servicelink.core.dto.response.admin.subscription.AdminSubscriptionRowDTO;
+import com.servicelink.core.dto.response.admin.subscription.PaymentAuditRowDTO;
 import com.servicelink.core.dto.response.admin.subscription.PagedResponseDTO;
 import com.servicelink.core.dto.response.admin.subscription.SubscriptionHistoryDTO;
 import com.servicelink.core.dto.response.admin.subscription.SubscriptionStatsDTO;
 import com.servicelink.core.dto.response.provider.subscription.SubscriptionStatusDTO;
 import com.servicelink.core.exception.BusinessException;
 import com.servicelink.core.model.notification.NotificationCategory;
+import com.servicelink.core.model.business.PaymentGateway;
+import com.servicelink.core.model.business.PaymentStatus;
+import com.servicelink.core.model.business.PaymentTransaction;
 import com.servicelink.core.model.provider.Provider;
 import com.servicelink.core.model.provider.subscription.ProviderSubscription;
 import com.servicelink.core.model.provider.subscription.SubscriptionPlanType;
 import com.servicelink.core.model.provider.subscription.SubscriptionStatus;
 import com.servicelink.core.model.user.Role;
 import com.servicelink.core.repository.provider.ProviderRepository;
+import com.servicelink.core.repository.business.PaymentTransactionRepository;
+import com.servicelink.core.mapper.business.PaymentMapper;
 import com.servicelink.core.repository.provider.availability.ProviderScheduleSettingsRepository;
 import com.servicelink.core.repository.provider.subscription.ProviderSubscriptionRepository;
 import com.servicelink.core.service.EmailService;
@@ -42,6 +48,8 @@ public class ProviderSubscriptionService {
     private final NotificationService notificationService;
     private final ProviderScheduleSettingsRepository scheduleSettingsRepo;
     private final EmailService emailService;
+    private final PaymentTransactionRepository paymentTransactionRepo;
+    private final PaymentMapper paymentMapper;
 
 
     @Transactional
@@ -247,8 +255,7 @@ public class ProviderSubscriptionService {
                 ? 0.0
                 : (trialedAndPaid * 100.0) / everTrialed;
 
-        // TODO: wire real revenue sum once PaymentTransaction repository is available here.
-        long totalRevenue = 0L;
+        long totalRevenue = paymentTransactionRepo.sumSuccessfulAmountNpr();
 
         return SubscriptionStatsDTO.builder()
                 .totalRevenue(totalRevenue)
@@ -280,10 +287,28 @@ public class ProviderSubscriptionService {
 
         return SubscriptionHistoryDTO.builder()
                 .subscription(toAdminRowDto(sub))
-                // TODO: paymentService.getTransactionsForProvider(sub.getProvider().getUser().getId())
-                .transactions(Collections.emptyList())
+                .transactions(paymentTransactionRepo.findBySubscription_Id(sub.getId()).stream()
+                        .map(paymentMapper::toResponse)
+                        .toList())
                 .events(Collections.emptyList()) // TODO: see SystemEventDTO
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponseDTO<PaymentAuditRowDTO> adminSearchTransactions(
+            PaymentGateway gateway,
+            PaymentStatus status,
+            String search,
+            int page,
+            int size
+    ) {
+        String normalizedSearch = (search == null || search.isBlank())
+                ? null
+                : search.trim().toLowerCase();
+        Page<PaymentAuditRowDTO> results = paymentTransactionRepo
+                .searchForAdmin(gateway, status, normalizedSearch, PageRequest.of(page, size))
+                .map(this::toPaymentAuditRow);
+        return PagedResponseDTO.from(results);
     }
 
     /**
@@ -392,6 +417,24 @@ public class ProviderSubscriptionService {
                 .endDate(sub.getEndDate())
                 .daysRemaining(sub.getDaysRemaining())
                 .referralBonusDaysTotal(sub.getReferralBonusDaysTotal())
+                .build();
+    }
+
+    private PaymentAuditRowDTO toPaymentAuditRow(PaymentTransaction tx) {
+        Provider provider = tx.getSubscription().getProvider();
+        return PaymentAuditRowDTO.builder()
+                .id(tx.getId())
+                .referenceId(tx.getReferenceId())
+                .gatewayTransactionId(tx.getGatewayTransactionId())
+                .providerId(provider.getId())
+                .providerName(provider.getFullName())
+                .providerEmail(provider.getEmail())
+                .purchasedPlanType(tx.getPurchasedPlanType())
+                .gateway(tx.getPaymentGateway())
+                .amountNpr(tx.getAmountNpr())
+                .status(tx.getPaymentStatus())
+                .initiatedAt(tx.getInitiatedAt())
+                .completedAt(tx.getCompletedAt())
                 .build();
     }
 }

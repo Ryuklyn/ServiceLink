@@ -39,7 +39,8 @@ public class ProJobTicketController {
                 com.servicelink.core.model.business.TeamRole.MANAGER,
                 com.servicelink.core.model.business.TeamRole.STAFF
         ));
-        return ResponseEntity.status(HttpStatus.CREATED).body(jobService.create(organizationId, user, request));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(jobService.create(organizationId, user, request));
     }
 
     @GetMapping

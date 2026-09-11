@@ -1,5 +1,7 @@
 package com.servicelink.core.mapper.appointment;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.servicelink.core.dto.response.appointment.AppointmentResponseDTO;
 import com.servicelink.core.dto.response.appointment.AppointmentSummaryDTO;
 import com.servicelink.core.model.appointment.Appointment;
@@ -10,8 +12,14 @@ import com.servicelink.core.model.user.User;
 import com.servicelink.core.model.user.UserProfile;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 @Component
 public class AppointmentMapper {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AppointmentResponseDTO toResponseDTO(Appointment appt, ProviderService ps, User customer) {
         Provider          provider = appt.getProvider();
@@ -38,6 +46,9 @@ public class AppointmentMapper {
                 .scheduledAt(appt.getScheduledAt())
                 .estimatedStartTime(appt.getEstimatedStartTime())
                 .estimatedEndTime(appt.getEstimatedEndTime())
+                .previousAppointmentDate(appt.getPreviousAppointmentDate())
+                .previousTimeSlot(appt.getPreviousTimeSlot())
+                .rescheduledAt(appt.getRescheduledAt())
                 .attachedImgUrl(appt.getAttachedImgUrl())
                 .attachedVideoUrl(appt.getAttachedVideoUrl())
                 .attachedAudioUrl(appt.getAttachedAudioUrl())
@@ -53,6 +64,11 @@ public class AppointmentMapper {
                 .operationalStatus(appt.getOperationalStatus())
                 .estimatedAmount(appt.getEstimatedAmount())
                 .finalAmount(appt.getFinalAmount())
+                .paymentStatus(appt.getPaymentStatus())
+                .paymentMethod(appt.getPaymentMethod())
+                .completionNote(appt.getCompletionNote())
+                .selectedServices(parseSelectedServices(appt))
+                .completedServices(parseCompletedServices(appt))
                 .providerRate(appt.getProviderRate())
                 // Customer snapshot — name/phone/photo resolved from UserProfile,
                 // email is the one field that legitimately lives on User itself.
@@ -76,8 +92,18 @@ public class AppointmentMapper {
                 .appointmentDate(appt.getAppointmentDate())
                 .timeSlot(appt.getTimeSlot())
                 .estimatedStartTime(appt.getEstimatedStartTime())
+                .previousAppointmentDate(appt.getPreviousAppointmentDate())
+                .previousTimeSlot(appt.getPreviousTimeSlot())
+                .rescheduledAt(appt.getRescheduledAt())
                 .status(appt.getStatus())
                 .totalPrice(appt.getTotalPrice())
+                .estimatedAmount(appt.getEstimatedAmount())
+                .finalAmount(appt.getFinalAmount())
+                .paymentStatus(appt.getPaymentStatus())
+                .paymentMethod(appt.getPaymentMethod())
+                .selectedServiceNames(parseSelectedServices(appt).stream()
+                        .map(AppointmentResponseDTO.SelectedServiceDTO::getSubServiceName)
+                        .toList())
                 .address(appt.getAddress())
                 .operationalStatus(appt.getOperationalStatus())
                 .hours(appt.getHours())
@@ -121,6 +147,44 @@ public class AppointmentMapper {
             String photo = profile != null ? profile.getProfileImage() : null;
 
             return new CustomerSnapshot(name, phone, photo);
+        }
+    }
+
+    private List<AppointmentResponseDTO.SelectedServiceDTO> parseSelectedServices(Appointment appt) {
+        if (appt.getSelectedServicesJson() == null || appt.getSelectedServicesJson().isBlank()) {
+            return List.of(AppointmentResponseDTO.SelectedServiceDTO.builder()
+                    .serviceCatalogId(appt.getServiceCatalog().getId())
+                    .subServiceName(appt.getServiceCatalog().getSubServiceName())
+                    .estimatedAmount(appt.getEstimatedAmount())
+                    .build());
+        }
+        try {
+            List<Map<String, Object>> rows = objectMapper.readValue(
+                    appt.getSelectedServicesJson(), new TypeReference<>() {});
+            return rows.stream().map(row -> AppointmentResponseDTO.SelectedServiceDTO.builder()
+                    .serviceCatalogId(((Number) row.get("serviceCatalogId")).longValue())
+                    .subServiceName(String.valueOf(row.get("subServiceName")))
+                    .estimatedAmount(((Number) row.get("estimatedAmount")).intValue())
+                    .build()).toList();
+        } catch (Exception ignored) {
+            return Collections.emptyList();
+        }
+    }
+
+    private List<AppointmentResponseDTO.CompletedServiceDTO> parseCompletedServices(Appointment appt) {
+        if (appt.getCompletedServicesJson() == null || appt.getCompletedServicesJson().isBlank()) {
+            return Collections.emptyList();
+        }
+        try {
+            List<Map<String, Object>> rows = objectMapper.readValue(
+                    appt.getCompletedServicesJson(), new TypeReference<>() {});
+            return rows.stream().map(row -> AppointmentResponseDTO.CompletedServiceDTO.builder()
+                    .serviceCatalogId(((Number) row.get("serviceCatalogId")).longValue())
+                    .subServiceName(String.valueOf(row.get("subServiceName")))
+                    .finalAmount(((Number) row.get("finalAmount")).intValue())
+                    .build()).toList();
+        } catch (Exception ignored) {
+            return Collections.emptyList();
         }
     }
 }

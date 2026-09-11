@@ -61,6 +61,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.data.redis.core.RedisTemplate;
+import tools.jackson.databind.ObjectMapper;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -83,6 +86,11 @@ public class ProviderProfileService {
     private final ProviderSubscriptionService subscriptionService;
     private final NotificationService notificationService;
     private final KycRepository kycRepository;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
+
+    private static final String ACTIVE_CATEGORIES_CACHE_KEY = "catalog:categories:active";
+    private static final java.time.Duration CACHE_TTL = java.time.Duration.ofHours(24);
 
     // ══════════════════════════════════════════════════════════════════════════
     // PUBLIC PROFILE (no auth required)
@@ -342,6 +350,11 @@ public class ProviderProfileService {
                     "You can only review a completed appointment", "REVIEW_NOT_ELIGIBLE");
         }
 
+        if (!appointment.getProvider().getId().equals(req.getProviderId())) {
+            throw new BusinessException(
+                    "The selected provider does not belong to this appointment", "REVIEW_PROVIDER_MISMATCH");
+        }
+
         if (reviewRepo.existsByCustomer_IdAndAppointmentId(customer.getId(), req.getAppointmentId())) {
             throw new ConflictException(
                     "You have already reviewed this appointment", "DUPLICATE_REVIEW");
@@ -441,10 +454,42 @@ public class ProviderProfileService {
 
     @Transactional(readOnly = true)
     public List<CategoryDTO> getActiveCategories() {
-        return categoryRepo.findByIsActiveTrueOrderByNameAsc()
+        try {
+            String cachedJson = redisTemplate.opsForValue().get(ACTIVE_CATEGORIES_CACHE_KEY);
+            if (cachedJson != null) {
+                return objectMapper.readValue(
+                        cachedJson,
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, CategoryDTO.class)
+                );
+            }
+        } catch (Exception e) {
+            log.warn("Failed to retrieve active categories from Redis cache", e);
+        }
+
+        List<CategoryDTO> categories = categoryRepo.findByIsActiveTrueOrderByNameAsc()
                 .stream()
                 .map(c -> mapper.toCategoryDTO(c, (int) catalogRepo.countByCategory_Id(c.getId())))
                 .toList();
+
+        try {
+            redisTemplate.opsForValue().set(
+                    ACTIVE_CATEGORIES_CACHE_KEY,
+                    objectMapper.writeValueAsString(categories),
+                    CACHE_TTL
+            );
+        } catch (Exception e) {
+            log.warn("Failed to write active categories to Redis cache", e);
+        }
+
+        return categories;
+    }
+
+    private void clearCategoriesCache() {
+        try {
+            redisTemplate.delete(ACTIVE_CATEGORIES_CACHE_KEY);
+        } catch (Exception e) {
+            log.warn("Failed to clear active categories Redis cache", e);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -469,6 +514,7 @@ public class ProviderProfileService {
                 .build();
 
         Category saved = categoryRepo.save(category);
+        clearCategoriesCache();
         notifyCatalogChange("New service category", saved.getName() + " is now available in the ServiceLink service catalog.");
         log.info("Admin created category {} ({})", saved.getId(), saved.getName());
         return mapper.toCategoryDTO(saved, 0);
@@ -509,6 +555,7 @@ public class ProviderProfileService {
         }
 
         log.info("Admin created category {} with {} sub-service(s)", category.getName(), created);
+        clearCategoriesCache();
         notifyCatalogChange("New service category", category.getName() + " and its services are now available in the catalog.");
         return mapper.toCategoryDTO(category, created);
     }
@@ -591,6 +638,7 @@ public class ProviderProfileService {
         }
 
         Category saved = categoryRepo.save(category);
+        clearCategoriesCache();
         notifyCatalogChange("Service category updated", saved.getName() + " has been updated in the service catalog.");
         return mapper.toCategoryDTO(saved, (int) catalogRepo.countByCategory_Id(categoryId));
     }
@@ -602,6 +650,7 @@ public class ProviderProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId));
         category.setIsActive(!category.getIsActive());
         Category saved = categoryRepo.save(category);
+        clearCategoriesCache();
         notifyCatalogChange("Service category availability changed", saved.getName() + " is " + (Boolean.TRUE.equals(saved.getIsActive()) ? "now available" : "no longer available") + ".");
         return mapper.toCategoryDTO(saved, (int) catalogRepo.countByCategory_Id(categoryId));
     }
@@ -665,6 +714,7 @@ public class ProviderProfileService {
                 .build();
 
         ServiceCatalog saved = catalogRepo.save(sc);
+        clearCategoriesCache();
         notifyCatalogChange("New service added", saved.getSubServiceName() + " is now available under " + saved.getCategory().getName() + ".");
         return mapper.toCatalogDTO(saved);
     }
@@ -686,6 +736,7 @@ public class ProviderProfileService {
         if (req.getBasePrice()      != null) sc.setBasePrice(req.getBasePrice());
 
         ServiceCatalog saved = catalogRepo.save(sc);
+        clearCategoriesCache();
         notifyCatalogChange("Service updated", saved.getSubServiceName() + " has been updated in the service catalog.");
         return mapper.toCatalogDTO(saved);
     }
@@ -697,6 +748,7 @@ public class ProviderProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("ServiceCatalog", catalogId));
         sc.setIsActive(!sc.getIsActive());
         ServiceCatalog saved = catalogRepo.save(sc);
+        clearCategoriesCache();
         notifyCatalogChange("Service availability changed", saved.getSubServiceName() + " is " + (Boolean.TRUE.equals(saved.getIsActive()) ? "now available" : "no longer available") + ".");
         return mapper.toCatalogDTO(saved);
     }
@@ -894,6 +946,7 @@ public class ProviderProfileService {
         }
 
         categoryRepo.delete(category);
+        clearCategoriesCache();
         notifyCatalogChange("Service category removed", category.getName() + " has been removed from the service catalog.");
     }
 
@@ -915,6 +968,7 @@ public class ProviderProfileService {
         }
 
         catalogRepo.delete(sc);
+        clearCategoriesCache();
         notifyCatalogChange("Service removed", sc.getSubServiceName() + " has been removed from the service catalog.");
     }
 }

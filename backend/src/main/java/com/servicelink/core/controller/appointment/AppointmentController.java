@@ -107,19 +107,7 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.getMyAppointmentDetail(user.getId(), id));
     }
 
-    /**
-     * PATCH /api/v1/appointments/{id}/cancel
-     * Customer cancels their own appointment.
-     */
-    @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<AppointmentResponseDTO> cancelMyAppointment(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long id,
-            @RequestParam(required = false) String reason) {
 
-        return ResponseEntity.ok(appointmentService.cancelByCustomer(user.getId(), id, reason));
-    }
 
     /**
      * GET /api/v1/appointments/stats

@@ -13,7 +13,6 @@ import {
     Cell,
 } from "recharts";
 import {
-    Download,
     FileText,
     CheckCircle,
     TrendingUp,
@@ -21,7 +20,6 @@ import {
     AlertCircle,
 } from "lucide-react";
 import { insightsApi, ProviderEarningsResponse } from "@/lib/api/insightsApi";
-import { jsPDF } from "jspdf";
 
 const tabs = ["This Week", "This Month", "Last 3 Months", "This Year"];
 
@@ -53,6 +51,7 @@ export default function EarningsPage() {
     const [data, setData] = useState<ProviderEarningsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [retryKey, setRetryKey] = useState(0);
 
     useEffect(() => {
         let active = true;
@@ -62,7 +61,17 @@ export default function EarningsPage() {
             try {
                 const res = await insightsApi.getEarnings(activeTab);
                 if (active) {
-                    setData(res);
+                    setData({
+                        summary: {
+                            totalEarned: Number(res?.summary?.totalEarned ?? 0),
+                            completedJobs: Number(res?.summary?.completedJobs ?? 0),
+                            averagePerJob: Number(res?.summary?.averagePerJob ?? 0),
+                            pendingAmount: Number(res?.summary?.pendingAmount ?? 0),
+                        },
+                        revenueTrend: Array.isArray(res?.revenueTrend) ? res.revenueTrend : [],
+                        topServices: Array.isArray(res?.topServices) ? res.topServices : [],
+                        recentPayments: Array.isArray(res?.recentPayments) ? res.recentPayments : [],
+                    });
                 }
             } catch (err: any) {
                 if (active) {
@@ -78,129 +87,7 @@ export default function EarningsPage() {
         return () => {
             active = false;
         };
-    }, [activeTab]);
-
-    const handleExportPDF = () => {
-        if (!data) return;
-        const doc = new jsPDF();
-        
-        // Title
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(18);
-        doc.setTextColor(30, 58, 138); // bg-[#1e3a8a]
-        doc.text("SERVICELINK PROVIDER EARNINGS REPORT", 14, 20);
-        
-        // Divider
-        doc.setDrawColor(226, 232, 240);
-        doc.line(14, 24, 196, 24);
-        
-        // Sub-info
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 31);
-        doc.text(`Report Period: ${activeTab}`, 14, 37);
-        
-        // Summary box
-        doc.setFillColor(248, 250, 252);
-        doc.rect(14, 43, 182, 34, "F");
-        
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(30, 58, 138);
-        doc.text("SUMMARY METRICS", 20, 50);
-        
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(51, 65, 85);
-        doc.text(`Total Earned: Rs. ${data.summary.totalEarned.toLocaleString()}`, 20, 57);
-        doc.text(`Jobs Completed: ${data.summary.completedJobs}`, 20, 63);
-        doc.text(`Average Per Job: Rs. ${data.summary.averagePerJob.toLocaleString()}`, 20, 69);
-        
-        doc.text(`Pending Amount: Rs. ${data.summary.pendingAmount.toLocaleString()}`, 110, 57);
-        
-        // Top Services
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.setTextColor(30, 58, 138);
-        doc.text("TOP SERVICES DISTRIBUTION", 14, 88);
-        doc.line(14, 90, 196, 90);
-        
-        let y = 97;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(51, 65, 85);
-        if (data.topServices.length === 0) {
-            doc.text("No services activity recorded.", 14, y);
-            y += 8;
-        } else {
-            data.topServices.forEach(s => {
-                if (y > 270) { doc.addPage(); y = 20; }
-                doc.text(`${s.name}`, 14, y);
-                doc.text(`Rs. ${s.value.toLocaleString()}`, 150, y);
-                y += 8;
-            });
-        }
-        
-        // Payment History Table
-        y += 8;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.setTextColor(30, 58, 138);
-        doc.text("RECENT PAYMENT HISTORY", 14, y);
-        doc.line(14, y + 2, 196, y + 2);
-        y += 10;
-        
-        // Table Header
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text("Booking ID", 14, y);
-        doc.text("Customer", 42, y);
-        doc.text("Service", 90, y);
-        doc.text("Date", 140, y);
-        doc.text("Amount", 163, y);
-        doc.text("Status", 182, y);
-        y += 6;
-        doc.line(14, y - 2, 196, y - 2);
-        
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(51, 65, 85);
-        if (data.recentPayments.length === 0) {
-            doc.text("No payment history records found.", 14, y);
-        } else {
-            data.recentPayments.forEach(p => {
-                if (y > 270) {
-                    doc.addPage();
-                    y = 20;
-                    // Repeat headers on new page
-                    doc.setFont("helvetica", "bold");
-                    doc.text("Booking ID", 14, y);
-                    doc.text("Customer", 42, y);
-                    doc.text("Service", 90, y);
-                    doc.text("Date", 140, y);
-                    doc.text("Amount", 163, y);
-                    doc.text("Status", 182, y);
-                    y += 6;
-                    doc.line(14, y - 2, 196, y - 2);
-                    doc.setFont("helvetica", "normal");
-                }
-                doc.text(p.id, 14, y);
-                
-                const cust = p.customer.length > 20 ? p.customer.substring(0, 18) + "..." : p.customer;
-                const serv = p.service.length > 24 ? p.service.substring(0, 22) + "..." : p.service;
-                
-                doc.text(cust, 42, y);
-                doc.text(serv, 90, y);
-                doc.text(p.date, 140, y);
-                doc.text(p.amount, 163, y);
-                doc.text(p.status, 182, y);
-                y += 8;
-            });
-        }
-        
-        doc.save(`ServiceLink-Earnings-Report-${activeTab.replace(" ", "-")}.pdf`);
-    };
+    }, [activeTab, retryKey]);
 
     if (loading) {
         return (
@@ -227,7 +114,7 @@ export default function EarningsPage() {
                 <h3 className="text-base font-bold text-slate-800">Something went wrong</h3>
                 <p className="text-sm text-slate-500 max-w-sm">{error}</p>
                 <button
-                    onClick={() => setActiveTab(activeTab)}
+                    onClick={() => setRetryKey((key) => key + 1)}
                     className="rounded-lg bg-[#1e3a8a] text-white text-sm font-semibold px-4 py-2 hover:bg-[#1e3a8a]/90 transition-colors"
                 >
                     Try Again
@@ -249,13 +136,6 @@ export default function EarningsPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-bold text-gray-900">Earnings</h1>
-                    <button 
-                        onClick={handleExportPDF}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm cursor-pointer"
-                    >
-                        <Download size={14} />
-                        Export as PDF
-                    </button>
                 </div>
 
                 {/* Tabs */}
@@ -451,7 +331,7 @@ export default function EarningsPage() {
                                         <td className="px-6 py-3.5 text-sm font-bold text-gray-800">{row.amount}</td>
                                         <td className="px-6 py-3.5">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold ${statusStyle(row.status)}`}>
-                                                {row.status}
+                                                {row.status}{row.paymentMethod ? ` · ${row.paymentMethod === "QR_MOBILE" ? "QR" : "Cash"}` : ""}
                                             </span>
                                         </td>
                                     </tr>

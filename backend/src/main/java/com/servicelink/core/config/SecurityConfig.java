@@ -119,14 +119,26 @@ public class SecurityConfig {
                                 HttpMethod.POST, "/api/business/team/accept-invite"
                         ).permitAll()
 
-                        // TODO: if ProUser registration / KYB submission lives
-                        // under /api/business/** and must be reachable before
-                        // login (e.g. "/api/business/pro-user/create"), add its
-                        // specific matcher here too — do NOT blanket-permit
-                        // the whole /api/business/** prefix again.
-                        //
-                        // Example:
-                        // .requestMatchers(HttpMethod.POST, "/api/business/pro-user/create").permitAll()
+                        // =====================================================
+                        // BUSINESS — REGISTER FLOW (anonymous wizard)
+                        // =====================================================
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/business/registration/resume/*",
+                                "/api/business/organization/*",
+                                "/api/business/workspace/*",
+                                "/api/business/pro-user/workspace/*",
+                                "/api/business/kyb/organization/*"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/business/organization",
+                                "/api/business/workspace",
+                                "/api/business/pro-user/create",
+                                "/api/business/kyb/submit",
+                                "/api/business/payment/subscription"
+                        ).permitAll()
 
                         // =====================================================
                         // BUSINESS — everything else requires authentication

@@ -52,6 +52,7 @@ export default function AnalyticsPage() {
     const [data, setData] = useState<ProviderAnalyticsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [retryKey, setRetryKey] = useState(0);
 
     useEffect(() => {
         let active = true;
@@ -77,7 +78,7 @@ export default function AnalyticsPage() {
         return () => {
             active = false;
         };
-    }, [activeTab]);
+    }, [activeTab, retryKey]);
 
     if (loading) {
         return (
@@ -107,7 +108,7 @@ export default function AnalyticsPage() {
                 <h3 className="text-base font-bold text-slate-800">Something went wrong</h3>
                 <p className="text-sm text-slate-500 max-w-sm">{error}</p>
                 <button
-                    onClick={() => setActiveTab(activeTab)}
+                    onClick={() => setRetryKey((key) => key + 1)}
                     className="rounded-lg bg-[#1e3a8a] text-white text-sm font-semibold px-4 py-2 hover:bg-[#1e3a8a]/90 transition-colors"
                 >
                     Try Again
@@ -127,7 +128,14 @@ export default function AnalyticsPage() {
         lng: c.lng,
         label: c.label,
     }));
-    const mapCenter: [number, number] = markers.length > 0 ? [markers[0].lat, markers[0].lng] : [27.7172, 85.324];
+    const hasCoverageCenter = Number.isFinite(data.coverageArea?.latitude) && Number.isFinite(data.coverageArea?.longitude);
+    const mapCenter: [number, number] = hasCoverageCenter
+        ? [data.coverageArea!.latitude!, data.coverageArea!.longitude!]
+        : markers.length > 0
+            ? [markers[0].lat, markers[0].lng]
+            : [27.7172, 85.324];
+    const radiusMeters = hasCoverageCenter ? Math.max(0, data.coverageArea?.radiusKm ?? 0) * 1000 : 0;
+    const coverageDistricts = data.coverageArea?.districts ?? [];
 
     return (
         <div className="flex flex-col gap-5 max-w-[1200px] mx-auto">
@@ -260,7 +268,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Heatmap + Ratings Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className={`grid grid-cols-1 gap-4 ${data.ratings.totalReviews > 0 ? "md:grid-cols-2" : ""}`}>
 
                     {/* Peak Operating Hours Heatmap */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
@@ -298,7 +306,7 @@ export default function AnalyticsPage() {
                     </div>
 
                     {/* Customer Ratings */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                    {data.ratings.totalReviews > 0 && <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                         <h2 className="text-sm font-semibold text-gray-800 mb-4">Customer Ratings</h2>
 
                         {/* Big rating */}
@@ -337,7 +345,7 @@ export default function AnalyticsPage() {
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </div>}
                 </div>
 
                 {/* Interactive Customer Map */}
@@ -352,9 +360,30 @@ export default function AnalyticsPage() {
                         </span>
                     </div>
 
-                    <div className="w-full h-[350px] relative z-0">
-                        <MapComponent center={mapCenter} markers={markers} interactive={true} />
-                    </div>
+                    {hasCoverageCenter || markers.length > 0 ? (
+                        <div className="w-full h-[350px] relative z-0">
+                            <MapComponent
+                                center={mapCenter}
+                                radius={radiusMeters}
+                                markers={markers}
+                                centerLabel="Your service area center"
+                                interactive={true}
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex h-[220px] items-center justify-center px-6 text-center text-sm text-slate-500">
+                            Add your service-area location and travel radius in your provider profile to activate this map.
+                        </div>
+                    )}
+                    {coverageDistricts.length > 0 && (
+                        <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-3">
+                            {coverageDistricts.map((district) => (
+                                <span key={district} className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-800">
+                                    {district}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
             </div>

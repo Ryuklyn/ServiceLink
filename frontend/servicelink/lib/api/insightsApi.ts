@@ -42,6 +42,12 @@ export interface ProviderAnalyticsResponse {
     peakHours: number[][];
     ratings: RatingsInfo;
     coverage: CoverageItem[];
+    coverageArea?: {
+        latitude: number | null;
+        longitude: number | null;
+        radiusKm: number | null;
+        districts: string[];
+    };
 }
 
 export interface EarningsSummary {
@@ -69,6 +75,7 @@ export interface PaymentItem {
     date: string;
     amount: string;
     status: "Paid" | "Pending" | "Unpaid" | "Refunded" | string;
+    paymentMethod?: "CASH" | "QR_MOBILE" | string | null;
 }
 
 export interface ProviderEarningsResponse {
@@ -88,7 +95,8 @@ export const insightsApi = {
 
     getEarnings: async (range: string): Promise<ProviderEarningsResponse> => {
         const { data } = await api.get<ProviderEarningsResponse>(
-            `/providers/earnings?range=${encodeURIComponent(range)}`
+            "/providers/earnings",
+            { params: { range } }
         );
         return data;
     }

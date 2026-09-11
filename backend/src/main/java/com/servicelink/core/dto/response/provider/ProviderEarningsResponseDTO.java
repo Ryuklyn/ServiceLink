@@ -59,5 +59,6 @@ public class ProviderEarningsResponseDTO {
         private String date;
         private String amount;
         private String status;
+        private String paymentMethod;
     }
 }

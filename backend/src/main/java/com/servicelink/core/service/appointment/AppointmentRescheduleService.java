@@ -26,6 +26,7 @@ import com.servicelink.core.repository.UserRepository;
 import com.servicelink.core.repository.appointment.AppointmentPaymentTransactionRepository;
 import com.servicelink.core.repository.appointment.AppointmentRepository;
 import com.servicelink.core.repository.appointment.ProviderServiceRepository;
+import com.servicelink.core.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,6 +60,7 @@ public class AppointmentRescheduleService {
     private final UserRepository userRepo;
     private final ProviderServiceRepository providerServiceRepo;
     private final JobAssignmentRepository jobAssignmentRepository;
+    private final NotificationService notificationService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // FREE RESCHEDULE — only when > 24h out, no token/fee involved
@@ -259,6 +261,9 @@ public class AppointmentRescheduleService {
     }
 
     private boolean isLateWindow(Appointment appt) {
+        if (appt.getStatus() != AppointmentStatus.CONFIRMED) {
+            return false;
+        }
         LocalTime startTime = appt.getEstimatedStartTime() != null
                 ? appt.getEstimatedStartTime()
                 : appt.getTimeSlot().getStartTime();
@@ -295,6 +300,10 @@ public class AppointmentRescheduleService {
     }
 
     private void applyReschedule(Appointment appt, LocalDate newDate, TimeSlot newSlot, String reason) {
+        appt.setPreviousAppointmentDate(appt.getAppointmentDate());
+        appt.setPreviousTimeSlot(appt.getTimeSlot());
+        appt.setRescheduledAt(java.time.LocalDateTime.now());
+
         appt.setAppointmentDate(newDate);
         appt.setTimeSlot(newSlot);
         appt.setEstimatedStartTime(newSlot.getStartTime());
@@ -303,10 +312,23 @@ public class AppointmentRescheduleService {
             appt.setNotes(appendReason(appt.getNotes(), reason));
         }
         // Rescheduled bookings drop back to PENDING so the provider reconfirms the new slot.
-        // If you'd rather keep it CONFIRMED automatically, remove these two lines.
         appt.setStatus(AppointmentStatus.PENDING);
         appt.setConfirmedAt(null);
         appointmentRepo.save(appt);
+
+        // 🔔 NOTIFY PROVIDER: reschedule request
+        try {
+            notificationService.sendPrivateNotification(
+                    appt.getProvider().getUser().getId(),
+                    com.servicelink.core.model.user.Role.PROVIDER,
+                    com.servicelink.core.model.notification.NotificationCategory.BOOKING,
+                    "Booking Rescheduled",
+                    "Customer has rescheduled booking (BK-" + appt.getId() + ") to " + newDate + " (" + newSlot.getDisplayLabel() + "). Please approve or decline.",
+                    "/dashboard/provider/bookings"
+            );
+        } catch (Exception e) {
+            log.error("Failed to send reschedule notification to provider", e);
+        }
     }
 
     private String appendReason(String existingNotes, String rescheduleReason) {

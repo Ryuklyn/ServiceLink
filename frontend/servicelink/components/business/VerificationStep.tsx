@@ -26,7 +26,7 @@ export default function VerificationStep({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [taxId, setTaxId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checkingExisting, setCheckingExisting] = useState(true);
+  const [checkingExisting, setCheckingExisting] = useState(!!organizationId);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [existingStatus, setExistingStatus] = useState<string | null>(null);
 
@@ -34,7 +34,6 @@ export default function VerificationStep({
   // re-submit — the backend rejects duplicates ("KYC ... already submitted").
   useEffect(() => {
     if (!organizationId) {
-      setCheckingExisting(false);
       return;
     }
     api
@@ -92,14 +91,13 @@ export default function VerificationStep({
       formData.append(
           "data",
           new Blob([JSON.stringify(kybData)], { type: "application/json" }),
+          "data.json"
       );
       if (selectedFile) {
         formData.append("document", selectedFile);
       }
 
-      await api.post("/business/kyb/submit", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await api.post("/business/kyb/submit", formData);
 
       toast.success("Business verification submitted successfully!");
       onContinue();

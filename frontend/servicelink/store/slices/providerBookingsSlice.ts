@@ -9,16 +9,24 @@ export interface AppointmentSummary {
     providerName: string;
     providerProfilePicture: string | null;
     subServiceName: string;
+    selectedServiceNames: string[];
     appointmentDate: string;          // yyyy-MM-dd
     timeSlot: "MORNING" | "AFTERNOON" | "EVENING";
     estimatedStartTime: string | null; // HH:mm:ss
     status: BackendAppointmentStatus;
     totalPrice: number | null;
+    estimatedAmount: number | null;
+    finalAmount: number | null;
+    paymentStatus: "PAID" | "PENDING" | null;
+    paymentMethod: "CASH" | "QR_MOBILE" | null;
     address: string;
     customerName: string;
     customerPhone: string | null;
     customerProfilePictureUrl: string | null;
     operationalStatus: string | null;
+    previousAppointmentDate?: string | null;
+    previousTimeSlot?: "MORNING" | "AFTERNOON" | "EVENING" | null;
+    rescheduledAt?: string | null;
 }
 
 export interface AppointmentDetail extends AppointmentSummary {
@@ -43,6 +51,17 @@ export interface AppointmentDetail extends AppointmentSummary {
     completedAt: string | null;
     cancelledAt: string | null;
     customerEmail: string | null;
+    selectedServices: Array<{
+        serviceCatalogId: number;
+        subServiceName: string;
+        estimatedAmount: number;
+    }>;
+    completedServices: Array<{
+        serviceCatalogId: number;
+        subServiceName: string;
+        finalAmount: number;
+    }>;
+    completionNote: string | null;
 }
 
 interface ProviderBookingsState {
@@ -90,11 +109,11 @@ AppointmentDetail, number, { rejectValue: string }
 
 export const updateBookingStatus = createAsyncThunk<
 AppointmentDetail,
-    { id: number; status: BackendAppointmentStatus; operationalStatus?: string; measuredQuantity?: number; reason?: string },
+    { id: number; status: BackendAppointmentStatus; operationalStatus?: string; measuredQuantity?: number; reason?: string; finalAmount?: number; paymentStatus?: "PAID" | "PENDING"; paymentMethod?: "CASH" | "QR_MOBILE"; completionNote?: string; completedServices?: Array<{ serviceCatalogId: number; subServiceName: string; finalAmount: number }> },
 { rejectValue: string }
-> ("providerBookings/updateStatus", async ({ id, status, operationalStatus, measuredQuantity, reason }, { rejectWithValue }) => {
+> ("providerBookings/updateStatus", async ({ id, status, operationalStatus, measuredQuantity, reason, finalAmount, paymentStatus, paymentMethod, completionNote, completedServices }, { rejectWithValue }) => {
     try {
-        const { data } = await api.patch(`/appointments/provider/${id}/status`, { status, operationalStatus, measuredQuantity, reason });
+        const { data } = await api.patch(`/appointments/provider/${id}/status`, { status, operationalStatus, measuredQuantity, reason, finalAmount, paymentStatus, paymentMethod, completionNote, completedServices });
         return data as AppointmentDetail;
     } catch (err: any) {
         return rejectWithValue(err?.response?.data?.message ?? err?.message ?? "Failed to update booking status");
@@ -138,7 +157,18 @@ const providerBookingsSlice = createSlice({
                 state.detailsById[action.payload.id] = action.payload;
                 state.items = state.items.map((b) =>
                     b.id === action.payload.id
-                        ? { ...b, status: action.payload.status, operationalStatus: action.payload.operationalStatus }
+                        ? { 
+                            ...b, 
+                            status: action.payload.status, 
+                            operationalStatus: action.payload.operationalStatus,
+                            previousAppointmentDate: action.payload.previousAppointmentDate,
+                            previousTimeSlot: action.payload.previousTimeSlot,
+                            rescheduledAt: action.payload.rescheduledAt
+                            ,estimatedAmount: action.payload.estimatedAmount
+                            ,finalAmount: action.payload.finalAmount
+                            ,paymentStatus: action.payload.paymentStatus
+                            ,paymentMethod: action.payload.paymentMethod
+                          }
                         : b,
                 );
             })

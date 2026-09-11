@@ -46,6 +46,8 @@
 package com.servicelink.core.dto.response.appointment;
 
 import com.servicelink.core.model.appointment.AppointmentStatus;
+import com.servicelink.core.model.appointment.AppointmentPaymentMethod;
+import com.servicelink.core.model.appointment.AppointmentPaymentStatus;
 import com.servicelink.core.model.common.TimeSlot;
 import com.servicelink.core.model.provider.ServiceCatalog;
 import lombok.Builder;
@@ -54,6 +56,7 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -83,6 +86,27 @@ public class AppointmentResponseDTO {
     private String  operationalStatus;
     private Integer estimatedAmount;
     private Integer finalAmount;
+    private AppointmentPaymentStatus paymentStatus;
+    private AppointmentPaymentMethod paymentMethod;
+    private String completionNote;
+    private List<SelectedServiceDTO> selectedServices;
+    private List<CompletedServiceDTO> completedServices;
+
+    @Data
+    @Builder
+    public static class SelectedServiceDTO {
+        private Long serviceCatalogId;
+        private String subServiceName;
+        private Integer estimatedAmount;
+    }
+
+    @Data
+    @Builder
+    public static class CompletedServiceDTO {
+        private Long serviceCatalogId;
+        private String subServiceName;
+        private Integer finalAmount;
+    }
     private Integer providerRate;
 
     // ── Scheduling ────────────────────────────────────────────────────────────
@@ -91,6 +115,9 @@ public class AppointmentResponseDTO {
     private LocalDateTime scheduledAt;
     private LocalTime     estimatedStartTime;
     private LocalTime     estimatedEndTime;
+    private LocalDate     previousAppointmentDate;
+    private TimeSlot      previousTimeSlot;
+    private LocalDateTime rescheduledAt;
 
     // ── Attachments ───────────────────────────────────────────────────────────
     private String attachedImgUrl;

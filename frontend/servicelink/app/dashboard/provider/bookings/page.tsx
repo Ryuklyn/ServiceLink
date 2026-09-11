@@ -209,13 +209,18 @@ export default function BookingsPage() {
     const [search, setSearch] = useState("");
     const [sortKey, setSortKey] = useState<SortKey>("newest");
     const [mobileView, setMobileView] = useState<"list" | "detail">("list");
-    const [measuredQty, setMeasuredQty] = useState<number | undefined>(undefined);
 
     const [proJobs, setProJobs] = useState<any[]>([]);
     const [selectedProJob, setSelectedProJob] = useState<any | null>(null);
     const [proLoading, setProLoading] = useState(false);
     const [proSeen, setProSeen] = useState(false);
     const [b2cSeen, setB2cSeen] = useState(false);
+
+    const [completionOpen, setCompletionOpen] = useState(false);
+    const [completionServices, setCompletionServices] = useState<Array<{ serviceCatalogId: number; subServiceName: string; finalAmount: number }>>([]);
+    const [paymentReceived, setPaymentReceived] = useState(true);
+    const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QR_MOBILE">("CASH");
+    const [completionNote, setCompletionNote] = useState("");
 
     const loadProJobs = async () => {
         setProLoading(true);
@@ -273,10 +278,6 @@ export default function BookingsPage() {
     useEffect(() => {
         dispatch(fetchProviderBookings());
     }, [dispatch]);
-
-    useEffect(() => {
-        setMeasuredQty(undefined);
-    }, [selectedId]);
 
     // Auto-select first item once the list loads
     useEffect(() => {
@@ -338,6 +339,7 @@ export default function BookingsPage() {
             return (
                 b.customerName?.toLowerCase().includes(q) ||
                 b.subServiceName?.toLowerCase().includes(q) ||
+                b.selectedServiceNames?.some((name) => name.toLowerCase().includes(q)) ||
                 b.address?.toLowerCase().includes(q) ||
                 `bk-${b.id}`.includes(q) ||
                 String(b.id).includes(q)
@@ -410,6 +412,58 @@ export default function BookingsPage() {
     const doTransition = (status: BackendAppointmentStatus, reason?: string, operationalStatus?: string) => {
         if (selectedId == null) return;
         dispatch(updateBookingStatus({ id: selectedId, status, reason, operationalStatus }));
+    };
+
+    const openCompletion = () => {
+        if (!selectedSummary) return;
+        if (!selectedDetail) {
+            toast.info("Booking details are still loading. Please try again in a moment.");
+            return;
+        }
+        const services = selectedDetail?.selectedServices?.length
+            ? selectedDetail.selectedServices.map((service) => ({
+                serviceCatalogId: service.serviceCatalogId,
+                subServiceName: service.subServiceName,
+                finalAmount: service.estimatedAmount,
+            }))
+            : [{
+                serviceCatalogId: selectedDetail.serviceCatalogId,
+                subServiceName: selectedDetail.subServiceName,
+                finalAmount: selectedDetail.estimatedAmount ?? selectedSummary.estimatedAmount ?? selectedSummary.totalPrice ?? 0,
+            }];
+        setCompletionServices(services);
+        setPaymentReceived(true);
+        setPaymentMethod("CASH");
+        setCompletionNote("");
+        setCompletionOpen(true);
+    };
+
+    const completeService = () => {
+        if (selectedId == null) return;
+        if (completionServices.length === 0 || completionServices.some((service) => !Number.isFinite(service.finalAmount) || service.finalAmount < 0)) {
+            toast.error("Enter a valid final amount for every service.");
+            return;
+        }
+        const finalAmount = completionServices.reduce((sum, service) => sum + service.finalAmount, 0);
+        dispatch(
+            updateBookingStatus({
+                id: selectedId,
+                status: "COMPLETED",
+                finalAmount,
+                paymentStatus: paymentReceived ? "PAID" : "PENDING",
+                paymentMethod: paymentReceived ? paymentMethod : undefined,
+                completionNote: completionNote || undefined,
+                completedServices: completionServices,
+            })
+        )
+            .unwrap()
+            .then(() => {
+                toast.success("Service marked as completed!");
+                setCompletionOpen(false);
+            })
+            .catch((err) => {
+                toast.error(err?.message || "Failed to complete service.");
+            });
     };
 
     const handleSelectBooking = (id: number) => {
@@ -613,7 +667,9 @@ export default function BookingsPage() {
                                                                     Rs. {(b.totalPrice ?? 0).toLocaleString()}
                                                                 </p>
                                                             </div>
-                                                            <p className="text-xs text-gray-500 mt-0.5 truncate">{b.subServiceName}</p>
+                                                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                                                                {(b.selectedServiceNames?.length ? b.selectedServiceNames : [b.subServiceName]).join(" · ")}
+                                                            </p>
 
                                                             {rescheduled && (
                                                                 <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#1e3a8a] bg-[#1e3a8a]/10 border border-[#1e3a8a]/20 px-1.5 py-0.5 rounded-full">
@@ -1024,7 +1080,14 @@ export default function BookingsPage() {
                                     <h3 className="text-sm font-semibold text-gray-800 mb-3">Service Requested</h3>
                                     <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold border mb-3"
                                           style={{ borderColor: "#bbf7d0", color: "#16a34a", backgroundColor: "#f0fdf4" }}>
-                                        {selectedSummary.subServiceName}
+                                        {(selectedSummary.selectedServiceNames?.length
+                                            ? selectedSummary.selectedServiceNames
+                                            : [selectedSummary.subServiceName]
+                                        ).map((serviceName) => (
+                                            <span key={serviceName} className="mr-1.5 inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-[#1e3a8a]">
+                                                {serviceName}
+                                            </span>
+                                        ))}
                                     </span>
 
                                     {detailStatus === "loading" && !selectedDetail ? (
@@ -1151,7 +1214,7 @@ export default function BookingsPage() {
                                         {selectedSummary.status === "CONFIRMED" && (
                                             <div className="w-full flex flex-col gap-4 mb-4">
                                                 {/* Operational Stepper */}
-                                                <div className="flex items-center justify-between w-full px-2 py-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                <div className="hidden">
                                                     <div className="flex flex-col items-center flex-1">
                                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                                                             selectedSummary.operationalStatus === "CONFIRMED" || !selectedSummary.operationalStatus
@@ -1189,21 +1252,21 @@ export default function BookingsPage() {
                                                 </div>
 
                                                 <div className="flex gap-2 w-full">
-                                                    {(!selectedSummary.operationalStatus || selectedSummary.operationalStatus === "CONFIRMED") && (
+                                                    {false && (
                                                         <button
                                                             onClick={() => doTransition("CONFIRMED", undefined, "ON_THE_WAY")}
-                                                            disabled={updatingId === selectedSummary.id}
+                                                            disabled={updatingId === selectedSummary?.id}
                                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                                                             style={{ backgroundColor: BRAND.navy }}
                                                         >
-                                                            <Truck size={15} /> On My Way
+                                                            <Wrench size={15} /> On My Way
                                                         </button>
                                                     )}
 
-                                                    {selectedSummary.operationalStatus === "ON_THE_WAY" && (
+                                                    {false && (
                                                         <button
                                                             onClick={() => doTransition("CONFIRMED", undefined, "ARRIVED")}
-                                                            disabled={updatingId === selectedSummary.id}
+                                                            disabled={updatingId === selectedSummary?.id}
                                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                                                             style={{ backgroundColor: BRAND.navy }}
                                                         >
@@ -1211,7 +1274,7 @@ export default function BookingsPage() {
                                                         </button>
                                                     )}
 
-                                                    {selectedSummary.operationalStatus === "ARRIVED" && (
+                                                    {true && (
                                                         <button
                                                             onClick={() => doTransition("IN_PROGRESS")}
                                                             disabled={updatingId === selectedSummary.id}
@@ -1235,60 +1298,45 @@ export default function BookingsPage() {
 
                                         {selectedSummary.status === "IN_PROGRESS" && (
                                             <div className="w-full flex flex-col gap-3">
-                                                {selectedDetail && selectedDetail.pricingUnit !== "PER_JOB" && (
-                                                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 flex flex-col gap-2">
-                                                        <label className="text-xs font-semibold text-slate-600">
-                                                            Enter measured quantity ({selectedDetail.pricingUnit === "PER_SQ_FT" ? "sq. ft." : selectedDetail.pricingUnit === "PER_HOUR" ? "hours" : "items"}):
-                                                        </label>
-                                                        <div className="flex gap-2">
-                                                            <input
-                                                                type="number"
-                                                                min={0}
-                                                                placeholder="e.g. 5"
-                                                                value={measuredQty ?? ""}
-                                                                onChange={(e) => setMeasuredQty(e.target.value ? Number(e.target.value) : undefined)}
-                                                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white"
-                                                            />
-                                                            {measuredQty !== undefined && selectedDetail.providerCustomPrice && (
-                                                                <span className="text-xs font-bold text-slate-500 self-center">
-                                                                    × Rs {selectedDetail.providerCustomPrice.toLocaleString()} = Rs {(measuredQty * selectedDetail.providerCustomPrice).toLocaleString()}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
                                                 <button
-                                                    onClick={() => {
-                                                        if (selectedDetail && selectedDetail.pricingUnit !== "PER_JOB" && (measuredQty === undefined || measuredQty <= 0)) {
-                                                            toast.warning("Please enter a valid measured quantity to complete the job.");
-                                                            return;
-                                                        }
-                                                        dispatch(updateBookingStatus({
-                                                            id: selectedSummary.id,
-                                                            status: "COMPLETED",
-                                                            measuredQuantity: measuredQty
-                                                        }));
-                                                    }}
+                                                    onClick={openCompletion}
                                                     disabled={updatingId === selectedSummary.id}
                                                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                                                     style={{ backgroundColor: BRAND.navy }}
                                                 >
-                                                    <CheckCircle size={15} /> Complete Job
+                                                    <CheckCircle size={15} /> Complete Service
                                                 </button>
                                             </div>
                                         )}
 
                                         {selectedSummary.status === "COMPLETED" && (
-                                            <div className="flex flex-col sm:flex-row gap-3 w-full">
-                                                <div className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-green-700 bg-green-50 border border-green-200">
-                                                    <CheckCircle size={15} /> Job Completed Successfully
+                                            <div className="w-full rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+                                                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2 text-sm font-bold text-emerald-800">
+                                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                                                                <CheckCircle size={16} />
+                                                            </span>
+                                                            Service completed
+                                                        </div>
+                                                    {(selectedDetail?.completedServices?.length ?? 0) > 0 && (
+                                                        <div className="mt-3 grid gap-1.5 border-t border-emerald-200/80 pt-3 text-xs text-slate-600">
+                                                            {selectedDetail?.completedServices?.map((service) => (
+                                                                <div key={service.serviceCatalogId} className="flex justify-between gap-3">
+                                                                    <span className="truncate">{service.subServiceName}</span>
+                                                                    <span className="shrink-0 font-semibold text-slate-800">Rs. {service.finalAmount.toLocaleString()}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleAddToPortfolioClick(selectedSummary)}
+                                                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 shadow-sm transition-colors hover:bg-emerald-100"
+                                                    >
+                                                        <Plus size={15} /> Add to portfolio
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleAddToPortfolioClick(selectedSummary)}
-                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#e8683f] hover:bg-[#d95a2f] transition-colors"
-                                                >
-                                                    <Plus size={15} /> Add to Portfolio
-                                                </button>
                                             </div>
                                         )}
 
@@ -1302,6 +1350,77 @@ export default function BookingsPage() {
                                     {/* WhatsApp/Call now live up in the customer header (always visible,
                                         status-independent) — removed the duplicate copy that used to sit
                                         here to avoid showing the same two buttons twice per booking. */}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {completionOpen && selectedSummary && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4" onClick={() => setCompletionOpen(false)}>
+                            <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                                <div className="border-b border-slate-100 px-5 py-4">
+                                    <h2 className="text-lg font-bold text-slate-900">Complete Service</h2>
+                                    <p className="mt-1 text-xs text-slate-500">Confirm the actual amount for each service. The total updates automatically.</p>
+                                </div>
+
+                                <div className="space-y-4 p-5">
+                                    <div className="space-y-2">
+                                        {completionServices.map((service, index) => {
+                                            const estimate = selectedDetail?.selectedServices?.find((item) => item.serviceCatalogId === service.serviceCatalogId)?.estimatedAmount ?? service.finalAmount;
+                                            return (
+                                                <div key={`${service.serviceCatalogId}-${index}`} className="rounded-xl border border-slate-200 p-3.5">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-semibold text-slate-800">{service.subServiceName}</p>
+                                                            <p className="mt-0.5 text-xs text-slate-400">Estimated: Rs. {estimate.toLocaleString()}</p>
+                                                        </div>
+                                                        <label className="w-36 shrink-0 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                                            Final amount
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                value={service.finalAmount}
+                                                                onChange={(event) => setCompletionServices((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, finalAmount: Number(event.target.value) } : item))}
+                                                                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-right text-sm font-bold text-slate-800 focus:border-[#1e3a8a] focus:outline-none"
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3 text-[#1e3a8a]">
+                                        <span className="text-sm font-semibold">Final Total</span>
+                                        <span className="text-lg font-black">Rs. {completionServices.reduce((sum, service) => sum + (Number.isFinite(service.finalAmount) ? service.finalAmount : 0), 0).toLocaleString()}</span>
+                                    </div>
+
+                                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">
+                                        <input type="checkbox" checked={paymentReceived} onChange={(event) => setPaymentReceived(event.target.checked)} className="h-4 w-4" />
+                                        Payment received
+                                    </label>
+
+                                    {paymentReceived && (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {(["CASH", "QR_MOBILE"] as const).map((method) => (
+                                                <button key={method} type="button" onClick={() => setPaymentMethod(method)} className={`rounded-lg border px-3 py-2.5 text-sm font-semibold ${paymentMethod === method ? "border-[#1e3a8a] bg-blue-50 text-[#1e3a8a]" : "border-slate-200 text-slate-600"}`}>
+                                                    {method === "CASH" ? "Cash" : "QR / Mobile"}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <label className="block text-sm font-semibold text-slate-700">
+                                        Optional note
+                                        <textarea value={completionNote} onChange={(event) => setCompletionNote(event.target.value)} maxLength={1000} rows={3} className="mt-1 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 font-normal focus:border-[#1e3a8a] focus:outline-none" />
+                                    </label>
+                                </div>
+
+                                <div className="flex gap-3 border-t border-slate-100 px-5 py-4">
+                                    <button onClick={() => setCompletionOpen(false)} className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600">Cancel</button>
+                                    <button onClick={completeService} disabled={updatingId === selectedSummary.id || completionServices.length === 0} className="flex-1 rounded-lg bg-[#1e3a8a] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                                        {updatingId === selectedSummary.id ? "Completing..." : "Complete Service"}
+                                    </button>
                                 </div>
                             </div>
                         </div>

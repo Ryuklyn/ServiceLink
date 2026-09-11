@@ -48,8 +48,10 @@ public class PaymentService {
     // ─────────────────────────────────────────────────────────────
     // Step 1: Initiate — build gateway URL, save INITIATED record
     // ─────────────────────────────────────────────────────────────
-    @Transactional
-    public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request) throws Exception {
+    public PaymentInitiateResponse initiatePayment(
+            PaymentInitiateRequest request,
+            SubscriptionPlanType purchasedPlan
+    ) throws Exception {
 
         ProviderSubscription subscription = providerSubscriptionRepo
                 .findById(request.getSubscriptionId())
@@ -81,47 +83,51 @@ public class PaymentService {
         java.util.Map<String, String> gatewayFormFields = null;
         String pidx = null;
 
-        switch (request.getPaymentGateway()) {
-            case ESEWA -> {
-                EsewaGatewayService.EsewaPaymentForm form = esewaService.buildPaymentForm(
-                        referenceId,
-                        request.getAmountNpr(),
-                        request.getSuccessUrl(),
-                        request.getFailureUrl()
-                );
-                gatewayRedirectUrl = form.actionUrl();
-                gatewayMethod = "POST";
-                gatewayFormFields = form.fields();
-                log.info("eSewa payment form built: ref={}", referenceId);
-            }
-            case KHALTI -> {
-                long amountPaisa = request.getAmountNpr() * 100L;
-                KhaltiGatewayService.KhaltiInitiateResult result = khaltiService.initiatePayment(
-                        referenceId,
-                        amountPaisa,
-                        "ServiceLink " + subscription.getPlanType().name() + " Plan",
-                        request.getSuccessUrl()
-                );
-                pidx = result.pidx();
-                gatewayRedirectUrl = result.paymentUrl();
-                log.info("Khalti payment initiated: ref={} pidx={}", referenceId, pidx);
-            }
-            default -> throw new IllegalArgumentException(
-                    "Unsupported gateway: " + request.getPaymentGateway());
-        }
-
         PaymentTransaction tx = PaymentTransaction.builder()
                 .subscription(subscription)
                 .referenceId(referenceId)
                 .paymentGateway(request.getPaymentGateway())
                 .paymentStatus(PaymentStatus.INITIATED)
                 .amountNpr(request.getAmountNpr())
-                .gatewayRedirectUrl(gatewayRedirectUrl)
-                .gatewayTransactionId(pidx)
+                .purchasedPlanType(purchasedPlan)
                 .build();
-
         transactionRepository.save(tx);
         log.info("PaymentTransaction saved: ref={} status=INITIATED", referenceId);
+
+        try {
+            switch (request.getPaymentGateway()) {
+                case ESEWA -> {
+                    EsewaGatewayService.EsewaPaymentForm form = esewaService.buildPaymentForm(
+                            referenceId, request.getAmountNpr(), request.getSuccessUrl(), request.getFailureUrl());
+                    gatewayRedirectUrl = form.actionUrl();
+                    gatewayMethod = "POST";
+                    gatewayFormFields = form.fields();
+                    log.info("eSewa payment form built: ref={}", referenceId);
+                }
+                case KHALTI -> {
+                    long amountPaisa = request.getAmountNpr() * 100L;
+                    KhaltiGatewayService.KhaltiInitiateResult result = khaltiService.initiatePayment(
+                            referenceId, amountPaisa, "ServiceLink " + purchasedPlan.name() + " Plan",
+                            request.getSuccessUrl());
+                    pidx = result.pidx();
+                    gatewayRedirectUrl = result.paymentUrl();
+                    log.info("Khalti payment initiated: ref={} pidx={}", referenceId, pidx);
+                }
+                default -> throw new IllegalArgumentException(
+                        "Unsupported gateway: " + request.getPaymentGateway());
+            }
+            tx.setGatewayRedirectUrl(gatewayRedirectUrl);
+            tx.setGatewayTransactionId(pidx);
+            transactionRepository.save(tx);
+        } catch (Exception gatewayError) {
+            tx.setPaymentStatus(PaymentStatus.FAILED);
+            tx.setGatewayResponse(gatewayError.getMessage());
+            tx.setCompletedAt(java.time.LocalDateTime.now());
+            transactionRepository.save(tx);
+            log.error("Payment initiation failed: ref={} gateway={}",
+                    referenceId, request.getPaymentGateway(), gatewayError);
+            throw gatewayError;
+        }
 
         return PaymentInitiateResponse.builder()
                 .referenceId(referenceId)
@@ -192,7 +198,6 @@ public class PaymentService {
     // (created at onboarding via issueTrialIfEligible) — checkout does
     // not create one, only ProviderSubscriptionService owns that.
     // ─────────────────────────────────────────────────────────────
-    @Transactional
     public PaymentInitiateResponse checkout(Long userId, SubscriptionCheckoutRequestDTO req,
                                             String successUrl, String failureUrl) throws Exception {
         Provider provider = providerRepo.findByUser_Id(userId)
@@ -200,19 +205,7 @@ public class PaymentService {
 
         long amountNpr = resolvePrice(req.getSubscriptionPlanType()); // server-side source of truth
 
-        ProviderSubscription bizSub = providerSubscriptionRepo.findByProvider_Id(provider.getId())
-                .orElseThrow(() -> new BusinessException(
-                        "No subscription found for provider", "SUBSCRIPTION_NOT_FOUND"));
-
-        // Tentatively record the plan being purchased so initiatePayment() and
-        // the later verifyAndSync() can read it off the linked subscription —
-        // upgradePlan() re-applies plan/status/dates correctly once payment is
-        // actually confirmed, so this early write is safely overwritten either
-        // way (a failed payment just leaves a stale planType until the next
-        // successful checkout, with no dates/status changed — isCurrentlyActive()
-        // is driven by endDate/status, not planType, so this can't fake activation).
-        bizSub.setPlanType(req.getSubscriptionPlanType());
-        providerSubscriptionRepo.save(bizSub);
+        ProviderSubscription bizSub = providerSubscriptionService.issueTrialIfEligible(provider);
 
         PaymentInitiateRequest payReq = new PaymentInitiateRequest();
         payReq.setSubscriptionId(bizSub.getId());
@@ -221,7 +214,7 @@ public class PaymentService {
         payReq.setSuccessUrl(successUrl);
         payReq.setFailureUrl(failureUrl);
 
-        return initiatePayment(payReq);
+        return initiatePayment(payReq, req.getSubscriptionPlanType());
     }
 
     private long resolvePrice(SubscriptionPlanType plan) {
@@ -265,7 +258,10 @@ public class PaymentService {
             transactionRepository.findByReferenceId(req.getReferenceId())
                     .ifPresent(tx -> {
                         ProviderSubscription sub = tx.getSubscription();
-                        providerSubscriptionService.upgradePlan(provider.getId(), sub.getPlanType());
+                        SubscriptionPlanType purchasedPlan = tx.getPurchasedPlanType() != null
+                                ? tx.getPurchasedPlanType()
+                                : sub.getPlanType();
+                        providerSubscriptionService.upgradePlan(provider.getId(), purchasedPlan);
 
                         // same persistence context → sub.getEndDate() below already
                         // reflects the post-upgrade value, since upgradePlan() loads
@@ -273,7 +269,7 @@ public class PaymentService {
                         emailService.sendSubscriptionPaymentEmail(
                                 provider.getUser().getEmail(),
                                 provider.getUser().getFullName(),
-                                sub.getPlanType().name(),
+                                purchasedPlan.name(),
                                 tx.getAmountNpr(),
                                 tx.getPaymentGateway().name(),
                                 tx.getReferenceId(),
